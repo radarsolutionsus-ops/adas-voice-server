@@ -91,6 +91,7 @@ if (!SPREADSHEET_ID) {
 const SCHEDULE_SHEET_NAME = process.env.SCHEDULE_SHEET_ID || 'ADAS_Schedule';
 const BILLING_SHEET_NAME = process.env.BILLING_SHEET_ID || 'Billing';
 const SHOPS_SHEET_NAME = process.env.SHOPS_SHEET_ID || 'Shops';
+const CONFIG_SHEET_NAME = 'Config';
 
 // Column mappings for ADAS_Schedule (A-T)
 const SCHEDULE_COLUMNS = {
@@ -142,43 +143,171 @@ const SHOPS_COLUMNS = {
 
 // Google Sheets API client (initialized lazily)
 let sheetsClient = null;
+let oauth2ClientInstance = null;
+
+/**
+ * Get OAuth credentials from env var (Railway) or file (local dev)
+ * @returns {object} - Parsed credentials object
+ */
+function getOAuthCredentials() {
+  // Try env var first (Railway deployment)
+  if (process.env.GMAIL_OAUTH_CREDENTIALS_JSON) {
+    return JSON.parse(process.env.GMAIL_OAUTH_CREDENTIALS_JSON);
+  }
+  // Fall back to file (local development)
+  if (fs.existsSync(OAUTH_CREDENTIALS_PATH)) {
+    return JSON.parse(fs.readFileSync(OAUTH_CREDENTIALS_PATH, 'utf8'));
+  }
+  throw new Error(`No OAuth credentials found. Set GMAIL_OAUTH_CREDENTIALS_JSON env var or provide file at ${OAUTH_CREDENTIALS_PATH}`);
+}
+
+/**
+ * Get OAuth token from env var (Railway) or file (local dev)
+ * @returns {object} - Parsed token object
+ */
+function getOAuthToken() {
+  // Try env var first (Railway deployment)
+  if (process.env.GMAIL_OAUTH_TOKEN_JSON) {
+    return JSON.parse(process.env.GMAIL_OAUTH_TOKEN_JSON);
+  }
+  // Fall back to file (local development)
+  if (fs.existsSync(OAUTH_TOKEN_PATH)) {
+    return JSON.parse(fs.readFileSync(OAUTH_TOKEN_PATH, 'utf8'));
+  }
+  throw new Error(`No OAuth token found. Set GMAIL_OAUTH_TOKEN_JSON env var or provide file at ${OAUTH_TOKEN_PATH}. Run: node scripts/gmail-auth.js`);
+}
+
+/**
+ * Get Gmail OAuth token from Google Sheets Config tab
+ * Looks for row with key="GMAIL_OAUTH_TOKEN" in column A, value in column B
+ * @returns {Promise<object|null>} - Parsed token object or null if not found
+ */
+export async function getGmailTokenFromSheets() {
+  console.log(`${LOG_TAG} Reading Gmail OAuth token from Config sheet...`);
+
+  try {
+    const sheets = await initializeSheetsClient();
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${CONFIG_SHEET_NAME}!A:B`
+    });
+
+    const rows = response.data.values || [];
+
+    for (const row of rows) {
+      if (row[0] === 'GMAIL_OAUTH_TOKEN' && row[1]) {
+        const token = JSON.parse(row[1]);
+        console.log(`${LOG_TAG} Found Gmail OAuth token in Config sheet`);
+        return token;
+      }
+    }
+
+    console.log(`${LOG_TAG} No Gmail OAuth token found in Config sheet`);
+    return null;
+  } catch (err) {
+    console.error(`${LOG_TAG} Failed to read Gmail token from Config sheet:`, err.message);
+    return null;
+  }
+}
+
+/**
+ * Save Gmail OAuth token to Google Sheets Config tab
+ * Stores in row with key="GMAIL_OAUTH_TOKEN" (column A), value as JSON string (column B)
+ * @param {object} tokenJson - The token object to save
+ * @returns {Promise<{success: boolean, error?: string}>}
+ */
+export async function saveGmailTokenToSheets(tokenJson) {
+  console.log(`${LOG_TAG} Saving Gmail OAuth token to Config sheet...`);
+
+  try {
+    const sheets = await initializeSheetsClient();
+
+    // First, find if GMAIL_OAUTH_TOKEN row exists
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${CONFIG_SHEET_NAME}!A:B`
+    });
+
+    const rows = response.data.values || [];
+    let rowIndex = -1;
+
+    for (let i = 0; i < rows.length; i++) {
+      if (rows[i][0] === 'GMAIL_OAUTH_TOKEN') {
+        rowIndex = i + 1; // Sheets are 1-indexed
+        break;
+      }
+    }
+
+    const tokenString = JSON.stringify(tokenJson);
+
+    if (rowIndex > 0) {
+      // Update existing row
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${CONFIG_SHEET_NAME}!B${rowIndex}`,
+        valueInputOption: 'RAW',
+        resource: {
+          values: [[tokenString]]
+        }
+      });
+      console.log(`${LOG_TAG} Updated Gmail OAuth token in Config sheet (row ${rowIndex})`);
+    } else {
+      // Append new row
+      await sheets.spreadsheets.values.append({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${CONFIG_SHEET_NAME}!A:B`,
+        valueInputOption: 'RAW',
+        resource: {
+          values: [['GMAIL_OAUTH_TOKEN', tokenString]]
+        }
+      });
+      console.log(`${LOG_TAG} Appended Gmail OAuth token to Config sheet`);
+    }
+
+    return { success: true };
+  } catch (err) {
+    console.error(`${LOG_TAG} Failed to save Gmail token to Config sheet:`, err.message);
+    return { success: false, error: err.message };
+  }
+}
 
 /**
  * Initialize the Google Sheets API client using OAuth2 (same credentials as Gmail/Drive)
+ * Supports both environment variables (Railway) and file-based credentials (local dev)
  */
 async function initializeSheetsClient() {
   if (sheetsClient) return sheetsClient;
 
   try {
-    if (!fs.existsSync(OAUTH_CREDENTIALS_PATH)) {
-      throw new Error(`OAuth credentials not found at ${OAUTH_CREDENTIALS_PATH}`);
-    }
+    // Load OAuth credentials (from env var or file)
+    const credentials = getOAuthCredentials();
+    const { client_id, client_secret, redirect_uris } = credentials.installed || credentials.web;
 
-    if (!fs.existsSync(OAUTH_TOKEN_PATH)) {
-      throw new Error(`OAuth token not found at ${OAUTH_TOKEN_PATH}. Run: node scripts/gmail-auth.js`);
-    }
-
-    const credentials = JSON.parse(fs.readFileSync(OAUTH_CREDENTIALS_PATH, 'utf8'));
-    const { client_id, client_secret } = credentials.installed || credentials.web;
-
-    const oauth2Client = new google.auth.OAuth2(
+    oauth2ClientInstance = new google.auth.OAuth2(
       client_id,
       client_secret,
-      'urn:ietf:wg:oauth:2.0:oob'
+      redirect_uris ? redirect_uris[0] : 'urn:ietf:wg:oauth:2.0:oob'
     );
 
-    const token = JSON.parse(fs.readFileSync(OAUTH_TOKEN_PATH, 'utf8'));
-    oauth2Client.setCredentials(token);
+    // Load existing token (from env var or file)
+    const token = getOAuthToken();
+    oauth2ClientInstance.setCredentials(token);
 
     // Check if token needs refresh
     if (token.expiry_date && token.expiry_date < Date.now()) {
       console.log(`${LOG_TAG} Token expired, refreshing...`);
-      const { credentials: newCredentials } = await oauth2Client.refreshAccessToken();
-      oauth2Client.setCredentials(newCredentials);
-      fs.writeFileSync(OAUTH_TOKEN_PATH, JSON.stringify(newCredentials, null, 2));
+      const { credentials: newCredentials } = await oauth2ClientInstance.refreshAccessToken();
+      oauth2ClientInstance.setCredentials(newCredentials);
+      // Only save to file if not using env var
+      if (!process.env.GMAIL_OAUTH_TOKEN_JSON) {
+        fs.writeFileSync(OAUTH_TOKEN_PATH, JSON.stringify(newCredentials, null, 2));
+      } else {
+        console.log(`${LOG_TAG} Token refreshed - saving to Google Sheets Config tab`);
+        // Save to Sheets (will be done after sheetsClient is initialized)
+      }
     }
 
-    sheetsClient = google.sheets({ version: 'v4', auth: oauth2Client });
+    sheetsClient = google.sheets({ version: 'v4', auth: oauth2ClientInstance });
     console.log(`${LOG_TAG} Google Sheets API client initialized`);
     return sheetsClient;
   } catch (err) {
@@ -1055,5 +1184,7 @@ export default {
   appendScrubNotes,
   updateWithScrubResult,
   logROFromOps,
-  updateFromTech
+  updateFromTech,
+  getGmailTokenFromSheets,
+  saveGmailTokenToSheets
 };

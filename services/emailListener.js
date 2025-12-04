@@ -22,7 +22,7 @@ dotenv.config();
 
 import driveUpload from './driveUpload.js';
 import pdfParser from './pdfParser.js';
-import sheetWriter from './sheetWriter.js';
+import sheetWriter, { getGmailTokenFromSheets, saveGmailTokenToSheets } from './sheetWriter.js';
 import billingMailer from './billingMailer.js';
 import { formatScrubResultsAsNotes, getScrubSummary, formatPreviewNotes, formatFullScrub } from './estimateScrubber.js';
 import jobState from '../data/jobState.js';
@@ -101,35 +101,63 @@ function getOAuthCredentials() {
 }
 
 /**
- * Get OAuth token from env var (Railway) or file (local dev)
- * @returns {object} - Parsed token object
+ * Get OAuth token from Google Sheets (Railway), env var, or file (local dev)
+ * Priority: 1. Google Sheets Config tab, 2. Env var, 3. Local file
+ * @returns {Promise<object>} - Parsed token object
  */
-function getOAuthToken() {
-  // Try env var first (Railway deployment)
+async function getOAuthToken() {
+  // Try Google Sheets first (Railway - persists refreshed tokens)
+  try {
+    const sheetsToken = await getGmailTokenFromSheets();
+    if (sheetsToken) {
+      console.log(`${LOG_TAG} Loading OAuth token from Google Sheets Config tab`);
+      return sheetsToken;
+    }
+  } catch (err) {
+    console.log(`${LOG_TAG} Could not read token from Sheets: ${err.message}`);
+  }
+
+  // Try env var second (Railway fallback)
   if (process.env.GMAIL_OAUTH_TOKEN_JSON) {
     console.log(`${LOG_TAG} Loading OAuth token from environment variable`);
     return JSON.parse(process.env.GMAIL_OAUTH_TOKEN_JSON);
   }
+
   // Fall back to file (local development)
   if (fs.existsSync(OAUTH_TOKEN_PATH)) {
     console.log(`${LOG_TAG} Loading OAuth token from file: ${OAUTH_TOKEN_PATH}`);
     return JSON.parse(fs.readFileSync(OAUTH_TOKEN_PATH, 'utf8'));
   }
+
   throw new Error(`No Gmail OAuth token found. Set GMAIL_OAUTH_TOKEN_JSON env var or provide file at ${OAUTH_TOKEN_PATH}. Run: node scripts/gmail-auth.js`);
 }
 
 /**
- * Save OAuth token - only works for file-based storage (local dev)
- * For Railway, tokens must be updated in environment variables manually
+ * Save OAuth token to Google Sheets (Railway) or file (local dev)
  * @param {object} token - Token object to save
  */
-function saveOAuthToken(token) {
-  // Only save to file if not using env var
-  if (process.env.GMAIL_OAUTH_TOKEN_JSON) {
-    console.log(`${LOG_TAG} Token refresh detected but using env var - please update GMAIL_OAUTH_TOKEN_JSON manually`);
-    console.log(`${LOG_TAG} New token: ${JSON.stringify(token)}`);
+async function saveOAuthToken(token) {
+  // For Railway deployment: save to Google Sheets Config tab
+  // This persists the refreshed token so Railway can access it on next restart
+  if (process.env.GMAIL_OAUTH_TOKEN_JSON || process.env.RAILWAY_ENVIRONMENT) {
+    console.log(`${LOG_TAG} Saving refreshed token to Google Sheets Config tab...`);
+    try {
+      const result = await saveGmailTokenToSheets(token);
+      if (result.success) {
+        console.log(`${LOG_TAG} Token saved to Google Sheets Config tab successfully`);
+        return;
+      } else {
+        console.error(`${LOG_TAG} Failed to save token to Sheets: ${result.error}`);
+      }
+    } catch (err) {
+      console.error(`${LOG_TAG} Error saving token to Sheets: ${err.message}`);
+    }
+    // Log the token as fallback so it can be manually updated if needed
+    console.log(`${LOG_TAG} Token (for manual backup): ${JSON.stringify(token)}`);
     return;
   }
+
+  // For local development: save to file
   const dir = path.dirname(OAUTH_TOKEN_PATH);
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
@@ -199,8 +227,8 @@ async function initializeGmailClient() {
       redirect_uris ? redirect_uris[0] : 'urn:ietf:wg:oauth:2.0:oob'
     );
 
-    // Load existing token (from env var or file)
-    const token = getOAuthToken();
+    // Load existing token (from Sheets, env var, or file - in that priority)
+    const token = await getOAuthToken();
     oauth2Client.setCredentials(token);
 
     // Check if token needs refresh
@@ -208,7 +236,7 @@ async function initializeGmailClient() {
       console.log(`${LOG_TAG} Token expired, refreshing...`);
       const { credentials: newCredentials } = await oauth2Client.refreshAccessToken();
       oauth2Client.setCredentials(newCredentials);
-      saveOAuthToken(newCredentials);
+      await saveOAuthToken(newCredentials);
     }
 
     gmailClient = google.gmail({ version: 'v1', auth: oauth2Client });
