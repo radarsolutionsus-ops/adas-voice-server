@@ -4366,6 +4366,15 @@ app.post("/email/auth-callback", async (req, res) => {
   }
 });
 
+app.post("/email/reset-processed", (req, res) => {
+  try {
+    emailListener.clearProcessedIds();
+    res.json({ success: true, message: "Processed email IDs cleared" });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // ============================================================
 // BILLING ENDPOINTS
 // ============================================================

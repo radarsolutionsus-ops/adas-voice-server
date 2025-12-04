@@ -210,6 +210,16 @@ function saveProcessedIds() {
 }
 
 /**
+ * Clear all processed message IDs - allows reprocessing of emails
+ */
+function clearProcessedIds() {
+  processedMessageIds.clear();
+  saveProcessedIds();
+  console.log(`${LOG_TAG} Cleared all processed message IDs - starting fresh`);
+  return true;
+}
+
+/**
  * Initialize Gmail client with OAuth2 credentials for radarsolutionsus@gmail.com
  * Supports both environment variables (Railway) and file-based credentials (local dev)
  */
@@ -1257,5 +1267,6 @@ export default {
   getStatus,
   checkNewEmails,
   getAuthUrl,
-  exchangeCodeForToken
+  exchangeCodeForToken,
+  clearProcessedIds
 };
