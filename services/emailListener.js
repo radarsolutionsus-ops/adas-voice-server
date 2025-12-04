@@ -24,7 +24,7 @@ import driveUpload from './driveUpload.js';
 import pdfParser from './pdfParser.js';
 import sheetWriter, { getGmailTokenFromSheets, saveGmailTokenToSheets, getShopEmailByName } from './sheetWriter.js';
 import billingMailer from './billingMailer.js';
-import { formatScrubResultsAsNotes, getScrubSummary, formatPreviewNotes, formatFullScrub } from './estimateScrubber.js';
+import { formatScrubResultsAsNotes, getScrubSummary, formatPreviewNotes, formatFullScrub, analyzeEstimateWithLLM } from './estimateScrubber.js';
 import jobState from '../data/jobState.js';
 import shopNotifier from './shopNotifier.js';
 import emailResponder from './emailResponder.js';

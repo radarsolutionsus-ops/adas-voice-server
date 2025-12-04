@@ -650,6 +650,136 @@ function getContext(text, match, chars) {
 }
 
 /**
+ * Comprehensive LLM-powered estimate analysis
+ * Extracts shop info, vehicle info, AND ADAS-triggering operations
+ * Used for automated email workflow - determines what calibrations are needed
+ *
+ * @param {string} estimateText - Full text extracted from estimate PDF
+ * @returns {Promise<Object>} - Complete analysis with adasOperations
+ */
+export async function analyzeEstimateWithLLM(estimateText) {
+  if (!estimateText || typeof estimateText !== 'string') {
+    return { error: 'No estimate text provided', adasOperations: [] };
+  }
+
+  try {
+    // Import OpenAI dynamically
+    const OpenAI = (await import('openai')).default;
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+    if (!process.env.OPENAI_API_KEY) {
+      console.log(`${LOG_TAG} No OpenAI API key, skipping LLM analysis`);
+      return { error: 'No API key', adasOperations: [] };
+    }
+
+    // Use first 8000 chars - enough for most estimates while staying fast
+    const textSample = estimateText.substring(0, 8000);
+
+    console.log(`${LOG_TAG} Analyzing estimate with LLM (${textSample.length} chars)...`);
+
+    const systemPrompt = `You are an ADAS calibration expert analyzing body shop repair estimates.
+Extract the following from this estimate:
+
+SHOP NAME - The body shop name (usually at top)
+RO/PO NUMBER - Repair Order or Purchase Order number
+VIN - Vehicle Identification Number (17 characters)
+VEHICLE - Year, Make, Model (e.g., "2025 Genesis G70")
+ADAS OPERATIONS - List ALL operations that trigger ADAS calibration
+
+ADAS-triggering operations include:
+- Windshield replacement/repair (R&R, R&I) → Front camera calibration
+- Front bumper R&R/R&I → Front radar calibration
+- Rear bumper R&R/R&I → Rear radar/parking sensor calibration
+- Side mirror replacement → Blind spot monitor calibration
+- Grille removal/replacement → Front radar calibration
+- Headlamp aiming/replacement → Headlamp calibration
+- Wheel alignment → May trigger camera/radar calibration
+- Steering angle sensor → Steering angle calibration
+- Any sensor R&R/R&I (radar, camera, ultrasonic)
+- Frame/structural repair → Multiple calibrations
+- Suspension work → Ride height affects calibrations
+
+Respond in this exact JSON format:
+{
+  "shopName": "string or null",
+  "roNumber": "string or null",
+  "vin": "string or null",
+  "vehicle": {
+    "year": "string or null",
+    "make": "string or null",
+    "model": "string or null",
+    "full": "string or null"
+  },
+  "adasOperations": [
+    {
+      "operation": "Description of repair operation",
+      "lineNumber": "optional line number",
+      "triggersCalibration": "What calibration this triggers",
+      "reason": "Why this operation requires calibration"
+    }
+  ],
+  "totalAdasOps": number,
+  "confidence": "HIGH" | "MEDIUM" | "LOW",
+  "notes": "any additional observations"
+}
+
+IMPORTANT:
+- Only list operations that ACTUALLY trigger ADAS calibrations
+- Do NOT include non-ADAS items (SRS, seat weight sensors, TPMS relearn, etc.)
+- If no ADAS operations found, return empty adasOperations array
+- Be conservative - only flag what the estimate clearly shows`;
+
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: textSample }
+      ],
+      max_tokens: 1500,
+      temperature: 0.1
+    });
+
+    const content = response.choices[0]?.message?.content;
+    if (!content) {
+      console.error(`${LOG_TAG} LLM returned empty response`);
+      return { error: 'Empty LLM response', adasOperations: [] };
+    }
+
+    // Parse JSON response
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.error(`${LOG_TAG} Could not parse LLM JSON response`);
+      return { error: 'Invalid JSON response', adasOperations: [], raw: content };
+    }
+
+    const parsed = JSON.parse(jsonMatch[0]);
+
+    console.log(`${LOG_TAG} LLM analysis complete:`, {
+      shop: parsed.shopName,
+      ro: parsed.roNumber,
+      vin: parsed.vin ? `${parsed.vin.substring(0, 5)}***` : null,
+      vehicle: parsed.vehicle?.full,
+      adasOps: parsed.adasOperations?.length || 0,
+      confidence: parsed.confidence
+    });
+
+    return {
+      success: true,
+      ...parsed,
+      source: 'LLM-gpt-4o-mini',
+      timestamp: getESTISOTimestamp()
+    };
+  } catch (err) {
+    console.error(`${LOG_TAG} LLM analysis failed:`, err.message);
+    return {
+      error: err.message,
+      adasOperations: [],
+      source: 'LLM-error'
+    };
+  }
+}
+
+/**
  * LLM fallback for field extraction when pattern matching fails
  * Uses OpenAI to extract fields from estimate text
  * @param {string} estimateText - Estimate text
@@ -2593,6 +2723,7 @@ export default {
   getCalibrationCardCSS,
 
   // LLM-Powered Functions
+  analyzeEstimateWithLLM,  // NEW: Comprehensive LLM analysis for email workflow
   scrubEstimateLLM,
   scrubEstimateSmart,
   formatLLMScrubAsNotes,
