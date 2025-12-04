@@ -58,7 +58,7 @@ const server = app.listen(PORT, () => {
 
 const wss = new WebSocketServer({ server });  // Handle all WebSocket paths
 
-const NGROK = process.env.NGROK_URL.replace("https://", "").replace(/\/$/, "");
+const NGROK = (process.env.BASE_URL || process.env.NGROK_URL || "").replace("https://", "").replace(/\/$/, "");
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-realtime-preview-2024-10-01";
 const GAS_WEBHOOK_URL = process.env.GAS_WEBHOOK_URL;
