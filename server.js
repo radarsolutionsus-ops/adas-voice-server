@@ -44,19 +44,26 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Health check - MUST be first, responds immediately for Railway
+app.get("/health", (req, res) => {
+  res.status(200).send("OK");
+});
+
 const PORT = process.env.PORT || 8080;
 const server = app.listen(PORT, () => {
   console.log(`✅ ADAS First Voice Server LIVE on port ${PORT}`);
   console.log(`📞 Ops webhook: /voice-ops`);
   console.log(`🔧 Tech webhook: /voice-tech`);
 
-  // Auto-start email listener on server boot
-  if (!emailListener.isRunning()) {
-    console.log("[EMAIL_PIPELINE] Auto-starting email listener after server boot...");
-    emailListener.startListener().catch(err =>
-      console.error("[EMAIL_PIPELINE] Failed to auto-start listener:", err)
-    );
-  }
+  // Delay email listener start to not block health checks
+  setTimeout(() => {
+    if (!emailListener.isRunning()) {
+      console.log("[EMAIL_PIPELINE] Auto-starting email listener...");
+      emailListener.startListener().catch(err =>
+        console.error("[EMAIL_PIPELINE] Failed to auto-start listener:", err)
+      );
+    }
+  }, 5000);  // Wait 5 seconds after server starts
 });
 
 const wss = new WebSocketServer({ server });  // Handle all WebSocket paths
@@ -2807,10 +2814,6 @@ app.post("/transfer-randy", (req, res) => {
   <Dial>${RANDY_PHONE}</Dial>
 </Response>
   `);
-});
-
-app.get("/health", (req, res) => {
-  res.json({ status: "healthy", timestamp: getESTISOTimestamp() });
 });
 
 // ============================================================
