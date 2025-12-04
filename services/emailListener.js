@@ -22,7 +22,7 @@ dotenv.config();
 
 import driveUpload from './driveUpload.js';
 import pdfParser from './pdfParser.js';
-import sheetWriter, { getGmailTokenFromSheets, saveGmailTokenToSheets } from './sheetWriter.js';
+import sheetWriter, { getGmailTokenFromSheets, saveGmailTokenToSheets, getShopEmailByName } from './sheetWriter.js';
 import billingMailer from './billingMailer.js';
 import { formatScrubResultsAsNotes, getScrubSummary, formatPreviewNotes, formatFullScrub } from './estimateScrubber.js';
 import jobState from '../data/jobState.js';
@@ -996,6 +996,13 @@ async function processEmail(message) {
         // Comparison results
         missingCalibrations: mergedData.estimateScrubResult?.missingCalibrations || []
       };
+
+      // Extract sender email from "from" header (format: "Name <email@domain.com>")
+      let senderEmail = from;
+      const emailMatch = from.match(/<([^>]+)>/);
+      if (emailMatch) {
+        senderEmail = emailMatch[1];
+      }
 
       // Original email info for reply threading
       const originalEmail = {

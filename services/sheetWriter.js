@@ -959,6 +959,182 @@ export async function getScheduledJobsForTechOnDate(technician, date) {
   }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// SMART SHOP NAME MATCHING
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Known shop aliases - maps variations to canonical names
+ * Key = normalized alias, Value = canonical normalized name
+ */
+const SHOP_ALIASES = {
+  // Paint Max variations
+  'paintmax': 'paintmax',
+  'paintmaxinc': 'paintmax',
+  'paint max': 'paintmax',
+  'paint max inc': 'paintmax',
+
+  // JMD variations
+  'jmd': 'jmd',
+  'jmdbodyshop': 'jmd',
+  'jmd body shop': 'jmd',
+
+  // Reinaldo variations
+  'reinaldo': 'reinaldo',
+  'reinaldobodyshop': 'reinaldo',
+  'reinaldo body shop': 'reinaldo',
+
+  // AutoSport variations
+  'autosport': 'autosport',
+  'auto sport': 'autosport',
+  'autosportcollision': 'autosport',
+
+  // CCNM / Collision Center of North Miami
+  'ccnm': 'ccnm',
+  'collisioncenterofnorthmiami': 'ccnm',
+  'collision center of north miami': 'ccnm',
+  'collisioncentermiami': 'ccnm',
+  'ccofnm': 'ccnm',
+
+  // Kendall collision
+  'kendall': 'kendallcollision',
+  'kendallcollision': 'kendallcollision',
+  'kendall collision': 'kendallcollision',
+
+  // Other common patterns
+  'classic': 'classicautobody',
+  'classicautobody': 'classicautobody',
+  'classic auto body': 'classicautobody'
+};
+
+/**
+ * Words to strip from shop names during normalization
+ */
+const STRIP_WORDS = [
+  'inc', 'llc', 'corp', 'corporation', 'co', 'company',
+  'body shop', 'bodyshop', 'collision', 'collision center',
+  'auto body', 'autobody', 'auto', 'center', 'of',
+  'the', 'and', '&'
+];
+
+/**
+ * Normalize a shop name for comparison
+ * @param {string} name - Raw shop name
+ * @returns {string} - Normalized name for matching
+ */
+export function normalizeShopNameForLookup(name) {
+  if (!name) return '';
+
+  let normalized = name.toLowerCase().trim();
+
+  // Remove punctuation and special characters
+  normalized = normalized.replace(/[.,\-_'"()]/g, ' ');
+
+  // Remove strip words (as whole words)
+  for (const word of STRIP_WORDS) {
+    // Use word boundary for multi-word patterns
+    const regex = new RegExp(`\\b${word.replace(/ /g, '\\s+')}\\b`, 'gi');
+    normalized = normalized.replace(regex, ' ');
+  }
+
+  // Collapse multiple spaces and trim
+  normalized = normalized.replace(/\s+/g, '').trim();
+
+  // Check if this matches a known alias
+  if (SHOP_ALIASES[normalized]) {
+    return SHOP_ALIASES[normalized];
+  }
+
+  // Also check with spaces for alias lookup
+  const withSpaces = name.toLowerCase().trim()
+    .replace(/[.,\-_'"()]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (SHOP_ALIASES[withSpaces]) {
+    return SHOP_ALIASES[withSpaces];
+  }
+
+  return normalized;
+}
+
+/**
+ * Get shop email by name using smart matching
+ * Handles aliases, abbreviations, and common variations
+ * @param {string} shopNameFromEstimate - Shop name as it appears in estimate
+ * @returns {Promise<{shopName: string, email: string, billingCc: string, matched: string}|null>}
+ */
+export async function getShopEmailByName(shopNameFromEstimate) {
+  console.log(`${LOG_TAG} Smart shop lookup for: "${shopNameFromEstimate}"`);
+
+  if (!shopNameFromEstimate) {
+    console.log(`${LOG_TAG} No shop name provided`);
+    return null;
+  }
+
+  try {
+    const rows = await readSheetData(SHOPS_SHEET_NAME, 'A:D');
+
+    if (rows.length <= 1) {
+      console.log(`${LOG_TAG} No shops in Shops tab`);
+      return null;
+    }
+
+    const normalizedInput = normalizeShopNameForLookup(shopNameFromEstimate);
+    console.log(`${LOG_TAG} Normalized input: "${shopNameFromEstimate}" → "${normalizedInput}"`);
+
+    // Skip header row
+    const dataRows = rows.slice(1);
+
+    // First pass: exact normalized match
+    for (const row of dataRows) {
+      if (!row || !row[SHOPS_COLUMNS.SHOP_NAME]) continue;
+
+      const rowShopName = row[SHOPS_COLUMNS.SHOP_NAME];
+      const normalizedRow = normalizeShopNameForLookup(rowShopName);
+
+      if (normalizedInput === normalizedRow) {
+        const result = {
+          shopName: rowShopName,
+          email: row[SHOPS_COLUMNS.EMAIL] || '',
+          billingCc: row[SHOPS_COLUMNS.BILLING_CC] || '',
+          matched: `exact: "${shopNameFromEstimate}" → "${rowShopName}"`
+        };
+        console.log(`${LOG_TAG} ✓ Matched "${shopNameFromEstimate}" → "${rowShopName}" → ${result.email}`);
+        return result;
+      }
+    }
+
+    // Second pass: partial/contains match
+    for (const row of dataRows) {
+      if (!row || !row[SHOPS_COLUMNS.SHOP_NAME]) continue;
+
+      const rowShopName = row[SHOPS_COLUMNS.SHOP_NAME];
+      const normalizedRow = normalizeShopNameForLookup(rowShopName);
+
+      // Check if one contains the other (for partial matches like "JMD" matching "JMD Body Shop")
+      if (normalizedInput.includes(normalizedRow) || normalizedRow.includes(normalizedInput)) {
+        // Require at least 3 characters to avoid false matches
+        if (normalizedInput.length >= 3 && normalizedRow.length >= 3) {
+          const result = {
+            shopName: rowShopName,
+            email: row[SHOPS_COLUMNS.EMAIL] || '',
+            billingCc: row[SHOPS_COLUMNS.BILLING_CC] || '',
+            matched: `partial: "${shopNameFromEstimate}" → "${rowShopName}"`
+          };
+          console.log(`${LOG_TAG} ✓ Matched (partial) "${shopNameFromEstimate}" → "${rowShopName}" → ${result.email}`);
+          return result;
+        }
+      }
+    }
+
+    console.log(`${LOG_TAG} ✗ No match found for "${shopNameFromEstimate}" (normalized: "${normalizedInput}")`);
+    return null;
+  } catch (err) {
+    console.error(`${LOG_TAG} getShopEmailByName failed:`, err.message);
+    return null;
+  }
+}
+
 /**
  * Get shop information from the Shops tab using direct Sheets API
  * @param {string} shopName - Name of the shop
@@ -1186,5 +1362,8 @@ export default {
   logROFromOps,
   updateFromTech,
   getGmailTokenFromSheets,
-  saveGmailTokenToSheets
+  saveGmailTokenToSheets,
+  // Smart shop matching
+  normalizeShopNameForLookup,
+  getShopEmailByName
 };

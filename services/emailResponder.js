@@ -152,10 +152,11 @@ async function initializeGmailClient() {
 }
 
 /**
- * Look up shop email from Shops tab
+ * Look up shop email from Shops tab using SMART matching
+ * Handles aliases, abbreviations, and common variations
  * CRITICAL: Always use this to get shop email, never use technician/sender email
- * @param {string} shopName - Shop name to lookup
- * @returns {Promise<{email: string, billingCC: string, name: string, notes: string}|null>}
+ * @param {string} shopName - Shop name to lookup (can be from estimate, various formats)
+ * @returns {Promise<{email: string, billingCC: string, name: string, notes: string, matched: string}|null>}
  */
 export async function lookupShopEmail(shopName) {
   console.log(`${LOG_TAG} Looking up email for shop: ${shopName}`);
@@ -166,19 +167,35 @@ export async function lookupShopEmail(shopName) {
   }
 
   try {
+    // Use smart shop matching from sheetWriter
+    const shopMatch = await sheetWriter.getShopEmailByName(shopName);
+
+    if (shopMatch && shopMatch.email) {
+      console.log(`${LOG_TAG} ✓ Found shop email via smart match: ${shopMatch.email} (${shopMatch.matched})`);
+      return {
+        name: shopMatch.shopName || shopName,
+        email: shopMatch.email,
+        billingCC: shopMatch.billingCc || null,
+        notes: null,
+        matched: shopMatch.matched
+      };
+    }
+
+    // Fallback to legacy getShopInfo for backward compatibility
     const shopInfo = await sheetWriter.getShopInfo(shopName);
 
     if (shopInfo && shopInfo.email) {
-      console.log(`${LOG_TAG} Found shop email: ${shopInfo.email}`);
+      console.log(`${LOG_TAG} Found shop email via legacy lookup: ${shopInfo.email}`);
       return {
         name: shopInfo.shopName || shopName,
         email: shopInfo.email,
         billingCC: shopInfo.billingCc || null,
-        notes: shopInfo.notes || null
+        notes: shopInfo.notes || null,
+        matched: 'legacy'
       };
     }
 
-    console.log(`${LOG_TAG} Shop not found in Shops tab: ${shopName}`);
+    console.log(`${LOG_TAG} ✗ Shop not found in Shops tab: ${shopName}`);
     return null;
   } catch (error) {
     console.error(`${LOG_TAG} Error looking up shop:`, error.message);
