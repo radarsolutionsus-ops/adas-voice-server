@@ -19,6 +19,33 @@ import {
   generateScrubSummary as _generateScrubSummary
 } from './scrubEngine.js';
 
+const LOG_TAG = '[SCRUB]';
+
+/**
+ * Backwards-compatible wrapper for scrubEstimateNew
+ * Converts old function signature to new scrubEstimateV2 signature
+ *
+ * Old signature: scrubEstimateNew(pdfText, roPo, options = {})
+ * New signature: scrubEstimateV2({ estimateText, vin, brand, year, revvText, vehicle })
+ */
+export async function scrubEstimateNew(pdfText, roPo, options = {}) {
+  console.log(`${LOG_TAG} Using NEW RevvADAS 4-stage scrubber for RO: ${roPo}`);
+
+  const result = await _scrubEstimateV2({
+    estimateText: pdfText,
+    vin: options.vin || null,
+    brand: options.brand || null,
+    year: options.year || null,
+    revvText: options.revvText || null,
+    vehicle: options.vehicle || null
+  });
+
+  // Add roPo to result for reference
+  result.roPo = roPo;
+
+  return result;
+}
+
 import {
   formatCompactNotes as _formatCompactNotes,
   formatPreviewNotes as _formatPreviewNotes,

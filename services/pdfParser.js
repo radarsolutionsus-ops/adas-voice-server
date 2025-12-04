@@ -11,7 +11,8 @@
 
 import pdf from 'pdf-parse';
 import axios from 'axios';
-import { isEstimatePDF, scrubEstimateNew } from './estimateScrubber.js';
+import { isEstimatePDF } from './estimateScrubber.js';
+import { scrubEstimateNew } from '../src/scrub/index.js';
 import dotenv from 'dotenv';
 
 // Ensure environment variables are loaded

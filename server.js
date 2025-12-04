@@ -24,13 +24,13 @@ import dispatcher from "./services/dispatcher.js";
 import emailListener from "./services/emailListener.js";
 import billingMailer from "./services/billingMailer.js";
 import {
-  scrubEstimateNew,
   formatScrubResultsAsNotes,
   getScrubSummary,
   extractROFromText,
   convertSpanishNumbersToDigits,
   padRO
 } from "./services/estimateScrubber.js";
+import { scrubEstimateNew } from "./src/scrub/index.js";
 
 // Import utilities (lazy-loaded on demand)
 import downloadPlan from "./utils/downloadPlan.js";
