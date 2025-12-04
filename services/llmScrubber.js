@@ -20,9 +20,17 @@ import { getOEMRules } from '../utils/oem/index.js';
 
 const LOG_TAG = '[HYBRID_SCRUB]';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
+// Lazy-load OpenAI client to avoid initialization before env vars are ready
+let openaiClient = null;
+
+function getOpenAIClient() {
+  if (!openaiClient) {
+    openaiClient = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY
+    });
+  }
+  return openaiClient;
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // MAIN HYBRID SCRUB FUNCTION
@@ -138,7 +146,7 @@ async function analyzeWithLLM(estimatePath, vehicleInfo, kbRules, revvCalibratio
   const userPrompt = buildUserPrompt(vehicleInfo, revvCalibrations);
 
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAIClient().chat.completions.create({
       model: "gpt-4o",
       messages: [
         { role: "system", content: systemPrompt },
@@ -843,7 +851,7 @@ export async function llmScrubEstimate(estimateInput, revvData, vehicleInfo = {}
 
     console.log(`${LOG_TAG} Sending to GPT-4o Vision...`);
 
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAIClient().chat.completions.create({
       model: "gpt-4o",
       messages: [
         { role: "system", content: LEGACY_SYSTEM_PROMPT },
@@ -1031,7 +1039,7 @@ Please analyze and determine:
 
 Return your analysis as JSON matching the specified format.`;
 
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAIClient().chat.completions.create({
       model: "gpt-4o",
       messages: [
         { role: "system", content: LEGACY_SYSTEM_PROMPT },
