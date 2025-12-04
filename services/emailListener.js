@@ -83,6 +83,62 @@ const OAUTH_TOKEN_PATH = process.env.GMAIL_OAUTH_TOKEN_PATH ||
   path.join(__dirname, '../credentials/gmail_oauth_token.json');
 const PROCESSED_IDS_PATH = path.join(__dirname, '../data/processed_email_ids.json');
 
+/**
+ * Get OAuth credentials from env var (Railway) or file (local dev)
+ * @returns {object} - Parsed credentials object
+ */
+function getOAuthCredentials() {
+  // Try env var first (Railway deployment)
+  if (process.env.GMAIL_OAUTH_CREDENTIALS_JSON) {
+    console.log(`${LOG_TAG} Loading OAuth credentials from environment variable`);
+    return JSON.parse(process.env.GMAIL_OAUTH_CREDENTIALS_JSON);
+  }
+  // Fall back to file (local development)
+  if (fs.existsSync(OAUTH_CREDENTIALS_PATH)) {
+    console.log(`${LOG_TAG} Loading OAuth credentials from file: ${OAUTH_CREDENTIALS_PATH}`);
+    return JSON.parse(fs.readFileSync(OAUTH_CREDENTIALS_PATH, 'utf8'));
+  }
+  throw new Error(`No Gmail OAuth credentials found. Set GMAIL_OAUTH_CREDENTIALS_JSON env var or provide file at ${OAUTH_CREDENTIALS_PATH}`);
+}
+
+/**
+ * Get OAuth token from env var (Railway) or file (local dev)
+ * @returns {object} - Parsed token object
+ */
+function getOAuthToken() {
+  // Try env var first (Railway deployment)
+  if (process.env.GMAIL_OAUTH_TOKEN_JSON) {
+    console.log(`${LOG_TAG} Loading OAuth token from environment variable`);
+    return JSON.parse(process.env.GMAIL_OAUTH_TOKEN_JSON);
+  }
+  // Fall back to file (local development)
+  if (fs.existsSync(OAUTH_TOKEN_PATH)) {
+    console.log(`${LOG_TAG} Loading OAuth token from file: ${OAUTH_TOKEN_PATH}`);
+    return JSON.parse(fs.readFileSync(OAUTH_TOKEN_PATH, 'utf8'));
+  }
+  throw new Error(`No Gmail OAuth token found. Set GMAIL_OAUTH_TOKEN_JSON env var or provide file at ${OAUTH_TOKEN_PATH}. Run: node scripts/gmail-auth.js`);
+}
+
+/**
+ * Save OAuth token - only works for file-based storage (local dev)
+ * For Railway, tokens must be updated in environment variables manually
+ * @param {object} token - Token object to save
+ */
+function saveOAuthToken(token) {
+  // Only save to file if not using env var
+  if (process.env.GMAIL_OAUTH_TOKEN_JSON) {
+    console.log(`${LOG_TAG} Token refresh detected but using env var - please update GMAIL_OAUTH_TOKEN_JSON manually`);
+    console.log(`${LOG_TAG} New token: ${JSON.stringify(token)}`);
+    return;
+  }
+  const dir = path.dirname(OAUTH_TOKEN_PATH);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  fs.writeFileSync(OAUTH_TOKEN_PATH, JSON.stringify(token, null, 2));
+  console.log(`${LOG_TAG} Token saved to ${OAUTH_TOKEN_PATH}`);
+}
+
 let gmailClient = null;
 let sourceLabelId = null;
 let processedLabelId = null;
@@ -128,18 +184,14 @@ function saveProcessedIds() {
 
 /**
  * Initialize Gmail client with OAuth2 credentials for radarsolutionsus@gmail.com
+ * Supports both environment variables (Railway) and file-based credentials (local dev)
  */
 async function initializeGmailClient() {
   if (gmailClient) return gmailClient;
 
   try {
-    // Load OAuth credentials
-    if (!fs.existsSync(OAUTH_CREDENTIALS_PATH)) {
-      throw new Error(`OAuth credentials not found at ${OAUTH_CREDENTIALS_PATH}. ` +
-        `Please download OAuth credentials from Google Cloud Console for ${GMAIL_USER}`);
-    }
-
-    const credentials = JSON.parse(fs.readFileSync(OAUTH_CREDENTIALS_PATH, 'utf8'));
+    // Load OAuth credentials (from env var or file)
+    const credentials = getOAuthCredentials();
     const { client_id, client_secret, redirect_uris } = credentials.installed || credentials.web;
 
     const oauth2Client = new google.auth.OAuth2(
@@ -148,22 +200,16 @@ async function initializeGmailClient() {
       redirect_uris ? redirect_uris[0] : 'urn:ietf:wg:oauth:2.0:oob'
     );
 
-    // Load existing token or prompt for authorization
-    if (fs.existsSync(OAUTH_TOKEN_PATH)) {
-      const token = JSON.parse(fs.readFileSync(OAUTH_TOKEN_PATH, 'utf8'));
-      oauth2Client.setCredentials(token);
+    // Load existing token (from env var or file)
+    const token = getOAuthToken();
+    oauth2Client.setCredentials(token);
 
-      // Check if token needs refresh
-      if (token.expiry_date && token.expiry_date < Date.now()) {
-        console.log(`${LOG_TAG} Token expired, refreshing...`);
-        const { credentials: newCredentials } = await oauth2Client.refreshAccessToken();
-        oauth2Client.setCredentials(newCredentials);
-        fs.writeFileSync(OAUTH_TOKEN_PATH, JSON.stringify(newCredentials, null, 2));
-      }
-    } else {
-      throw new Error(`OAuth token not found at ${OAUTH_TOKEN_PATH}. ` +
-        `Run the OAuth authorization flow first to generate a token for ${GMAIL_USER}. ` +
-        `Use: node scripts/gmail-auth.js`);
+    // Check if token needs refresh
+    if (token.expiry_date && token.expiry_date < Date.now()) {
+      console.log(`${LOG_TAG} Token expired, refreshing...`);
+      const { credentials: newCredentials } = await oauth2Client.refreshAccessToken();
+      oauth2Client.setCredentials(newCredentials);
+      saveOAuthToken(newCredentials);
     }
 
     gmailClient = google.gmail({ version: 'v1', auth: oauth2Client });
@@ -1120,59 +1166,50 @@ export function getStatus() {
  * Generate OAuth authorization URL (for initial setup)
  */
 export function getAuthUrl() {
-  if (!fs.existsSync(OAUTH_CREDENTIALS_PATH)) {
-    return { error: `Credentials file not found at ${OAUTH_CREDENTIALS_PATH}` };
+  try {
+    const credentials = getOAuthCredentials();
+    const { client_id, client_secret, redirect_uris } = credentials.installed || credentials.web;
+
+    const oauth2Client = new google.auth.OAuth2(
+      client_id,
+      client_secret,
+      redirect_uris ? redirect_uris[0] : 'urn:ietf:wg:oauth:2.0:oob'
+    );
+
+    const authUrl = oauth2Client.generateAuthUrl({
+      access_type: 'offline',
+      scope: [
+        'https://www.googleapis.com/auth/gmail.readonly',
+        'https://www.googleapis.com/auth/gmail.modify'
+      ]
+    });
+
+    return { authUrl, note: `Login as ${GMAIL_USER} and authorize the app` };
+  } catch (err) {
+    return { error: err.message };
   }
-
-  const credentials = JSON.parse(fs.readFileSync(OAUTH_CREDENTIALS_PATH, 'utf8'));
-  const { client_id, client_secret, redirect_uris } = credentials.installed || credentials.web;
-
-  const oauth2Client = new google.auth.OAuth2(
-    client_id,
-    client_secret,
-    redirect_uris ? redirect_uris[0] : 'urn:ietf:wg:oauth:2.0:oob'
-  );
-
-  const authUrl = oauth2Client.generateAuthUrl({
-    access_type: 'offline',
-    scope: [
-      'https://www.googleapis.com/auth/gmail.readonly',
-      'https://www.googleapis.com/auth/gmail.modify'
-    ]
-  });
-
-  return { authUrl, note: `Login as ${GMAIL_USER} and authorize the app` };
 }
 
 /**
  * Exchange authorization code for token (for initial setup)
  */
 export async function exchangeCodeForToken(code) {
-  if (!fs.existsSync(OAUTH_CREDENTIALS_PATH)) {
-    return { error: `Credentials file not found at ${OAUTH_CREDENTIALS_PATH}` };
-  }
-
-  const credentials = JSON.parse(fs.readFileSync(OAUTH_CREDENTIALS_PATH, 'utf8'));
-  const { client_id, client_secret, redirect_uris } = credentials.installed || credentials.web;
-
-  const oauth2Client = new google.auth.OAuth2(
-    client_id,
-    client_secret,
-    redirect_uris ? redirect_uris[0] : 'urn:ietf:wg:oauth:2.0:oob'
-  );
-
   try {
+    const credentials = getOAuthCredentials();
+    const { client_id, client_secret, redirect_uris } = credentials.installed || credentials.web;
+
+    const oauth2Client = new google.auth.OAuth2(
+      client_id,
+      client_secret,
+      redirect_uris ? redirect_uris[0] : 'urn:ietf:wg:oauth:2.0:oob'
+    );
+
     const { tokens } = await oauth2Client.getToken(code);
 
-    // Save the token
-    const dir = path.dirname(OAUTH_TOKEN_PATH);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    fs.writeFileSync(OAUTH_TOKEN_PATH, JSON.stringify(tokens, null, 2));
+    // Save the token using helper (handles env var vs file)
+    saveOAuthToken(tokens);
 
-    console.log(`${LOG_TAG} Token saved to ${OAUTH_TOKEN_PATH}`);
-    return { success: true, message: 'Token saved successfully' };
+    return { success: true, message: 'Token saved successfully', token: tokens };
   } catch (err) {
     return { error: err.message };
   }
