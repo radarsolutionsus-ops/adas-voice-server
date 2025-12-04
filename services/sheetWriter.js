@@ -55,6 +55,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+import { getESTTimestamp, getESTISOTimestamp } from '../utils/timezone.js';
 
 // Ensure environment variables are loaded
 dotenv.config();
@@ -425,7 +426,7 @@ export async function upsertScheduleRowByRO(roPo, dataObject) {
   // GAS accepts both 'roPo' and 'ro_number' - use 'roPo' for consistency
   const normalizedData = {
     roPo: roPo,
-    date_logged: dataObject.timestampCreated || new Date().toISOString(),
+    date_logged: dataObject.timestampCreated || getESTTimestamp(),
     // Column B: Shop Name
     shop_name: dataObject.shopName || dataObject.shop || '',
     // Column D: VIN
@@ -974,7 +975,7 @@ export async function logROFromOps(data) {
     vehicleModel: extractModelFromVehicleInfo(data.vehicle_info),
     status: data.status_from_shop === 'ready' ? 'Ready' : 'Not Ready',
     notes: data.shop_notes,
-    timestampCreated: data.date_logged || new Date().toISOString()
+    timestampCreated: data.date_logged || getESTTimestamp()
   };
 
   return upsertScheduleRowByRO(data.ro_number, mappedData);

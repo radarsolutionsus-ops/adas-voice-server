@@ -28,17 +28,18 @@ import { formatScrubResultsAsNotes, getScrubSummary, formatPreviewNotes, formatF
 import jobState from '../data/jobState.js';
 import shopNotifier from './shopNotifier.js';
 import emailResponder from './emailResponder.js';
+import { getESTTimestamp, getESTISOTimestamp, formatToEST } from '../utils/timezone.js';
 
 const LOG_TAG = '[EMAIL_PIPELINE]';
 
 /**
- * Format timestamp to MM/DD/YY h:mm AM/PM
- * Example: "12/03/25 10:54 PM"
+ * Format timestamp to MM/DD/YY h:mm AM/PM in EST
+ * Example: "12/03/25 10:54 PM EST"
  * @param {string|Date} timestamp - ISO string or Date object
- * @returns {string} - Formatted timestamp
+ * @returns {string} - Formatted timestamp in EST
  */
 function formatTimestamp(timestamp) {
-  if (!timestamp) return '';
+  if (!timestamp) return getESTTimestamp();
 
   let date;
   if (typeof timestamp === 'string') {
@@ -53,18 +54,16 @@ function formatTimestamp(timestamp) {
     return String(timestamp);
   }
 
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const year = String(date.getFullYear()).slice(-2);  // 2-digit year
-
-  // Convert to 12-hour format with AM/PM
-  let hours = date.getHours();
-  const ampm = hours >= 12 ? 'PM' : 'AM';
-  hours = hours % 12;
-  hours = hours ? hours : 12;  // Convert 0 to 12
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-
-  return `${month}/${day}/${year} ${hours}:${minutes} ${ampm}`;
+  // Format in EST timezone
+  return date.toLocaleString('en-US', {
+    timeZone: 'America/New_York',
+    month: '2-digit',
+    day: '2-digit',
+    year: '2-digit',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  });
 }
 
 const __filename = fileURLToPath(import.meta.url);
@@ -175,7 +174,7 @@ function saveProcessedIds() {
     }
     fs.writeFileSync(PROCESSED_IDS_PATH, JSON.stringify({
       messageIds: Array.from(processedMessageIds),
-      lastUpdated: new Date().toISOString()
+      lastUpdated: getESTISOTimestamp()
     }, null, 2));
   } catch (err) {
     console.error(`${LOG_TAG} Failed to save processed IDs:`, err.message);

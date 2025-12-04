@@ -25,6 +25,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import sheetWriter from './sheetWriter.js';
+import { getESTTimestamp, getESTISOTimestamp } from '../utils/timezone.js';
 
 const LOG_TAG = '[EMAIL_RESPONDER]';
 
@@ -43,30 +44,61 @@ const OAUTH_TOKEN_PATH = process.env.GMAIL_OAUTH_TOKEN_PATH ||
 let gmailClient = null;
 
 /**
+ * Get OAuth credentials from env var (Railway) or file (local dev)
+ * @returns {object} - Parsed credentials object
+ */
+function getOAuthCredentials() {
+  // Try env var first (Railway deployment)
+  if (process.env.GMAIL_OAUTH_CREDENTIALS_JSON) {
+    console.log(`${LOG_TAG} Loading OAuth credentials from environment variable`);
+    return JSON.parse(process.env.GMAIL_OAUTH_CREDENTIALS_JSON);
+  }
+  // Fall back to file (local development)
+  if (fs.existsSync(OAUTH_CREDENTIALS_PATH)) {
+    console.log(`${LOG_TAG} Loading OAuth credentials from file: ${OAUTH_CREDENTIALS_PATH}`);
+    return JSON.parse(fs.readFileSync(OAUTH_CREDENTIALS_PATH, 'utf8'));
+  }
+  throw new Error(`No Gmail OAuth credentials found. Set GMAIL_OAUTH_CREDENTIALS_JSON env var or provide file at ${OAUTH_CREDENTIALS_PATH}`);
+}
+
+/**
+ * Get OAuth token from env var (Railway) or file (local dev)
+ * @returns {object} - Parsed token object
+ */
+function getOAuthToken() {
+  // Try env var first (Railway deployment)
+  if (process.env.GMAIL_OAUTH_TOKEN_JSON) {
+    console.log(`${LOG_TAG} Loading OAuth token from environment variable`);
+    return JSON.parse(process.env.GMAIL_OAUTH_TOKEN_JSON);
+  }
+  // Fall back to file (local development)
+  if (fs.existsSync(OAUTH_TOKEN_PATH)) {
+    console.log(`${LOG_TAG} Loading OAuth token from file: ${OAUTH_TOKEN_PATH}`);
+    return JSON.parse(fs.readFileSync(OAUTH_TOKEN_PATH, 'utf8'));
+  }
+  throw new Error(`No Gmail OAuth token found. Set GMAIL_OAUTH_TOKEN_JSON env var or provide file at ${OAUTH_TOKEN_PATH}. Run: node scripts/gmail-auth.js`);
+}
+
+/**
  * Initialize Gmail client for sending emails
+ * Supports both environment variables (Railway) and file-based credentials (local dev)
  */
 async function initializeGmailClient() {
   if (gmailClient) return gmailClient;
 
   try {
-    if (!fs.existsSync(OAUTH_CREDENTIALS_PATH)) {
-      throw new Error(`OAuth credentials not found at ${OAUTH_CREDENTIALS_PATH}`);
-    }
-
-    if (!fs.existsSync(OAUTH_TOKEN_PATH)) {
-      throw new Error(`OAuth token not found at ${OAUTH_TOKEN_PATH}. Run: node scripts/gmail-auth.js`);
-    }
-
-    const credentials = JSON.parse(fs.readFileSync(OAUTH_CREDENTIALS_PATH, 'utf8'));
-    const { client_id, client_secret } = credentials.installed || credentials.web;
+    // Load OAuth credentials (from env var or file)
+    const credentials = getOAuthCredentials();
+    const { client_id, client_secret, redirect_uris } = credentials.installed || credentials.web;
 
     const oauth2Client = new google.auth.OAuth2(
       client_id,
       client_secret,
-      'urn:ietf:wg:oauth:2.0:oob'
+      redirect_uris ? redirect_uris[0] : 'urn:ietf:wg:oauth:2.0:oob'
     );
 
-    const token = JSON.parse(fs.readFileSync(OAUTH_TOKEN_PATH, 'utf8'));
+    // Load existing token (from env var or file)
+    const token = getOAuthToken();
     oauth2Client.setCredentials(token);
 
     // Check if token needs refresh
@@ -74,7 +106,10 @@ async function initializeGmailClient() {
       console.log(`${LOG_TAG} Token expired, refreshing...`);
       const { credentials: newCredentials } = await oauth2Client.refreshAccessToken();
       oauth2Client.setCredentials(newCredentials);
-      fs.writeFileSync(OAUTH_TOKEN_PATH, JSON.stringify(newCredentials, null, 2));
+      // Only save to file if not using env var
+      if (!process.env.GMAIL_OAUTH_TOKEN_JSON) {
+        fs.writeFileSync(OAUTH_TOKEN_PATH, JSON.stringify(newCredentials, null, 2));
+      }
     }
 
     gmailClient = google.gmail({ version: 'v1', auth: oauth2Client });
@@ -1211,7 +1246,7 @@ async function handleVerifiedScrub(scrubResult, roPo, revvPdfBuffer, sw) {
   // Update sheet with success
   if (result.success && sw) {
     try {
-      const timestamp = new Date().toLocaleString('en-US', { timeZone: 'America/New_York' });
+      const timestamp = getESTTimestamp();
       await sw.updateScheduleRow(roPo, {
         status: 'Ready',
         notes: `✅ Confirmation sent to ${shopInfo.email} on ${timestamp}`
@@ -1285,7 +1320,7 @@ async function handleUnverifiedScrub(scrubResult, originalEmail, roPo, sw) {
   // Update sheet with review pending status
   if (result.success && sw) {
     try {
-      const timestamp = new Date().toLocaleString('en-US', { timeZone: 'America/New_York' });
+      const timestamp = getESTTimestamp();
       await sw.updateScheduleRow(roPo, {
         status: 'Needs Attention',
         notes: `⚠️ Review request sent to ${techEmail} on ${timestamp} - awaiting corrected RevvADAS`

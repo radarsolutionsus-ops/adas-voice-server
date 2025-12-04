@@ -15,6 +15,9 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
+// Import timezone utilities
+import { getESTTimestamp, getESTISOTimestamp } from "./utils/timezone.js";
+
 // Import services
 import sheetWriter from "./services/sheetWriter.js";
 import dispatcher from "./services/dispatcher.js";
@@ -367,7 +370,7 @@ async function handleOpsToolCall(toolName, args) {
           await sheetWriter.updateScheduleRow(args.roPo, {
             technician: result.technician,
             status: "Ready",
-            assignmentTime: new Date().toISOString()
+            assignmentTime: getESTISOTimestamp()
           });
           return {
             success: true,
@@ -405,7 +408,7 @@ async function handleOpsToolCall(toolName, args) {
         const isNeedsAttentionOverride = args.override && currentStatus === "Needs Attention";
         let overrideNote = "";
         if (isNeedsAttentionOverride) {
-          const timestamp = new Date().toLocaleString("en-US", { timeZone: "America/New_York" });
+          const timestamp = getESTTimestamp();
           overrideNote = `Scheduled under Needs Attention override by OPS on ${timestamp}`;
           console.log(`[OPS_TOOL] Scheduling with override for RO ${args.roPo}: ${overrideNote}`);
         }
@@ -582,7 +585,7 @@ async function handleTechToolCall(toolName, args) {
         const result = await sheetWriter.updateScheduleRow(args.roPo, {
           status: "Completed",
           notes: args.notes,
-          completionTime: new Date().toISOString()
+          completionTime: getESTISOTimestamp()
         });
         return result.success
           ? { success: true, message: `RO ${args.roPo} marked as completed` }
@@ -639,7 +642,7 @@ async function handleTechToolCall(toolName, args) {
         console.log(`[TECH_TOOL] Tech requesting status change for RO ${args.roPo}: ${args.status}`);
 
         // Build override note
-        const timestamp = new Date().toLocaleString("en-US", { timeZone: "America/New_York" });
+        const timestamp = getESTTimestamp();
         let note = `Status manually set to "${args.status}" by tech on ${timestamp}`;
         if (args.reason) {
           note += `. Reason: ${args.reason}`;
@@ -2575,7 +2578,7 @@ async function logOpsData(data, callerName = null, sessionLanguage = "en") {
     token: GAS_TOKEN,
     action: "log_ro",
     data: {
-      date_logged: new Date().toLocaleString("en-US", { timeZone: "America/New_York" }),
+      date_logged: getESTTimestamp(),
       ro_number: data.ro_number,
       shop: normalizedShop,
       vehicle_info: data.vehicle_info,
@@ -2739,7 +2742,7 @@ async function updateTechData(data, existingTechNotes = "") {
       calibration_performed: data.calibration_performed || "",
       status_from_tech: data.status_from_tech || "",
       completion: data.status_from_tech === "Completed"
-        ? new Date().toLocaleString("en-US", { timeZone: "America/New_York" })
+        ? getESTTimestamp()
         : "",
       tech_notes: finalTechNotes || "none"
     }
@@ -2807,7 +2810,7 @@ app.post("/transfer-randy", (req, res) => {
 });
 
 app.get("/health", (req, res) => {
-  res.json({ status: "healthy", timestamp: new Date().toISOString() });
+  res.json({ status: "healthy", timestamp: getESTISOTimestamp() });
 });
 
 // ============================================================
@@ -3284,7 +3287,7 @@ wss.on("connection", (twilioWs, req) => {
             conversationTranscript.push({
               role: "assistant",
               content: event.transcript,
-              timestamp: new Date().toISOString()
+              timestamp: getESTISOTimestamp()
             });
             console.log("🤖 Assistant:", event.transcript);
 
@@ -3467,7 +3470,7 @@ wss.on("connection", (twilioWs, req) => {
             conversationTranscript.push({
               role: "user",
               content: event.transcript,
-              timestamp: new Date().toISOString()
+              timestamp: getESTISOTimestamp()
             });
             console.log("👤 User:", event.transcript);
 

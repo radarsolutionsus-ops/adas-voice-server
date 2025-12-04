@@ -34,6 +34,7 @@
 import * as sheetWriter from './sheetWriter.js';
 import oem from '../utils/oem/index.js';
 import * as oemKnowledge from '../utils/oemKnowledge.js';
+import { getESTTimestamp, getESTISOTimestamp } from '../utils/timezone.js';
 
 // Import LLM-powered scrub (GPT-4o Vision) and new Hybrid Scrub
 import {
@@ -1883,7 +1884,7 @@ export async function scrubEstimate(pdfText, roPo, options = {}) {
       oemRequirements,
       oemJobAids,
       formattedNotes,
-      scrubTimestamp: new Date().toISOString()
+      scrubTimestamp: getESTISOTimestamp()
     };
 
     console.log(`${LOG_TAG} Scrub complete. Needs attention: ${needsAttention}`);
@@ -2229,9 +2230,14 @@ export function formatFullScrub(scrubResult, actualRevvCount = null, rawRevvText
 
   // Full Assistant Scrub section
   lines.push('--- ASSISTANT SCRUB ANALYSIS ---');
-  lines.push(`Vehicle: ${scrubResult.vehicleBrand || 'Unknown'}`);
+  // Use full vehicle info if available, otherwise fall back to brand
+  const vehicleDisplay = scrubResult.vehicle ||
+    (scrubResult.year && scrubResult.make && scrubResult.model
+      ? `${scrubResult.year} ${scrubResult.make} ${scrubResult.model}`
+      : scrubResult.vehicleBrand || 'Unknown');
+  lines.push(`Vehicle: ${vehicleDisplay}`);
   lines.push(`VIN: ${scrubResult.vin || 'Not provided'}`);
-  lines.push(`Scrubbed: ${scrubResult.scrubTimestamp || new Date().toISOString()}`);
+  lines.push(`Scrubbed: ${scrubResult.scrubTimestamp || getESTISOTimestamp()}`);
   lines.push('');
 
   lines.push(`Operations Detected (${operations.length}):`);
@@ -2440,7 +2446,7 @@ export async function scrubEstimateNew(pdfText, roPo, options = {}) {
       oemRequirements: null,
       oemJobAids: [],
       formattedNotes: `Error: ${err.message}`,
-      scrubTimestamp: new Date().toISOString()
+      scrubTimestamp: getESTISOTimestamp()
     };
   }
 }

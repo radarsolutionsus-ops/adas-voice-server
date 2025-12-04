@@ -17,6 +17,7 @@ import OpenAI from 'openai';
 import fs from 'fs';
 import path from 'path';
 import { getOEMRules } from '../utils/oem/index.js';
+import { getESTTimestamp, getESTISOTimestamp } from '../utils/timezone.js';
 
 const LOG_TAG = '[HYBRID_SCRUB]';
 
@@ -456,7 +457,7 @@ function reconcileAllSources(kbRules, revvCalibrations, llmResult, vehicleInfo) 
   if (needsReview > 0) result.summary += `${needsReview} need review. `;
   if (excluded > 0) result.summary += `${excluded} excluded (non-ADAS).`;
 
-  result.scrubTimestamp = new Date().toISOString();
+  result.scrubTimestamp = getESTISOTimestamp();
 
   return result;
 }
@@ -614,7 +615,7 @@ export function formatFullScrubText(result) {
   output += `Vehicle: ${result.vehicle?.year || ''} ${result.vehicle?.make || ''} ${result.vehicle?.model || ''}\n`;
   output += `VIN: ${result.vehicle?.vin || 'Not provided'}\n`;
   output += `Status: ${result.status}\n`;
-  output += `Scrubbed: ${result.scrubTimestamp || new Date().toISOString()}\n\n`;
+  output += `Scrubbed: ${result.scrubTimestamp || getESTISOTimestamp()}\n\n`;
 
   output += `─── SOURCES ───\n`;
   output += `Knowledge Base: ${result.sources?.knowledgeBase || 'N/A'}\n`;
