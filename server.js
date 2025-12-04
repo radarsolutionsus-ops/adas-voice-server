@@ -46,6 +46,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Health check - MUST be first, responds immediately for Railway
 app.get("/health", (req, res) => {
+  console.log("[HEALTH] Check received");
   res.status(200).send("OK");
 });
 
