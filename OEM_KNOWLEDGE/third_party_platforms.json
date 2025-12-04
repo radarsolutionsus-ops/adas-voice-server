@@ -1,0 +1,462 @@
+{
+  "metadata": {
+    "dataset_name": "Third-Party Repair Information Platforms",
+    "version": "1.0",
+    "created_date": "2025-12-02",
+    "total_records": 14,
+    "description": "Comprehensive comparison of third-party automotive repair information and ADAS calibration platforms",
+    "tags": ["third_party", "repair_info", "adas", "platforms", "subscriptions"]
+  },
+  "platforms": [
+    {
+      "id": "TP-001",
+      "name": "ALLDATA",
+      "code": "ALLD",
+      "category": "Repair Information",
+      "coverage": {
+        "vehicles": "95% of vehicles",
+        "years": "1980s-present",
+        "regions": "North America primary"
+      },
+      "adas_quality": "Excellent",
+      "adas_features": ["Collision procedures", "ADAS calibration", "OEM-licensed data"],
+      "strengths": [
+        "Industry standard",
+        "OEM-licensed data",
+        "Comprehensive coverage",
+        "Daily automatic updates",
+        "TSBs and recalls"
+      ],
+      "weaknesses": [
+        "Subscription cost",
+        "Some lag vs direct OEM portals"
+      ],
+      "pricing": {
+        "monthly": "$189-229",
+        "annual": "Contact",
+        "currency": "USD"
+      },
+      "subscription_options": ["Monthly", "Annual"],
+      "export_options": "Limited export - primarily viewing",
+      "gaps_vs_oem": "Minor lag in newest procedures vs direct OEM",
+      "best_for": "Industry standard OEM data for general repair shops",
+      "url": "https://www.alldata.com",
+      "update_frequency": "Daily automatic",
+      "tags": ["industry_standard", "oem_licensed", "comprehensive", "collision"]
+    },
+    {
+      "id": "TP-002",
+      "name": "Mitchell1 ProDemand",
+      "code": "M1PD",
+      "category": "Repair Information",
+      "coverage": {
+        "vehicles": "All makes",
+        "years": "1960-2025",
+        "regions": "North America"
+      },
+      "adas_quality": "Excellent",
+      "adas_features": ["SureTrack real fixes", "Community solutions", "OEM procedures"],
+      "strengths": [
+        "Real-world repair insights",
+        "SureTrack fix database",
+        "Continuous updates",
+        "Technician community fixes",
+        "1Shop integration"
+      ],
+      "weaknesses": [
+        "Learning curve",
+        "Cost"
+      ],
+      "pricing": {
+        "monthly": "~$199",
+        "currency": "USD"
+      },
+      "subscription_options": ["Monthly", "Annual"],
+      "export_options": "PDF print",
+      "gaps_vs_oem": "Some specialty vehicles",
+      "best_for": "Real-world repair insights and diagnostic direction",
+      "url": "https://mitchell1.com",
+      "update_frequency": "Continuous daily",
+      "tags": ["real_world_fixes", "suretrack", "community", "diagnostic"]
+    },
+    {
+      "id": "TP-003",
+      "name": "Identifix Direct-Hit",
+      "code": "IDTX",
+      "category": "Repair Information",
+      "coverage": {
+        "vehicles": "All makes",
+        "years": "50+ years",
+        "regions": "North America"
+      },
+      "adas_quality": "Good",
+      "adas_features": ["OEM manuals", "Developing ADAS coverage"],
+      "strengths": [
+        "50+ years of fix database",
+        "OEM manual access",
+        "Diagnostic direction",
+        "Technician community"
+      ],
+      "weaknesses": [
+        "Interface dated",
+        "ADAS coverage still developing"
+      ],
+      "pricing": {
+        "monthly": "$209-229",
+        "currency": "USD"
+      },
+      "subscription_options": ["Monthly", "Annual"],
+      "export_options": "Limited",
+      "gaps_vs_oem": "ADAS procedures developing",
+      "best_for": "Diagnostic troubleshooting and proven fixes",
+      "url": "https://identifix.com",
+      "update_frequency": "Regular",
+      "tags": ["diagnostics", "fix_database", "troubleshooting"]
+    },
+    {
+      "id": "TP-004",
+      "name": "CCC ONE",
+      "code": "CCC1",
+      "category": "Collision Estimating",
+      "coverage": {
+        "vehicles": "All makes - collision focus",
+        "years": "Current",
+        "regions": "North America"
+      },
+      "adas_quality": "Via integrations",
+      "adas_features": ["Partner integrations", "Calibration tracking"],
+      "strengths": [
+        "80% collision market share",
+        "Industry estimating standard",
+        "Insurance integration",
+        "Workflow management"
+      ],
+      "weaknesses": [
+        "Collision-only focus",
+        "Integration required for ADAS"
+      ],
+      "pricing": {
+        "starting": "$399/month",
+        "currency": "USD"
+      },
+      "subscription_options": ["Monthly", "Annual", "Enterprise"],
+      "export_options": "Via partners",
+      "gaps_vs_oem": "Not repair procedures - estimating only",
+      "best_for": "Collision estimating and shop management",
+      "url": "https://cccis.com",
+      "update_frequency": "Continuous",
+      "tags": ["collision", "estimating", "insurance", "workflow"]
+    },
+    {
+      "id": "TP-005",
+      "name": "RepairLogic",
+      "code": "RPLG",
+      "category": "OEM Collision Procedures",
+      "coverage": {
+        "vehicles": "Top 9 North American OEMs",
+        "years": "Current",
+        "regions": "North America"
+      },
+      "adas_quality": "Excellent - OEM-direct",
+      "adas_features": ["OEM-direct procedures", "Highest accuracy", "Real-time updates"],
+      "strengths": [
+        "OEM-direct data source",
+        "Best accuracy available",
+        "Collision procedure focus",
+        "First for new procedures"
+      ],
+      "weaknesses": [
+        "Limited brand coverage (9 OEMs)",
+        "Cost"
+      ],
+      "pricing": {
+        "model": "Contact OEC",
+        "per_shop": true,
+        "currency": "USD"
+      },
+      "subscription_options": ["Per shop"],
+      "export_options": "Limited",
+      "gaps_vs_oem": "Only covers top 9 OEMs",
+      "best_for": "OEM collision repair procedures with highest accuracy",
+      "url": "https://oec.com/repairlogic",
+      "update_frequency": "Real-time from OEM",
+      "tags": ["oem_direct", "collision", "highest_accuracy", "procedures"]
+    },
+    {
+      "id": "TP-006",
+      "name": "I-CAR RTS",
+      "code": "ICAR",
+      "category": "ADAS Calibration Requirements",
+      "coverage": {
+        "vehicles": "All major OEMs",
+        "years": "Current",
+        "regions": "North America"
+      },
+      "adas_quality": "Industry-first calibration database",
+      "adas_features": ["First ADAS calibration database", "OEM-verified requirements", "Position statements"],
+      "strengths": [
+        "First comprehensive ADAS calibration database",
+        "OEM-verified requirements",
+        "Position statements collected",
+        "Training integration"
+      ],
+      "weaknesses": [
+        "Requires membership",
+        "Not full repair procedures"
+      ],
+      "pricing": {
+        "model": "Membership-based subscription",
+        "currency": "USD"
+      },
+      "subscription_options": ["Membership-based"],
+      "export_options": "Reference only",
+      "gaps_vs_oem": "Not full repair procedures - calibration requirements only",
+      "best_for": "ADAS calibration requirements and OEM position statements",
+      "url": "https://rts.i-car.com",
+      "update_frequency": "As OEMs publish",
+      "tags": ["adas", "calibration", "position_statements", "training"]
+    },
+    {
+      "id": "TP-007",
+      "name": "OEM1Stop",
+      "code": "OEM1",
+      "category": "Portal Hub",
+      "coverage": {
+        "vehicles": "40+ manufacturers",
+        "years": "All",
+        "regions": "Global"
+      },
+      "adas_quality": "Links to OEM sites",
+      "adas_features": ["Central hub", "NASTF integration"],
+      "strengths": [
+        "FREE access",
+        "Central hub for all OEM links",
+        "NASTF integration",
+        "Quick navigation"
+      ],
+      "weaknesses": [
+        "Links only - no actual content",
+        "Still need OEM subscriptions"
+      ],
+      "pricing": {
+        "cost": "FREE",
+        "currency": "USD"
+      },
+      "subscription_options": ["Free"],
+      "export_options": "N/A",
+      "gaps_vs_oem": "No actual content - links only",
+      "best_for": "Central hub for accessing OEM service portals",
+      "url": "https://oem1stop.com",
+      "update_frequency": "As links change",
+      "tags": ["free", "hub", "links", "nastf"]
+    },
+    {
+      "id": "TP-008",
+      "name": "Bosch ESI[tronic]",
+      "code": "BESI",
+      "category": "Repair Information",
+      "coverage": {
+        "vehicles": "150+ brands, 90K vehicles",
+        "years": "Comprehensive",
+        "regions": "European primary"
+      },
+      "adas_quality": "Good - European strength",
+      "adas_features": ["European ADAS coverage", "DAS 3000 integration"],
+      "strengths": [
+        "European market coverage",
+        "Commercial vehicle data",
+        "Modular pricing",
+        "150+ brands"
+      ],
+      "weaknesses": [
+        "European focus",
+        "Setup complexity"
+      ],
+      "pricing": {
+        "model": "Modular pricing",
+        "currency": "EUR/USD"
+      },
+      "subscription_options": ["Modular subscriptions"],
+      "export_options": "Limited",
+      "gaps_vs_oem": "North American ADAS coverage",
+      "best_for": "European and commercial vehicle specialists",
+      "url": "https://www.boschaftermarket.com",
+      "update_frequency": "Regular",
+      "tags": ["european", "commercial", "modular", "bosch"]
+    },
+    {
+      "id": "TP-009",
+      "name": "HaynesPro",
+      "code": "HPRO",
+      "category": "Repair Information",
+      "coverage": {
+        "vehicles": "80+ makes",
+        "years": "99% EU coverage",
+        "regions": "European primary"
+      },
+      "adas_quality": "Strong ADAS",
+      "adas_features": ["Strong ADAS coverage", "European procedures"],
+      "strengths": [
+        "99% European coverage",
+        "Strong ADAS documentation",
+        "Technical data",
+        "Wiring diagrams"
+      ],
+      "weaknesses": [
+        "Limited North American coverage"
+      ],
+      "pricing": {
+        "starting": "$39.99/month",
+        "currency": "USD"
+      },
+      "subscription_options": ["Monthly", "Annual"],
+      "export_options": "PDF export",
+      "gaps_vs_oem": "North American vehicles",
+      "best_for": "European market shops",
+      "url": "https://www.haynespro.com",
+      "update_frequency": "Regular",
+      "tags": ["european", "wiring", "technical_data"]
+    },
+    {
+      "id": "TP-010",
+      "name": "Autodata",
+      "code": "ADAT",
+      "category": "Service Data",
+      "coverage": {
+        "vehicles": "43K+ models",
+        "years": "Comprehensive",
+        "regions": "Global"
+      },
+      "adas_quality": "Moderate",
+      "adas_features": ["Basic ADAS info"],
+      "strengths": [
+        "Quick service data lookup",
+        "Timing belt specs",
+        "Service schedules",
+        "Fast interface"
+      ],
+      "weaknesses": [
+        "Limited ADAS coverage",
+        "Basic repair info"
+      ],
+      "pricing": {
+        "monthly": "$89-140",
+        "currency": "USD"
+      },
+      "subscription_options": ["Monthly", "Annual"],
+      "export_options": "Limited",
+      "gaps_vs_oem": "Deep diagnostics and ADAS",
+      "best_for": "Quick service data and maintenance schedules",
+      "url": "https://autodata-group.com",
+      "update_frequency": "Regular",
+      "tags": ["quick_service", "maintenance", "timing_belts"]
+    }
+  ],
+  "adas_equipment_platforms": [
+    {
+      "id": "EQ-001",
+      "name": "Autel ADAS",
+      "code": "AUTL",
+      "category": "ADAS Calibration Equipment",
+      "entry_cost": "$10K-15K",
+      "full_system_cost": "$30K-50K",
+      "coverage": "95%+ vehicles",
+      "oem_approvals": ["Rivian (IA900)", "Stellantis (factory-approved)"],
+      "strengths": ["Best mobile frame", "95% coverage", "Integrated data"],
+      "equipment_models": ["IA900", "IA800", "MaxiSYS ADAS"],
+      "url": "https://autel.com",
+      "tags": ["mobile_frame", "wide_coverage", "rivian_approved"]
+    },
+    {
+      "id": "EQ-002",
+      "name": "Hunter ADAS",
+      "code": "HUNT",
+      "category": "ADAS Calibration Equipment",
+      "entry_cost": "Premium",
+      "full_system_cost": "$50K+",
+      "coverage": "Honda, Acura, Nissan, Infiniti, Subaru, Kia, Toyota, Lexus",
+      "oem_approvals": ["Honda", "Acura", "Nissan", "Infiniti", "Subaru", "Kia", "Toyota", "Lexus"],
+      "strengths": ["100K+ units deployed", "Alignment integration", "OEM approvals"],
+      "url": "https://hunter.com",
+      "tags": ["alignment_integration", "oem_approved", "professional"]
+    },
+    {
+      "id": "EQ-003",
+      "name": "Bosch DAS 3000",
+      "code": "BDAS",
+      "category": "ADAS Calibration Equipment",
+      "entry_cost": "$20K-25K",
+      "full_system_cost": "$35K-45K",
+      "coverage": "Broad European and NA coverage",
+      "oem_approvals": ["OEM co-developer"],
+      "strengths": ["European strength", "Future-proof", "OEM relationships"],
+      "url": "https://www.boschaftermarket.com",
+      "tags": ["european", "oem_codeveloper", "future_proof"]
+    },
+    {
+      "id": "EQ-004",
+      "name": "Snap-on/John Bean ADAS",
+      "code": "SNAP",
+      "category": "ADAS Calibration Equipment",
+      "entry_cost": "Premium",
+      "full_system_cost": "$40K+",
+      "coverage": "Professional coverage",
+      "oem_approvals": ["OEM-approved software"],
+      "strengths": ["Professional standard", "Snap-on integration", "Quality"],
+      "url": "https://snapon.com",
+      "tags": ["professional", "snap_on", "quality"]
+    },
+    {
+      "id": "EQ-005",
+      "name": "Hella Gutmann ADAS",
+      "code": "HGUT",
+      "category": "ADAS Calibration Equipment",
+      "entry_cost": "£6,450+",
+      "full_system_cost": "£15K+",
+      "coverage": "European and global",
+      "oem_approvals": ["Thatcham compliant"],
+      "strengths": ["Award-winning", "10+ years experience", "Thatcham certified"],
+      "url": "https://www.hella-gutmann.com",
+      "tags": ["thatcham", "award_winning", "european"]
+    },
+    {
+      "id": "EQ-006",
+      "name": "TEXA ADAS",
+      "code": "TEXA",
+      "category": "ADAS Calibration Equipment",
+      "entry_cost": "$15K-20K",
+      "full_system_cost": "$30K-40K",
+      "coverage": "30% higher coverage claimed",
+      "oem_approvals": ["European OEMs"],
+      "strengths": ["Italian engineering", "Comprehensive database", "European focus"],
+      "url": "https://texa.com",
+      "tags": ["italian", "european_focus", "comprehensive"]
+    },
+    {
+      "id": "EQ-007",
+      "name": "Launch ADAS",
+      "code": "LNCH",
+      "category": "ADAS Calibration Equipment",
+      "entry_cost": "$8K-12K",
+      "full_system_cost": "$20K-30K",
+      "coverage": "Wide coverage",
+      "oem_approvals": [],
+      "strengths": ["Budget-professional option", "Good value"],
+      "url": "https://launch.com",
+      "tags": ["budget", "value", "professional"]
+    },
+    {
+      "id": "EQ-008",
+      "name": "Thinkcar ADAS",
+      "code": "THNK",
+      "category": "ADAS Calibration Equipment",
+      "entry_cost": "$5K-8K",
+      "full_system_cost": "$15K-20K",
+      "coverage": "Growing coverage",
+      "oem_approvals": [],
+      "strengths": ["Value leader", "Entry-level professional"],
+      "url": "https://thinkcar.com",
+      "tags": ["value_leader", "entry_level"]
+    }
+  ]
+}

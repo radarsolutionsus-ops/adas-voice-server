@@ -1,0 +1,269 @@
+{
+  "metadata": {
+    "name": "ADAS Calibration Prerequisites",
+    "description": "Pre-calibration requirements by brand",
+    "generated": "2025-12-03T02:14:34.033Z",
+    "version": "1.0"
+  },
+  "brands": {
+    "Toyota": {
+      "alignment": "Wheel alignment verified",
+      "rideHeight": null,
+      "battery": null,
+      "floor": null,
+      "criticalNotes": [
+        "VCH must be cleared post-calibration"
+      ],
+      "requiredTools": [
+        "Techstream",
+        "Printed targets",
+        "Alignment rack",
+        "Trihedral reflector"
+      ]
+    },
+    "Honda": {
+      "alignment": "4-wheel alignment verified",
+      "rideHeight": null,
+      "battery": "Battery support recommended",
+      "floor": null,
+      "criticalNotes": [
+        "OEM windshield STRONGLY recommended - aftermarket causes failures",
+        "Must be level for calibration",
+        "Laser alignment critical",
+        "No diagnostic tool required"
+      ],
+      "requiredTools": [
+        "i-HDS",
+        "OEM targets",
+        "Battery support",
+        "Bubble level tool",
+        "Laser tool",
+        "Rear targets",
+        "Target board only - no i-HDS"
+      ]
+    },
+    "Nissan": {
+      "alignment": "After alignment/steering work",
+      "rideHeight": "N/A",
+      "battery": null,
+      "floor": null,
+      "criticalNotes": [
+        "Thrust angle must be exactly zero - critical requirement",
+        "Significant safety risk if not calibrated per position statement",
+        "All 4 cameras must calibrate together",
+        "Reset mandatory after any alignment"
+      ],
+      "requiredTools": [
+        "CONSULT-III Plus",
+        "Targets",
+        "Bubble level",
+        "Suction cup",
+        "AVM targets"
+      ]
+    },
+    "Subaru": {
+      "alignment": "Calibrate after SAS",
+      "rideHeight": "N/A",
+      "battery": null,
+      "floor": null,
+      "criticalNotes": [
+        "Level floor ±4mm tolerance CRITICAL; 13ft marked box required",
+        "Must calibrate IN ORDER: alignment > SAS > lateral G > camera",
+        "Part of pre-calibration sequence"
+      ],
+      "requiredTools": [
+        "SSM4/SSM5",
+        "EyeSight targets",
+        "Plumb bob",
+        "Level floor box"
+      ]
+    },
+    "Mazda": {
+      "alignment": "Standard alignment",
+      "rideHeight": null,
+      "battery": null,
+      "floor": null,
+      "criticalNotes": [
+        "Special Doppler simulator tool required"
+      ],
+      "requiredTools": [
+        "IDS",
+        "P/N 49 G067 0A0 Doppler simulator"
+      ]
+    },
+    "Volkswagen": {
+      "alignment": "Wheel alignment verified",
+      "rideHeight": "Air suspension: control position cal first",
+      "battery": "Correct tire inflation",
+      "floor": null,
+      "criticalNotes": [
+        "Silicon pad required when camera removed; OEM windshield required",
+        "Labor time 1.8-2.2 hours typical"
+      ],
+      "requiredTools": [
+        "ODIS",
+        "VAS 6430",
+        "VAS equipment"
+      ]
+    },
+    "Audi": {
+      "alignment": "Wheel alignment verified",
+      "rideHeight": "Air suspension cal first",
+      "battery": "Full battery support",
+      "floor": null,
+      "criticalNotes": [
+        "2018+ A8 has LiDAR requiring specialized procedure",
+        "2018+ A8 only; specialized equipment required"
+      ],
+      "requiredTools": [
+        "ODIS",
+        "VAS 6430",
+        "LiDAR targets"
+      ]
+    },
+    "BMW": {
+      "alignment": "Standard alignment",
+      "rideHeight": null,
+      "battery": null,
+      "floor": null,
+      "criticalNotes": [
+        "BMW UNIQUE: uses dynamic calibration for cameras",
+        "Static calibration for radar only",
+        "Medium range camera",
+        "Three lenses; up to 250m range"
+      ],
+      "requiredTools": [
+        "ISTA",
+        "Radar targets"
+      ]
+    },
+    "Mercedes-Benz": {
+      "alignment": "Check ride height first",
+      "rideHeight": "Airmatic/ABC check required",
+      "battery": "Battery health critical",
+      "floor": null,
+      "criticalNotes": [
+        "Check suspension before any calibration",
+        "24-step procedure after battery disconnect (some models)"
+      ],
+      "requiredTools": [
+        "Xentry",
+        "MB fixture",
+        "Radar targets"
+      ]
+    },
+    "GM": {
+      "alignment": "Standard alignment",
+      "rideHeight": "N/A",
+      "battery": null,
+      "floor": null,
+      "criticalNotes": [
+        "Mostly self-calibrating; SPS programming after replacement",
+        "No specific calibration; SPS programming after replacement",
+        "Self-calibrating; SPS programming after replacement",
+        "Fully self-calibrating during normal driving",
+        "Learn procedure through GDS2"
+      ],
+      "requiredTools": [
+        "GDS2",
+        "SPS2",
+        "None required"
+      ]
+    },
+    "Ford": {
+      "alignment": "Standard alignment",
+      "rideHeight": "N/A",
+      "battery": null,
+      "floor": null,
+      "criticalNotes": [
+        "Full fuel tank recommended for proper vehicle level",
+        "Cost ~$365 typical",
+        "Cost ~$395 typical",
+        "Model dependent static vs dynamic",
+        "Azimuth/elevation check may be needed; cost ~$235"
+      ],
+      "requiredTools": [
+        "FDRS",
+        "Targets",
+        "Radar targets",
+        "360 targets",
+        "BSM targets",
+        "FDRS for azimuth check"
+      ]
+    },
+    "Stellantis": {
+      "alignment": "Standard alignment",
+      "rideHeight": null,
+      "battery": null,
+      "floor": null,
+      "criticalNotes": [
+        "Autel is factory-approved ADAS tool",
+        "SGW bypass required on 2020+ models"
+      ],
+      "requiredTools": [
+        "wiTECH 2.0 or Autel"
+      ]
+    },
+    "Hyundai": {
+      "alignment": "Rear axle reference point",
+      "rideHeight": null,
+      "battery": null,
+      "floor": null,
+      "criticalNotes": [
+        "Use rear axle as reference point",
+        "Variant coding required for new sensors"
+      ],
+      "requiredTools": [
+        "GDS SMART",
+        "ADAS targets",
+        "Radar targets"
+      ]
+    },
+    "Kia": {
+      "alignment": "Rear axle reference point",
+      "rideHeight": null,
+      "battery": null,
+      "floor": null,
+      "criticalNotes": [
+        "Same process as Hyundai",
+        "Variant coding required for new sensors"
+      ],
+      "requiredTools": [
+        "KDS 2.0",
+        "ADAS targets",
+        "Radar targets"
+      ]
+    },
+    "Volvo": {
+      "alignment": "Standard alignment",
+      "rideHeight": null,
+      "battery": null,
+      "floor": null,
+      "criticalNotes": [
+        "Camera adjustment requires spirit level tool",
+        "Special radar angle setting tools for 2007-2018"
+      ],
+      "requiredTools": [
+        "VIDA",
+        "CSC0708-01 tool",
+        "CSC0708-02 tool",
+        "No.6007 radar tool"
+      ]
+    },
+    "Tesla": {
+      "alignment": "Standard alignment",
+      "rideHeight": null,
+      "battery": null,
+      "floor": null,
+      "criticalNotes": [
+        "Owner can initiate via Controls > Service > Camera Calibration",
+        "Requires Toolbox 3 access"
+      ],
+      "requiredTools": [
+        "Toolbox 3.0",
+        "LDW target",
+        "Toolbox 3.0 Radar Calibration Dashboard"
+      ]
+    }
+  }
+}

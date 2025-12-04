@@ -1,0 +1,1190 @@
+/**
+ * emailListener.js - Gmail API listener for radarsolutionsus@gmail.com
+ *
+ * CONFIGURATION:
+ * - Gmail Account: radarsolutionsus@gmail.com
+ * - Source Label: "ADAS FIRST" (only emails with this label are processed)
+ * - Processed Label: "ADAS_FIRST_PROCESSED" (added after processing)
+ * - Authentication: OAuth2 credentials for radarsolutionsus@gmail.com
+ *
+ * Monitors the "ADAS FIRST" label for new emails with PDF attachments.
+ * Processes each email through the PDF → Drive → Sheets pipeline.
+ */
+
+import { google } from 'googleapis';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
+
+// Ensure environment variables are loaded before importing other modules
+dotenv.config();
+
+import driveUpload from './driveUpload.js';
+import pdfParser from './pdfParser.js';
+import sheetWriter from './sheetWriter.js';
+import billingMailer from './billingMailer.js';
+import { formatScrubResultsAsNotes, getScrubSummary, formatPreviewNotes, formatFullScrub } from './estimateScrubber.js';
+import jobState from '../data/jobState.js';
+import shopNotifier from './shopNotifier.js';
+import emailResponder from './emailResponder.js';
+
+const LOG_TAG = '[EMAIL_PIPELINE]';
+
+/**
+ * Format timestamp to MM/DD/YY h:mm AM/PM
+ * Example: "12/03/25 10:54 PM"
+ * @param {string|Date} timestamp - ISO string or Date object
+ * @returns {string} - Formatted timestamp
+ */
+function formatTimestamp(timestamp) {
+  if (!timestamp) return '';
+
+  let date;
+  if (typeof timestamp === 'string') {
+    date = new Date(timestamp);
+  } else if (timestamp instanceof Date) {
+    date = timestamp;
+  } else {
+    return String(timestamp);
+  }
+
+  if (isNaN(date.getTime())) {
+    return String(timestamp);
+  }
+
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const year = String(date.getFullYear()).slice(-2);  // 2-digit year
+
+  // Convert to 12-hour format with AM/PM
+  let hours = date.getHours();
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12;
+  hours = hours ? hours : 12;  // Convert 0 to 12
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+
+  return `${month}/${day}/${year} ${hours}:${minutes} ${ampm}`;
+}
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Gmail configuration - MUST use radarsolutionsus@gmail.com
+const GMAIL_USER = 'radarsolutionsus@gmail.com';
+const SOURCE_LABEL_NAME = 'ADAS FIRST';
+const PROCESSED_LABEL_NAME = 'ADAS_FIRST_PROCESSED';
+const POLL_INTERVAL_MS = parseInt(process.env.EMAIL_POLL_INTERVAL_MS) || 60000; // 1 minute default
+
+// Paths for OAuth and tracking (credentials now in /credentials/ folder)
+const OAUTH_CREDENTIALS_PATH = process.env.GMAIL_OAUTH_CREDENTIALS_PATH ||
+  path.join(__dirname, '../credentials/google-oauth-client.json');
+const OAUTH_TOKEN_PATH = process.env.GMAIL_OAUTH_TOKEN_PATH ||
+  path.join(__dirname, '../credentials/gmail_oauth_token.json');
+const PROCESSED_IDS_PATH = path.join(__dirname, '../data/processed_email_ids.json');
+
+let gmailClient = null;
+let sourceLabelId = null;
+let processedLabelId = null;
+let isListening = false;
+let pollIntervalId = null;
+
+// Track processed message IDs locally as backup
+let processedMessageIds = new Set();
+
+/**
+ * Load processed message IDs from local JSON file
+ */
+function loadProcessedIds() {
+  try {
+    if (fs.existsSync(PROCESSED_IDS_PATH)) {
+      const data = JSON.parse(fs.readFileSync(PROCESSED_IDS_PATH, 'utf8'));
+      processedMessageIds = new Set(data.messageIds || []);
+      console.log(`${LOG_TAG} Loaded ${processedMessageIds.size} processed message IDs`);
+    }
+  } catch (err) {
+    console.error(`${LOG_TAG} Failed to load processed IDs:`, err.message);
+    processedMessageIds = new Set();
+  }
+}
+
+/**
+ * Save processed message IDs to local JSON file
+ */
+function saveProcessedIds() {
+  try {
+    const dir = path.dirname(PROCESSED_IDS_PATH);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(PROCESSED_IDS_PATH, JSON.stringify({
+      messageIds: Array.from(processedMessageIds),
+      lastUpdated: new Date().toISOString()
+    }, null, 2));
+  } catch (err) {
+    console.error(`${LOG_TAG} Failed to save processed IDs:`, err.message);
+  }
+}
+
+/**
+ * Initialize Gmail client with OAuth2 credentials for radarsolutionsus@gmail.com
+ */
+async function initializeGmailClient() {
+  if (gmailClient) return gmailClient;
+
+  try {
+    // Load OAuth credentials
+    if (!fs.existsSync(OAUTH_CREDENTIALS_PATH)) {
+      throw new Error(`OAuth credentials not found at ${OAUTH_CREDENTIALS_PATH}. ` +
+        `Please download OAuth credentials from Google Cloud Console for ${GMAIL_USER}`);
+    }
+
+    const credentials = JSON.parse(fs.readFileSync(OAUTH_CREDENTIALS_PATH, 'utf8'));
+    const { client_id, client_secret, redirect_uris } = credentials.installed || credentials.web;
+
+    const oauth2Client = new google.auth.OAuth2(
+      client_id,
+      client_secret,
+      redirect_uris ? redirect_uris[0] : 'urn:ietf:wg:oauth:2.0:oob'
+    );
+
+    // Load existing token or prompt for authorization
+    if (fs.existsSync(OAUTH_TOKEN_PATH)) {
+      const token = JSON.parse(fs.readFileSync(OAUTH_TOKEN_PATH, 'utf8'));
+      oauth2Client.setCredentials(token);
+
+      // Check if token needs refresh
+      if (token.expiry_date && token.expiry_date < Date.now()) {
+        console.log(`${LOG_TAG} Token expired, refreshing...`);
+        const { credentials: newCredentials } = await oauth2Client.refreshAccessToken();
+        oauth2Client.setCredentials(newCredentials);
+        fs.writeFileSync(OAUTH_TOKEN_PATH, JSON.stringify(newCredentials, null, 2));
+      }
+    } else {
+      throw new Error(`OAuth token not found at ${OAUTH_TOKEN_PATH}. ` +
+        `Run the OAuth authorization flow first to generate a token for ${GMAIL_USER}. ` +
+        `Use: node scripts/gmail-auth.js`);
+    }
+
+    gmailClient = google.gmail({ version: 'v1', auth: oauth2Client });
+    console.log(`${LOG_TAG} Gmail client initialized for ${GMAIL_USER}`);
+
+    // Load processed IDs
+    loadProcessedIds();
+
+    // Get or create labels
+    await ensureLabels();
+
+    return gmailClient;
+  } catch (err) {
+    console.error(`${LOG_TAG} Failed to initialize Gmail client:`, err.message);
+    throw err;
+  }
+}
+
+/**
+ * Ensure the source and processed labels exist
+ */
+async function ensureLabels() {
+  const gmail = gmailClient;
+
+  try {
+    const response = await gmail.users.labels.list({ userId: 'me' });
+    const labels = response.data.labels || [];
+
+    // Find source label "ADAS FIRST"
+    const sourceLabel = labels.find(l => l.name === SOURCE_LABEL_NAME);
+    if (sourceLabel) {
+      sourceLabelId = sourceLabel.id;
+      console.log(`${LOG_TAG} Found source label: ${SOURCE_LABEL_NAME} (${sourceLabelId})`);
+    } else {
+      console.error(`${LOG_TAG} SOURCE LABEL "${SOURCE_LABEL_NAME}" NOT FOUND!`);
+      console.error(`${LOG_TAG} Please create the label "${SOURCE_LABEL_NAME}" in Gmail first.`);
+      throw new Error(`Label "${SOURCE_LABEL_NAME}" not found in ${GMAIL_USER}`);
+    }
+
+    // Find or create processed label
+    const processedLabel = labels.find(l => l.name === PROCESSED_LABEL_NAME);
+    if (processedLabel) {
+      processedLabelId = processedLabel.id;
+      console.log(`${LOG_TAG} Found processed label: ${PROCESSED_LABEL_NAME}`);
+    } else {
+      // Create the processed label
+      const createResponse = await gmail.users.labels.create({
+        userId: 'me',
+        requestBody: {
+          name: PROCESSED_LABEL_NAME,
+          labelListVisibility: 'labelShow',
+          messageListVisibility: 'show'
+        }
+      });
+      processedLabelId = createResponse.data.id;
+      console.log(`${LOG_TAG} Created processed label: ${PROCESSED_LABEL_NAME}`);
+    }
+  } catch (err) {
+    console.error(`${LOG_TAG} Failed to ensure labels:`, err.message);
+    throw err;
+  }
+}
+
+/**
+ * Extract RO/PO from text using multiple patterns
+ * @param {string} text - Text to search
+ * @returns {string|null} - Extracted RO/PO or null
+ */
+function extractRoFromText(text) {
+  if (!text) return null;
+
+  // Pattern 1: Explicit RO/PO prefixes
+  const explicitMatch = text.match(/(?:RO|R\.O\.|PO|P\.O\.|Repair\s*Order|Estimate)[\s#\-:]*([A-Z0-9\-]{3,})/i);
+  if (explicitMatch) return explicitMatch[1].toUpperCase();
+
+  // Pattern 2: Invoice/Work Order numbers
+  const invoiceMatch = text.match(/(?:Invoice|Work\s*Order|WO)[\s#\-:]*([A-Z0-9\-]{3,})/i);
+  if (invoiceMatch) return invoiceMatch[1].toUpperCase();
+
+  // Pattern 3: Standalone 4-6 digit number at start of text or on its own line
+  const standaloneMatch = text.match(/(?:^|\n)\s*(\d{4,6})\s*(?:\n|$|[,.\s])/);
+  if (standaloneMatch) return standaloneMatch[1];
+
+  return null;
+}
+
+/**
+ * Extract RO/PO from PDF filename
+ * @param {string} filename - PDF filename
+ * @returns {string|null} - Extracted RO/PO or null
+ */
+function extractRoFromFilename(filename) {
+  if (!filename) return null;
+
+  // Remove extension
+  const name = filename.replace(/\.pdf$/i, '');
+
+  // Pattern 1: Filename is just a number (e.g., "3045.pdf")
+  if (/^\d{3,6}$/.test(name)) {
+    return name;
+  }
+
+  // Pattern 2: RO/PO prefix in filename
+  const prefixMatch = name.match(/(?:RO|PO|WO)[\s_\-]*(\d{3,})/i);
+  if (prefixMatch) return prefixMatch[1];
+
+  // Pattern 3: Number at start or end of filename
+  const numberMatch = name.match(/(?:^|[\s_\-])(\d{4,6})(?:[\s_\-]|$)/);
+  if (numberMatch) return numberMatch[1];
+
+  return null;
+}
+
+/**
+ * Extract RO/PO from PDF text content
+ * @param {string} pdfText - Extracted PDF text
+ * @returns {string|null} - Extracted RO/PO or null
+ */
+function extractRoFromPdfText(pdfText) {
+  if (!pdfText) return null;
+
+  // Try explicit patterns first
+  const explicit = extractRoFromText(pdfText);
+  if (explicit) return explicit;
+
+  // Look for RO in common estimate/invoice headers (first 500 chars)
+  const header = pdfText.substring(0, 500);
+
+  // Pattern: Number near keywords like "Estimate", "Invoice", "Repair"
+  const nearKeyword = header.match(/(?:estimate|invoice|repair|work\s*order)[^\d]*(\d{4,6})/i);
+  if (nearKeyword) return nearKeyword[1];
+
+  return null;
+}
+
+/**
+ * Generate a synthetic RO for emails without identifiable RO/PO
+ * @param {string} messageId - Gmail message ID
+ * @returns {string} - Synthetic RO in format "NO-RO-<timestamp>"
+ */
+function generateSyntheticRo(messageId) {
+  // Use timestamp + last 4 chars of messageId for uniqueness
+  const timestamp = Date.now();
+  const suffix = messageId ? messageId.slice(-4) : Math.random().toString(36).slice(-4);
+  return `NO-RO-${timestamp}-${suffix}`;
+}
+
+/**
+ * Parse email subject to extract RO/PO number
+ */
+function parseEmailSubject(subject) {
+  if (!subject) return { roPo: null, subjectType: 'unknown' };
+
+  // Match patterns like "RO 11977", "RO 11977-PM", "PO 12345", etc.
+  const roMatch = subject.match(/(?:RO|R\.O\.|PO|P\.O\.)[\s#\-:]*([A-Z0-9\-]+)/i);
+
+  if (roMatch) {
+    return {
+      roPo: roMatch[1].toUpperCase(),
+      subjectType: 'calibration_documents'
+    };
+  }
+
+  return { roPo: null, subjectType: 'unknown' };
+}
+
+/**
+ * Parse email body for additional information
+ */
+function parseEmailBody(body) {
+  if (!body) return {};
+
+  const info = {};
+
+  // Try to extract VIN
+  const vinMatch = body.match(/VIN[\s:]*([A-HJ-NPR-Z0-9]{17})/i);
+  if (vinMatch) info.vin = vinMatch[1];
+
+  // Try to extract shop name - improved patterns
+  const shopPatterns = [
+    /(?:shop|taller|from|sender)[:\s]+([A-Za-z][A-Za-z\s&'\.]+?)(?:\n|,|\||$)/i,
+    /(?:body\s*shop|collision\s*center|auto\s*body)[:\s]*([A-Za-z][A-Za-z\s&'\.]+?)(?:\n|,|\||$)/i,
+    /^([A-Za-z][A-Za-z\s&'\.]+(?:auto|body|collision|shop|motors|service)[A-Za-z\s]*)/im
+  ];
+
+  for (const pattern of shopPatterns) {
+    const match = body.match(pattern);
+    if (match && match[1] && match[1].trim().length >= 3 && match[1].trim().length <= 50) {
+      info.shopName = match[1].trim();
+      break;
+    }
+  }
+
+  // Try to extract technician name
+  const techMatch = body.match(/(?:technician|tech|técnico)[\s:]*([A-Za-z]+)/i);
+  if (techMatch) info.technician = techMatch[1].trim();
+
+  // Don't add body as notes - it causes duplication issues
+  // Only capture explicit notes if specifically labeled
+  const notesMatch = body.match(/(?:notes?|comments?)[:\s]+(.+?)(?:\n\n|$)/is);
+  if (notesMatch && notesMatch[1].trim().length > 0) {
+    info.notes = notesMatch[1].trim().substring(0, 300);
+  }
+
+  return info;
+}
+
+/**
+ * Get PDF attachments from a Gmail message
+ * ONLY extracts application/pdf attachments
+ */
+async function getPDFAttachments(message) {
+  const gmail = gmailClient;
+  const attachments = [];
+
+  function findPDFParts(parts) {
+    if (!parts) return;
+
+    for (const part of parts) {
+      // ONLY process application/pdf attachments
+      if (part.mimeType === 'application/pdf' && part.body.attachmentId) {
+        attachments.push({
+          filename: part.filename,
+          attachmentId: part.body.attachmentId
+        });
+      }
+
+      if (part.parts) {
+        findPDFParts(part.parts);
+      }
+    }
+  }
+
+  findPDFParts(message.payload.parts);
+
+  // Also check main body if no parts (rare for emails with attachments)
+  if (message.payload.mimeType === 'application/pdf' && message.payload.body?.attachmentId) {
+    attachments.push({
+      filename: message.payload.filename || 'document.pdf',
+      attachmentId: message.payload.body.attachmentId
+    });
+  }
+
+  console.log(`${LOG_TAG} Found ${attachments.length} PDF attachment(s)`);
+
+  // Download attachment data
+  const results = [];
+  for (const att of attachments) {
+    try {
+      const response = await gmail.users.messages.attachments.get({
+        userId: 'me',
+        messageId: message.id,
+        id: att.attachmentId
+      });
+
+      // Gmail returns base64url encoded data
+      const buffer = Buffer.from(response.data.data, 'base64');
+      results.push({
+        buffer,
+        filename: att.filename
+      });
+      console.log(`${LOG_TAG} Downloaded: ${att.filename} (${buffer.length} bytes)`);
+    } catch (err) {
+      console.error(`${LOG_TAG} Failed to download attachment ${att.filename}:`, err.message);
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Get plain text body from message
+ */
+function getEmailBody(message) {
+  function findTextPart(parts) {
+    if (!parts) return null;
+
+    for (const part of parts) {
+      if (part.mimeType === 'text/plain' && part.body.data) {
+        return Buffer.from(part.body.data, 'base64').toString('utf8');
+      }
+      if (part.parts) {
+        const found = findTextPart(part.parts);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+
+  // Check for simple body
+  if (message.payload.body?.data) {
+    return Buffer.from(message.payload.body.data, 'base64').toString('utf8');
+  }
+
+  // Check parts
+  return findTextPart(message.payload.parts) || '';
+}
+
+/**
+ * Mark an email as processed:
+ * 1. Add ADAS_FIRST_PROCESSED label
+ * 2. Track messageId in local JSON file
+ */
+async function markAsProcessed(messageId) {
+  const gmail = gmailClient;
+
+  try {
+    // Add processed label
+    if (processedLabelId) {
+      await gmail.users.messages.modify({
+        userId: 'me',
+        id: messageId,
+        requestBody: {
+          addLabelIds: [processedLabelId]
+        }
+      });
+      console.log(`${LOG_TAG} Added ${PROCESSED_LABEL_NAME} label to message ${messageId}`);
+    }
+
+    // Track in local file as backup
+    processedMessageIds.add(messageId);
+    saveProcessedIds();
+
+  } catch (err) {
+    console.error(`${LOG_TAG} Failed to mark as processed:`, err.message);
+    // Still track locally even if Gmail label fails
+    processedMessageIds.add(messageId);
+    saveProcessedIds();
+  }
+}
+
+/**
+ * Check if a message has already been processed
+ */
+function isAlreadyProcessed(messageId, labelIds) {
+  // Check if it has the processed label
+  if (labelIds && processedLabelId && labelIds.includes(processedLabelId)) {
+    return true;
+  }
+  // Check local tracking
+  return processedMessageIds.has(messageId);
+}
+
+/**
+ * Process a single email through the pipeline
+ */
+async function processEmail(message) {
+  console.log(`${LOG_TAG} Processing email: ${message.id}`);
+
+  try {
+    const gmail = gmailClient;
+
+    // Get full message details
+    const fullMessage = await gmail.users.messages.get({
+      userId: 'me',
+      id: message.id,
+      format: 'full'
+    });
+
+    // Double-check it hasn't been processed
+    if (isAlreadyProcessed(message.id, fullMessage.data.labelIds)) {
+      console.log(`${LOG_TAG} Message ${message.id} already processed, skipping`);
+      return { success: false, error: 'Already processed' };
+    }
+
+    // Verify it has the source label
+    if (!fullMessage.data.labelIds?.includes(sourceLabelId)) {
+      console.log(`${LOG_TAG} Message ${message.id} missing ${SOURCE_LABEL_NAME} label, skipping`);
+      return { success: false, error: 'Missing source label' };
+    }
+
+    // Extract headers
+    const headers = fullMessage.data.payload.headers;
+    const subject = headers.find(h => h.name.toLowerCase() === 'subject')?.value || '';
+    const from = headers.find(h => h.name.toLowerCase() === 'from')?.value || '';
+    const date = headers.find(h => h.name.toLowerCase() === 'date')?.value || '';
+
+    console.log(`${LOG_TAG} Subject: ${subject}`);
+    console.log(`${LOG_TAG} From: ${from}`);
+    console.log(`${LOG_TAG} Date: ${date}`);
+
+    // Get email body for notes
+    const body = getEmailBody(fullMessage.data);
+    const bodyInfo = parseEmailBody(body);
+
+    // Try to extract shop name from "From" header if not in body
+    if (!bodyInfo.shopName && from) {
+      // Pattern: "Shop Name <email@domain.com>" or just email
+      const fromNameMatch = from.match(/^([^<]+)\s*</);
+      if (fromNameMatch && fromNameMatch[1].trim().length >= 3) {
+        const fromName = fromNameMatch[1].trim().replace(/"/g, '');
+        // Check if it looks like a business name (not a person's name)
+        if (/\b(auto|body|collision|shop|motors?|service|repair|garage|center)\b/i.test(fromName)) {
+          bodyInfo.shopName = fromName;
+          console.log(`${LOG_TAG} Shop name extracted from email From header: ${fromName}`);
+        }
+      }
+    }
+
+    // Get PDF attachments ONLY
+    const pdfs = await getPDFAttachments(fullMessage.data);
+    if (pdfs.length === 0) {
+      console.log(`${LOG_TAG} No PDF attachments found, marking as processed`);
+      await markAsProcessed(message.id);
+      return { success: false, error: 'No PDF attachments', messageId: message.id };
+    }
+
+    // === RO/PO EXTRACTION CHAIN ===
+    // Try multiple sources to find RO/PO
+    let roPo = null;
+    let roSource = null;
+    let isSyntheticRo = false;
+
+    // 1. Try subject first
+    const subjectResult = parseEmailSubject(subject);
+    if (subjectResult.roPo) {
+      roPo = subjectResult.roPo;
+      roSource = 'subject';
+      console.log(`${LOG_TAG} Found RO in subject: ${roPo}`);
+    }
+
+    // 2. If not in subject, try email body
+    if (!roPo) {
+      console.log(`${LOG_TAG} No RO found in subject — attempting extraction from body`);
+      const bodyRo = extractRoFromText(body);
+      if (bodyRo) {
+        roPo = bodyRo;
+        roSource = 'email_body';
+        console.log(`${LOG_TAG} Extracted RO from email body: ${roPo}`);
+      }
+    }
+
+    // 3. Try PDF filenames
+    if (!roPo) {
+      for (const pdf of pdfs) {
+        const filenameRo = extractRoFromFilename(pdf.filename);
+        if (filenameRo) {
+          roPo = filenameRo;
+          roSource = `filename:${pdf.filename}`;
+          console.log(`${LOG_TAG} Extracted RO from PDF filename: ${roPo}`);
+          break;
+        }
+      }
+    }
+
+    // 4. Try PDF text content (quick extraction from first PDF)
+    if (!roPo && pdfs.length > 0) {
+      try {
+        const pdfParse = await import('pdf-parse');
+        const firstPdf = pdfs[0];
+        const pdfData = await pdfParse.default(firstPdf.buffer);
+        const pdfText = pdfData.text || '';
+
+        const pdfRo = extractRoFromPdfText(pdfText);
+        if (pdfRo) {
+          roPo = pdfRo;
+          roSource = `pdf_text:${firstPdf.filename}`;
+          console.log(`${LOG_TAG} Extracted RO from PDF text: ${roPo}`);
+        }
+      } catch (pdfErr) {
+        console.log(`${LOG_TAG} Could not extract RO from PDF text: ${pdfErr.message}`);
+      }
+    }
+
+    // 5. Generate synthetic RO if nothing found
+    if (!roPo) {
+      roPo = generateSyntheticRo(message.id);
+      roSource = 'synthetic';
+      isSyntheticRo = true;
+      console.log(`${LOG_TAG} No RO found anywhere — using synthetic RO: ${roPo}`);
+    }
+
+    console.log(`${LOG_TAG} Processing RO: ${roPo} (source: ${roSource})`);
+    console.log(`${LOG_TAG} Found ${pdfs.length} PDF attachments for RO ${roPo}`);
+
+    // Step 1: Upload PDFs to Drive
+    const uploadResults = await driveUpload.uploadMultiplePDFs(
+      pdfs.map(pdf => ({
+        buffer: pdf.buffer,
+        filename: pdf.filename,
+        type: detectPDFType(pdf.filename)
+      })),
+      roPo
+    );
+
+    console.log(`${LOG_TAG} Uploaded ${uploadResults.uploads.length} files to Drive`);
+
+    // Step 2: Parse PDFs for data (pass roPo for estimate scrubbing)
+    const mergedData = await pdfParser.parseAndMergePDFs(pdfs, roPo);
+
+    // Add RO from email subject if not found in PDFs
+    if (!mergedData.roPo) {
+      mergedData.roPo = roPo;
+    }
+
+    // Step 2b: Handle estimate scrub results if present
+    // IMPORTANT: Notes are set ONCE here and nowhere else to prevent duplication
+    // Column S = preview_notes (short, clean, single line)
+    // Column T = full_notes (full structured scrub text for sidebar)
+    let previewNotes = '';
+    let fullNotes = '';
+
+    if (mergedData.hasEstimate && mergedData.estimateScrubResult) {
+      console.log(`${LOG_TAG} Estimate detected for RO ${roPo}, scrub complete`);
+      const scrubResult = mergedData.estimateScrubResult;
+
+      // Get the raw Required Calibrations text from Column J (from RevvADAS)
+      // This ensures we use the actual Revv data for the count
+      const rawRevvText = mergedData.requiredCalibrationsText || '';
+      const revvItems = rawRevvText.split(/[;,]/).filter(s => s.trim().length > 0);
+      const actualRevvCount = revvItems.length > 0 ? revvItems.length : (scrubResult.requiredFromRevv?.length || 0);
+
+      console.log(`${LOG_TAG} Actual Revv count from Column J: ${actualRevvCount}`);
+
+      // Use NEW formatting functions:
+      // formatPreviewNotes - SHORT clean preview for Column S
+      // formatFullScrub - FULL structured text for Column T (sidebar view)
+      previewNotes = formatPreviewNotes(scrubResult, actualRevvCount);
+      fullNotes = formatFullScrub(scrubResult, actualRevvCount, rawRevvText);
+
+      // Store full scrub text separately for sidebar (Column T - hidden)
+      mergedData.fullScrubText = fullNotes;
+
+      // Log attention status
+      if (scrubResult.needsAttention) {
+        console.log(`${LOG_TAG} ATTENTION REQUIRED: ${getScrubSummary(scrubResult)}`);
+      }
+    }
+
+    // Add info from email body - ONLY set if not already set to avoid overwriting
+    if (bodyInfo.shopName && !mergedData.shopName) {
+      mergedData.shopName = bodyInfo.shopName;
+    }
+    if (bodyInfo.vin && !mergedData.vin) {
+      mergedData.vin = bodyInfo.vin;
+    }
+    if (bodyInfo.technician && !mergedData.technician) {
+      mergedData.technician = bodyInfo.technician;
+    }
+
+    // Handle synthetic RO - only if we don't have notes from scrub
+    if (isSyntheticRo && !previewNotes) {
+      previewNotes = `[AUTO-GENERATED] No RO/PO found. Please confirm RO number.`;
+    }
+
+    // FINAL: Set notes ONCE to avoid any duplication
+    // Column S = preview notes (short, single line)
+    // Column T = full scrub text (full structured text for sidebar)
+    mergedData.notes = previewNotes;
+    // fullScrubText already set above if estimate was present
+
+    // Add Drive links (using new column names from spec)
+    // Also record documents in job state for tracking
+    for (const upload of uploadResults.uploads) {
+      const docInfo = {
+        driveFileId: upload.fileId,
+        fileName: upload.filename,
+        webViewLink: upload.webViewLink
+      };
+
+      switch (upload.type) {
+        case 'revv_report':
+          mergedData.revvReportPdf = upload.webViewLink;
+          jobState.recordDocument(roPo, jobState.DOC_TYPES.REVV_REPORT, docInfo);
+          break;
+        case 'scan_report':
+          // Detect if it's pre-scan or post-scan based on filename or context
+          const isPostScan = upload.filename?.toLowerCase().includes('post') ||
+                            upload.filename?.toLowerCase().includes('final');
+          if (isPostScan) {
+            mergedData.postScanPdf = upload.webViewLink;
+            jobState.recordDocument(roPo, jobState.DOC_TYPES.POST_SCAN, docInfo);
+          } else {
+            jobState.recordDocument(roPo, jobState.DOC_TYPES.PRE_SCAN, docInfo);
+          }
+          break;
+        case 'invoice':
+          mergedData.invoicePdf = upload.webViewLink;
+          jobState.recordDocument(roPo, jobState.DOC_TYPES.INVOICE, docInfo);
+          break;
+        case 'estimate':
+          mergedData.estimatePdf = upload.webViewLink;
+          jobState.recordDocument(roPo, jobState.DOC_TYPES.ESTIMATE, docInfo);
+          break;
+      }
+    }
+
+    // Step 3: Update Google Sheets
+    // Determine appropriate status based on document types received
+    // - revv_report or shop_estimate = vehicle is ready FOR calibration, not completed
+    // - Only postscan_report with 0 DTCs + calibrations done = "Completed"
+    // - adas_invoice = "Completed"
+    let status = 'Ready';  // Default for revv_report + shop_estimate
+
+    // Check what document types we have
+    const hasAdasInvoice = mergedData.invoiceNumber && mergedData.invoiceAmount;
+    const hasPostScan = mergedData.postScanPdf || uploadResults.uploads.some(u =>
+      u.type === 'scan_report' && (u.filename?.toLowerCase().includes('post') || u.filename?.toLowerCase().includes('final'))
+    );
+    const hasCompletedCalibrations = mergedData.completedCalibrationsText && mergedData.completedCalibrationsText.length > 0;
+
+    // Only set to Completed if we have invoice OR (postscan + completed calibrations)
+    if (hasAdasInvoice) {
+      status = 'Completed';  // Invoice received means job is billed
+    } else if (hasPostScan && hasCompletedCalibrations) {
+      status = 'Completed';  // Post-scan with completed calibrations
+    }
+
+    // Override for attention-needed cases
+    if (isSyntheticRo) {
+      status = 'Needs Attention'; // Synthetic RO needs manual review
+    } else if (mergedData.estimateScrubResult?.needsAttention) {
+      status = 'Needs Review'; // Estimate scrub flagged issues (use "Needs Review" not "Needs Attention")
+    }
+
+    const scheduleResult = await sheetWriter.upsertScheduleRowByRO(roPo, {
+      ...mergedData,
+      status,
+      // Format timestamp to MM/DD/YYYY HH:mm
+      timestampCreated: formatTimestamp(new Date())
+    });
+
+    if (!scheduleResult.success) {
+      console.error(`${LOG_TAG} Failed to update schedule:`, scheduleResult.error);
+    }
+
+    // Step 4: Create billing row if invoice data present
+    if (mergedData.invoiceNumber && mergedData.invoiceAmount) {
+      const billingResult = await sheetWriter.appendBillingRow({
+        roPo,
+        shopName: mergedData.shopName,
+        vin: mergedData.vin,
+        vehicle: mergedData.vehicle || `${mergedData.vehicleYear || ''} ${mergedData.vehicleMake || ''} ${mergedData.vehicleModel || ''}`.trim(),
+        calibrationDescription: mergedData.completedCalibrationsText || mergedData.requiredCalibrationsText,
+        amount: mergedData.invoiceAmount,
+        invoiceNumber: mergedData.invoiceNumber,
+        invoiceDate: mergedData.invoiceDate,
+        invoicePdf: mergedData.invoicePdf,
+        status: 'Ready to Bill'  // New status per spec
+      });
+
+      if (!billingResult.success) {
+        console.error(`${LOG_TAG} Failed to create billing row:`, billingResult.error);
+      } else {
+        // Step 5: Auto-send billing email if configured
+        console.log(`${LOG_TAG} Attempting auto-billing email for RO: ${roPo}`);
+        const autoBillingResult = await billingMailer.maybeSendAutoBilling(roPo);
+        if (autoBillingResult.sent) {
+          console.log(`${LOG_TAG} Auto-billing email sent for RO: ${roPo}`);
+        } else {
+          console.log(`${LOG_TAG} Auto-billing not sent: ${autoBillingResult.reason}`);
+        }
+      }
+    }
+
+    // === SHOP NOTIFICATIONS ===
+    // Step 6: Check if we should send initial notice (calibration required / not required)
+    const docStatus = jobState.getDocumentStatus(roPo);
+
+    // Determine if calibration is needed based on Revv report or estimate scrub
+    const hasRevvCalibrations = mergedData.requiredCalibrationsText &&
+                                 mergedData.requiredCalibrationsText.trim().length > 0;
+    const needsCalibration = hasRevvCalibrations ||
+                              (mergedData.estimateScrubResult?.requiredFromEstimate?.length > 0);
+
+    // Find PDF buffers from original attachments (for email attachments)
+    let revvPdfBuffer = null;
+    let postScanPdfBuffer = null;
+    let invoicePdfBuffer = null;
+
+    for (const pdf of pdfs) {
+      const pdfType = detectPDFType(pdf.filename);
+      switch (pdfType) {
+        case 'revv_report':
+          revvPdfBuffer = pdf.buffer;
+          console.log(`${LOG_TAG} Found RevvADAS PDF buffer: ${pdf.filename}`);
+          break;
+        case 'scan_report':
+          // Check if it's a post-scan
+          if (pdf.filename?.toLowerCase().includes('post') || pdf.filename?.toLowerCase().includes('final')) {
+            postScanPdfBuffer = pdf.buffer;
+            console.log(`${LOG_TAG} Found Post-Scan PDF buffer: ${pdf.filename}`);
+          }
+          break;
+        case 'invoice':
+          invoicePdfBuffer = pdf.buffer;
+          console.log(`${LOG_TAG} Found Invoice PDF buffer: ${pdf.filename}`);
+          break;
+      }
+    }
+
+    // === AUTOMATED EMAIL WORKFLOW WITH FEEDBACK LOOP ===
+    //
+    // WORKFLOW:
+    // 1. Tech emails: estimate + RevvADAS PDF
+    // 2. Assistant scrubs estimate, compares to RevvADAS
+    // 3. Sources match? → YES: Auto-send confirmation to SHOP (Ready)
+    //                   → NO: Auto-send review request to TECH (Needs Attention)
+    // 4. Tech fixes RevvADAS, re-sends → Re-scrub → Loop back to step 3
+    //
+    // TWO EMAIL TYPES:
+    // - COMPLETION: Has post-scan + invoice → Send job completion to SHOP
+    // - INITIAL: Has estimate + RevvADAS → Route based on verification status
+
+    const hasCompletionDocs = postScanPdfBuffer && invoicePdfBuffer;
+    const hasInitialDocs = docStatus.hasEstimate && revvPdfBuffer;
+
+    // Step 6a: COMPLETION EMAIL - Send when technician provides final docs
+    // (Completion emails always go to shop - no verification needed)
+    if (hasCompletionDocs && mergedData.shopName && !isSyntheticRo) {
+      console.log(`${LOG_TAG} Sending job completion email for RO: ${roPo}`);
+
+      const completionResult = await emailResponder.sendAutoCompletionResponse({
+        shopName: mergedData.shopName,
+        roPo,
+        vehicle: mergedData.vehicle || `${mergedData.vehicleYear || ''} ${mergedData.vehicleMake || ''} ${mergedData.vehicleModel || ''}`.trim(),
+        vin: mergedData.vin,
+        calibrationsPerformed: mergedData.requiredCalibrationsText || '',
+        invoiceNumber: mergedData.invoiceNumber || '',
+        invoiceAmount: mergedData.invoiceAmount || '',
+        postScanPdfBuffer,
+        invoicePdfBuffer,
+        revvPdfBuffer,
+        postScanLink: mergedData.postScanPdf,
+        invoiceLink: mergedData.invoicePdf,
+        revvPdfLink: mergedData.revvReportPdf
+      });
+
+      if (completionResult.sent) {
+        console.log(`${LOG_TAG} Job completion email sent for RO ${roPo} → ${completionResult.shopEmail}`);
+        const emailSentNote = `Completion email sent to ${completionResult.shopEmail} on ${new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })}`;
+        mergedData.notes = mergedData.notes ? `${mergedData.notes} | ${emailSentNote}` : emailSentNote;
+      } else if (completionResult.error) {
+        console.log(`${LOG_TAG} Completion email not sent: ${completionResult.error}`);
+      }
+    }
+    // Step 6b: INITIAL EMAIL - Use automated routing based on scrub verification
+    else if (hasInitialDocs && !isSyntheticRo) {
+      console.log(`${LOG_TAG} Processing initial docs for RO: ${roPo} - automated routing enabled`);
+
+      // Build scrub result object for handleScrubResult
+      const scrubResult = {
+        roPo,
+        shopName: mergedData.shopName,
+        vehicle: mergedData.vehicle || `${mergedData.vehicleYear || ''} ${mergedData.vehicleMake || ''} ${mergedData.vehicleModel || ''}`.trim(),
+        vin: mergedData.vin,
+        // From estimate scrub
+        requiredFromEstimate: mergedData.estimateScrubResult?.requiredFromEstimate || [],
+        foundOperations: mergedData.estimateScrubResult?.foundOperations || [],
+        status: mergedData.estimateScrubResult?.status || '',
+        statusMessage: mergedData.estimateScrubResult?.statusMessage || '',
+        needsAttention: mergedData.estimateScrubResult?.needsAttention || false,
+        // From RevvADAS (Column J)
+        requiredFromRevv: mergedData.estimateScrubResult?.requiredFromRevv || [],
+        rawRevvText: mergedData.requiredCalibrationsText || '',
+        actualRevvCount: mergedData.estimateScrubResult?.actualRevvCount || 0,
+        // Comparison results
+        missingCalibrations: mergedData.estimateScrubResult?.missingCalibrations || []
+      };
+
+      // Original email info for reply threading
+      const originalEmail = {
+        from: senderEmail,
+        messageId: message?.id,
+        subject: subject
+      };
+
+      // Use handleScrubResult for automated routing
+      // - Sources agree → Send to SHOP → Status: Ready
+      // - Sources disagree → Send to TECH → Status: Needs Attention
+      const routingResult = await emailResponder.handleScrubResult(
+        scrubResult,
+        originalEmail,
+        roPo,
+        {
+          revvPdfBuffer,
+          sheetWriter
+        }
+      );
+
+      // Log the routing decision
+      if (routingResult.action === 'SENT_TO_SHOP') {
+        console.log(`${LOG_TAG} ✅ RO ${roPo}: Verified - confirmation sent to shop ${routingResult.recipient}`);
+        const emailSentNote = `✅ Confirmation sent to ${routingResult.recipient} on ${new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })}`;
+        mergedData.notes = mergedData.notes ? `${mergedData.notes} | ${emailSentNote}` : emailSentNote;
+      } else if (routingResult.action === 'SENT_TO_TECH') {
+        console.log(`${LOG_TAG} ⚠️ RO ${roPo}: Discrepancy - review request sent to tech ${routingResult.recipient}`);
+        const emailSentNote = `⚠️ Review request sent to ${routingResult.recipient} on ${new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })}`;
+        mergedData.notes = mergedData.notes ? `${mergedData.notes} | ${emailSentNote}` : emailSentNote;
+      } else if (routingResult.action === 'MANUAL_REQUIRED') {
+        console.log(`${LOG_TAG} ⚠️ RO ${roPo}: Manual action required - ${routingResult.error}`);
+        mergedData.notes = mergedData.notes
+          ? `${mergedData.notes} | Manual action required: ${routingResult.error}`
+          : `Manual action required: ${routingResult.error}`;
+      }
+    }
+
+    // Step 7: Check if all final docs are present for auto-close
+    const updatedDocStatus = jobState.getDocumentStatus(roPo);
+
+    if (updatedDocStatus.allFinalDocsPresent && mergedData.shopName) {
+      console.log(`${LOG_TAG} All final docs present for RO ${roPo}, attempting auto-close`);
+
+      const autoCloseResult = await shopNotifier.autoCloseJob(roPo);
+
+      if (autoCloseResult.closed) {
+        console.log(`${LOG_TAG} Auto-closed RO ${roPo} (Completed)`);
+        if (autoCloseResult.notificationSent) {
+          console.log(`${LOG_TAG} Final completion email sent for RO ${roPo} (post_scan + revv_report + invoice)`);
+        }
+      }
+    }
+
+    // Mark email as processed
+    await markAsProcessed(message.id);
+
+    console.log(`${LOG_TAG} Successfully processed email for RO: ${roPo}`);
+    return { success: true, roPo, messageId: message.id };
+  } catch (err) {
+    console.error(`${LOG_TAG} Failed to process email:`, err.message);
+    return { success: false, error: err.message, messageId: message.id };
+  }
+}
+
+/**
+ * Simple PDF type detection from filename
+ */
+function detectPDFType(filename) {
+  const lower = filename.toLowerCase();
+  if (lower.includes('invoice')) return 'invoice';
+  if (lower.includes('scan') || lower.includes('autel')) return 'scan_report';
+  if (lower.includes('revv') || lower.includes('calibration')) return 'revv_report';
+  if (lower.includes('estimate') || lower.includes('quote') || lower.includes('repair order')) return 'estimate';
+  return 'document';
+}
+
+/**
+ * Check for new unprocessed emails in "ADAS FIRST" label
+ */
+async function checkNewEmails() {
+  console.log(`${LOG_TAG} Checking for new emails in "${SOURCE_LABEL_NAME}" label...`);
+
+  try {
+    const gmail = await initializeGmailClient();
+
+    if (!sourceLabelId) {
+      console.error(`${LOG_TAG} Source label ID not set, cannot check emails`);
+      return;
+    }
+
+    // Query for emails in "ADAS FIRST" label that don't have "ADAS_FIRST_PROCESSED" label
+    // Also check for PDF attachments
+    const query = `label:${SOURCE_LABEL_NAME.replace(/ /g, '-')} -label:${PROCESSED_LABEL_NAME} has:attachment filename:pdf`;
+
+    const response = await gmail.users.messages.list({
+      userId: 'me',
+      q: query,
+      maxResults: 10
+    });
+
+    const messages = response.data.messages || [];
+    console.log(`${LOG_TAG} Found ${messages.length} unprocessed emails with PDFs`);
+
+    for (const message of messages) {
+      // Skip if already processed locally
+      if (processedMessageIds.has(message.id)) {
+        console.log(`${LOG_TAG} Skipping ${message.id} - already in local tracking`);
+        continue;
+      }
+      await processEmail(message);
+    }
+  } catch (err) {
+    console.error(`${LOG_TAG} Error checking emails:`, err.message);
+  }
+}
+
+/**
+ * Start the email listener polling loop
+ */
+export async function startListener() {
+  if (isListening) {
+    console.log(`${LOG_TAG} Listener already running`);
+    return { success: false, error: 'Already running' };
+  }
+
+  try {
+    console.log(`${LOG_TAG} Starting email listener for ${GMAIL_USER}`);
+    console.log(`${LOG_TAG} Source label: "${SOURCE_LABEL_NAME}"`);
+    console.log(`${LOG_TAG} Poll interval: ${POLL_INTERVAL_MS}ms`);
+
+    // Initialize client and verify setup
+    await initializeGmailClient();
+
+    isListening = true;
+
+    // Initial check
+    await checkNewEmails();
+
+    // Set up polling
+    pollIntervalId = setInterval(checkNewEmails, POLL_INTERVAL_MS);
+
+    console.log(`${LOG_TAG} Email listener started successfully`);
+    return { success: true, message: 'Listener started' };
+  } catch (err) {
+    console.error(`${LOG_TAG} Failed to start listener:`, err.message);
+    isListening = false;
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Stop the email listener
+ */
+export function stopListener() {
+  if (pollIntervalId) {
+    clearInterval(pollIntervalId);
+    pollIntervalId = null;
+  }
+  isListening = false;
+  console.log(`${LOG_TAG} Email listener stopped`);
+  return { success: true, message: 'Listener stopped' };
+}
+
+/**
+ * Process a single email manually by message ID
+ */
+export async function processMessageById(messageId) {
+  await initializeGmailClient();
+  return processEmail({ id: messageId });
+}
+
+/**
+ * Check if listener is running
+ */
+export function isRunning() {
+  return isListening;
+}
+
+/**
+ * Get listener status
+ */
+export function getStatus() {
+  return {
+    running: isListening,
+    gmailUser: GMAIL_USER,
+    sourceLabel: SOURCE_LABEL_NAME,
+    processedLabel: PROCESSED_LABEL_NAME,
+    processedCount: processedMessageIds.size,
+    pollIntervalMs: POLL_INTERVAL_MS
+  };
+}
+
+/**
+ * Generate OAuth authorization URL (for initial setup)
+ */
+export function getAuthUrl() {
+  if (!fs.existsSync(OAUTH_CREDENTIALS_PATH)) {
+    return { error: `Credentials file not found at ${OAUTH_CREDENTIALS_PATH}` };
+  }
+
+  const credentials = JSON.parse(fs.readFileSync(OAUTH_CREDENTIALS_PATH, 'utf8'));
+  const { client_id, client_secret, redirect_uris } = credentials.installed || credentials.web;
+
+  const oauth2Client = new google.auth.OAuth2(
+    client_id,
+    client_secret,
+    redirect_uris ? redirect_uris[0] : 'urn:ietf:wg:oauth:2.0:oob'
+  );
+
+  const authUrl = oauth2Client.generateAuthUrl({
+    access_type: 'offline',
+    scope: [
+      'https://www.googleapis.com/auth/gmail.readonly',
+      'https://www.googleapis.com/auth/gmail.modify'
+    ]
+  });
+
+  return { authUrl, note: `Login as ${GMAIL_USER} and authorize the app` };
+}
+
+/**
+ * Exchange authorization code for token (for initial setup)
+ */
+export async function exchangeCodeForToken(code) {
+  if (!fs.existsSync(OAUTH_CREDENTIALS_PATH)) {
+    return { error: `Credentials file not found at ${OAUTH_CREDENTIALS_PATH}` };
+  }
+
+  const credentials = JSON.parse(fs.readFileSync(OAUTH_CREDENTIALS_PATH, 'utf8'));
+  const { client_id, client_secret, redirect_uris } = credentials.installed || credentials.web;
+
+  const oauth2Client = new google.auth.OAuth2(
+    client_id,
+    client_secret,
+    redirect_uris ? redirect_uris[0] : 'urn:ietf:wg:oauth:2.0:oob'
+  );
+
+  try {
+    const { tokens } = await oauth2Client.getToken(code);
+
+    // Save the token
+    const dir = path.dirname(OAUTH_TOKEN_PATH);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(OAUTH_TOKEN_PATH, JSON.stringify(tokens, null, 2));
+
+    console.log(`${LOG_TAG} Token saved to ${OAUTH_TOKEN_PATH}`);
+    return { success: true, message: 'Token saved successfully' };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+export default {
+  startListener,
+  stopListener,
+  processMessageById,
+  isRunning,
+  getStatus,
+  checkNewEmails,
+  getAuthUrl,
+  exchangeCodeForToken
+};

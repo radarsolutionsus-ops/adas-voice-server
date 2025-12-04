@@ -1,0 +1,19 @@
+oem,free_access,paid_access,nastf_required,nastf_credential_type,dealer_only_restrictions,sgw_security,region_laws,right_to_repair_notes
+Toyota,Owner manuals;Recalls,Full procedures;TSBs;Calibrations;Techstream,Yes,VSP,Some campaigns,No,US state laws apply,Standard NASTF access
+Honda,Basic specs,i-HDS;Service procedures;Calibrations,Yes,VSP,None noted,No,US state laws apply,Battery support and OEM glass recommended
+Nissan,Limited,Full service;CONSULT;ECU files separate,Yes,VSP,ECU files extra cost,No,US state laws apply,Perfect alignment mandatory per position statement
+GM,TSBs index,Full ACDelco TDS;Programming per VIN,Yes - 2020+,VSP,None noted,No,US state laws apply,Per-VIN programming model $40-45
+Ford,Basic info,Full IDS/FDRS;Calibrations,Yes - 2020+,VSP,PATS functions separate,No,US state laws apply,PATS requires separate subscription access
+Stellantis,Recalls,wiTECH;TechAuthority;Flash tokens,Yes - 2016+,VSP,Some campaigns,Yes - 2020+,US state laws apply,SGW bypass requires TechAuthority subscription
+Volkswagen,Digital Service Schedule,erWin;ODIS;Calibrations,Yes,VSP,Full ODIS online coding,GeKo,EU MVBER;US state laws,GeKo credential required for online coding
+Audi,Limited,erWin;ODIS;Calibrations,Yes,VSP,Full ODIS online coding,GeKo,EU MVBER;US state laws,Same as VW - GeKo required
+Porsche,None,TSI;PIWIS III/4,No - PPN instead,PPN,Most functions,Dealer certification,EU MVBER;US state laws,PIWIS lease very expensive - PPN membership required
+BMW,Some bulletins,Full TIS/ISTA,Yes,VSP,Key codes (CA only);Enabling codes,No,US state laws apply;CA key code law,Key codes only available in California
+Mercedes,Recalls;Star Bulletins,WIS;Xentry,Yes,VSP,Initial Startup functions,No,US state laws apply,Clone tools cannot perform Initial Startup
+Hyundai,None noted,Full portal access,Yes,VSP,None noted,No,US state laws apply,VCI II/III interface required
+Kia,None noted,Full portal access,Yes,VSP,None noted,No,US state laws apply,Can share VCI with Hyundai
+Genesis,None noted,Full portal access,Yes,VSP,None noted,No,US state laws apply,Separate from Hyundai/Kia portal
+Volvo,None noted,VIDA;Calibrations,Yes,VSP,None noted,No,US state laws apply,NA subscription for NA vehicles only
+JLR,None noted,TOPIx;Pathfinder,LSID for some,LSID,DoIP VCI required 2017+,Secure diagnostics 25MY+,EU MVBER;US state laws,DoIP VCI required for newer vehicles
+Tesla,Service docs FREE,Toolbox 3.0,No,Limited,Some security functions,Limited,US state laws apply,Service info documents FREE since May 2022
+Rivian,Parts ordering FREE,Full access $2500-5500/yr,No,Developing,Limited access currently,Developing,US state laws apply,Service website under development

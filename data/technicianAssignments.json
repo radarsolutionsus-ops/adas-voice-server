@@ -1,0 +1,48 @@
+{
+  "PaintMax": {
+    "morning": ["Felipe"],
+    "afternoon": ["Martin", "Felipe"],
+    "fallback": ["Randy"]
+  },
+  "Paint Max": {
+    "morning": ["Felipe"],
+    "afternoon": ["Martin", "Felipe"],
+    "fallback": ["Randy"]
+  },
+  "Reinaldo_BodyShop": {
+    "morning": ["Felipe"],
+    "afternoon": ["Martin", "Felipe"],
+    "fallback": ["Randy"]
+  },
+  "Reinaldo Body Shop": {
+    "morning": ["Felipe"],
+    "afternoon": ["Martin", "Felipe"],
+    "fallback": ["Randy"]
+  },
+  "AutoSport": {
+    "morning": ["Felipe"],
+    "afternoon": ["Felipe"],
+    "fallback": ["Martin"]
+  },
+  "Auto Sport": {
+    "morning": ["Felipe"],
+    "afternoon": ["Felipe"],
+    "fallback": ["Martin"]
+  },
+  "CCNM": {
+    "all_day": ["Anthony"],
+    "fallback": ["Felipe"]
+  },
+  "Collision Center of North Miami": {
+    "all_day": ["Anthony"],
+    "fallback": ["Felipe"]
+  },
+  "JMD": {
+    "all_day": ["Randy"],
+    "fallback": ["Felipe"]
+  },
+  "JMD Body Shop": {
+    "all_day": ["Randy"],
+    "fallback": ["Felipe"]
+  }
+}

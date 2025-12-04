@@ -1,0 +1,130 @@
+{
+  "metadata": {
+    "name": "ADAS Brand Quirks",
+    "description": "Critical brand-specific issues and notes",
+    "generated": "2025-12-03T02:14:34.035Z",
+    "version": "1.0"
+  },
+  "brands": {
+    "Toyota": [
+      "VCH must be cleared post-calibration",
+      "VCH must be cleared after calibration; all procedures available for PDF download"
+    ],
+    "Honda": [
+      "OEM windshield STRONGLY recommended - aftermarket causes failures",
+      "Must be level for calibration",
+      "Laser alignment critical",
+      "No diagnostic tool required",
+      "Battery support strongly recommended; OEM windshield required for ADAS",
+      "2024+ Prologue uses GM TLC"
+    ],
+    "Nissan": [
+      "Thrust angle must be exactly zero - critical requirement",
+      "Significant safety risk if not calibrated per position statement",
+      "All 4 cameras must calibrate together",
+      "Reset mandatory after any alignment",
+      "Perfect wheel alignment with thrust angle at zero is MANDATORY",
+      "ECU calibration files charged separately"
+    ],
+    "Subaru": [
+      "Level floor ±4mm tolerance CRITICAL; 13ft marked box required",
+      "Must calibrate IN ORDER: alignment > SAS > lateral G > camera",
+      "Part of pre-calibration sequence",
+      "Level floor ±4mm required; full alignment with thrust angle mandatory",
+      "J2534 CD-ROM sold separately",
+      "Updated quarterly"
+    ],
+    "Mazda": [
+      "Special Doppler simulator tool required",
+      "BSM calibration requires special Doppler simulator tool P/N 49 G067 0A0",
+      "Limited ADAS coverage vs competitors"
+    ],
+    "Volkswagen": [
+      "Silicon pad required when camera removed; OEM windshield required",
+      "Labor time 1.8-2.2 hours typical",
+      "GeKo required for component protection/adaptation",
+      "Online coding restricted without dealer credentials"
+    ],
+    "Audi": [
+      "2018+ A8 has LiDAR requiring specialized procedure",
+      "2018+ A8 only; specialized equipment required",
+      "2018+ A8 has LiDAR requiring specialized calibration"
+    ],
+    "BMW": [
+      "BMW UNIQUE: uses dynamic calibration for cameras",
+      "Static calibration for radar only",
+      "Medium range camera",
+      "Three lenses; up to 250m range",
+      "BMW uses DYNAMIC calibration for cameras - unique approach",
+      "Key codes not available except California"
+    ],
+    "Mercedes-Benz": [
+      "Check suspension before any calibration",
+      "24-step procedure after battery disconnect (some models)",
+      "Genuine online Xentry connection required for many functions",
+      "Clone tools cannot perform Initial Startup"
+    ],
+    "GM": [
+      "Mostly self-calibrating; SPS programming after replacement",
+      "No specific calibration; SPS programming after replacement",
+      "Self-calibrating; SPS programming after replacement",
+      "Fully self-calibrating during normal driving",
+      "Learn procedure through GDS2",
+      "Most GM ADAS systems are plug-and-play with automatic self-calibration",
+      "Per-VIN programming charges apply"
+    ],
+    "Ford": [
+      "Full fuel tank recommended for proper vehicle level",
+      "Cost ~$365 typical",
+      "Cost ~$395 typical",
+      "Model dependent static vs dynamic",
+      "Azimuth/elevation check may be needed; cost ~$235",
+      "October 2025 unified pricing model; up to 3 concurrent sessions allowed",
+      "PATS functions require separate subscription"
+    ],
+    "Stellantis": [
+      "Autel is factory-approved ADAS tool",
+      "SGW bypass required on 2020+ models",
+      "SGW present on nearly 100% of 2020+ models; Autel is factory-approved ADAS tool",
+      "Flash tokens required per VIN"
+    ],
+    "Hyundai": [
+      "Use rear axle as reference point",
+      "Variant coding required for new sensors",
+      "VCI II/III interface required; can share VCI with Kia"
+    ],
+    "Kia": [
+      "Same process as Hyundai",
+      "Variant coding required for new sensors",
+      "VCI can be shared with Hyundai; separate software licenses required"
+    ],
+    "Volvo": [
+      "Camera adjustment requires spirit level tool",
+      "Special radar angle setting tools for 2007-2018",
+      "Special radar angle setting tools required for 2007-2018 models",
+      "NA subscriptions for NA vehicles only"
+    ],
+    "Tesla": [
+      "Owner can initiate via Controls > Service > Camera Calibration",
+      "Requires Toolbox 3 access",
+      "Service info documents FREE since May 2022; camera calibration via owner Controls menu",
+      "Some security functions service-center only"
+    ],
+    "Porsche": [
+      "Full PIWIS requires Porsche Partner Network membership; tester non-functional without subscription",
+      "PIWIS lease extremely expensive"
+    ],
+    "Genesis": [
+      "Separate portal from Hyundai/Kia"
+    ],
+    "Jaguar Land Rover": [
+      "25MY+ vehicles require secure diagnostics with approved DoIP SST",
+      "DoIP VCI required for EVA/EVA2 architecture"
+    ],
+    "Rivian": [
+      "Service information website under development",
+      "Limited independent access",
+      "Service website under development"
+    ]
+  }
+}

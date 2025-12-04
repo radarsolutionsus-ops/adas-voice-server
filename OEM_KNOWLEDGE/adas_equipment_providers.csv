@@ -1,0 +1,10 @@
+manufacturer,equipment_code,entry_cost,full_system_cost,oem_approvals,coverage_percent,strengths,target_system,software_updates,notes
+Autel,AUTL,$10K-15K,$30K-50K,Rivian IA900;Stellantis factory-approved,95%+,Best mobile frame;Wide coverage;Integrated data,Proprietary targets,Subscription-based,Best mobile frame option for independents
+Hunter,HUNT,Premium,$50K+,Honda;Acura;Nissan;Infiniti;Subaru;Kia;Toyota;Lexus,OEM-approved brands,100K+ units deployed;Alignment integration;OEM approvals,Integrated with alignment,With service contract,Best for shops with Hunter alignment equipment
+Bosch DAS 3000,BDAS,$20K-25K,$35K-45K,OEM co-developer,European + NA,European strength;Future-proof;OEM relationships,Bosch targets,ESI[tronic] subscription,OEM relationships provide early access to procedures
+Snap-on/John Bean,SNAP,Premium,$40K+,OEM-approved software,Professional,Professional standard;Snap-on integration;Quality,Snap-on targets,With tool subscription,Professional shops with existing Snap-on investment
+Hella Gutmann,HGUT,£6450+,£15K+,Thatcham compliant,European + global,Award-winning;10+ years experience;Thatcham certified,Hella targets,Subscription-based,Award-winning system with Thatcham certification
+TEXA,TEXA,$15K-20K,$30K-40K,European OEMs,30% higher claimed,Italian engineering;Comprehensive database;European focus,TEXA targets,Subscription-based,Italian engineering with claimed 30% higher coverage
+Mahle,MAHL,Mid-range,$25K-35K,TÜV Süd validated,Professional,TÜV validated;Digital efficiency;Quality German engineering,Mahle targets,Subscription-based,TÜV Süd validated for quality assurance
+Launch,LNCH,$8K-12K,$20K-30K,None listed,Wide,Budget-professional;Good value;Entry point,Launch targets,Subscription-based,Good entry point for shops starting in ADAS
+Thinkcar,THNK,$5K-8K,$15K-20K,None listed,Growing,Value leader;Entry-level professional;Low cost,Thinkcar targets,Subscription-based,Lowest cost professional option

@@ -1,0 +1,217 @@
+{
+  "metadata": {
+    "name": "ADAS Target Specifications",
+    "description": "Target board dimensions and placement requirements by brand",
+    "generated": "2025-12-03T02:14:34.027Z",
+    "version": "1.0"
+  },
+  "brands": {
+    "Toyota": {
+      "Forward Camera": {
+        "specs": "TSS printed targets per model",
+        "alignment": "Wheel alignment verified",
+        "rideHeight": "Standard ride height"
+      },
+      "Front Radar": {
+        "specs": "P/N 09870-60040 reflector",
+        "alignment": "Wheel alignment verified",
+        "rideHeight": "Standard ride height"
+      }
+    },
+    "Honda": {
+      "Multipurpose Camera": {
+        "specs": "Honda-specific targets per model",
+        "alignment": "4-wheel alignment verified",
+        "rideHeight": "Standard ride height"
+      },
+      "Millimeter Wave Radar": {
+        "specs": "Bubble level alignment",
+        "alignment": "4-wheel alignment verified",
+        "rideHeight": "Standard ride height"
+      },
+      "BSI Radar": {
+        "specs": "Rear target boards",
+        "alignment": "4-wheel alignment verified",
+        "rideHeight": "Standard ride height"
+      },
+      "LaneWatch Camera": {
+        "specs": "LaneWatch target board",
+        "alignment": "N/A",
+        "rideHeight": "Standard ride height"
+      }
+    },
+    "Nissan": {
+      "Forward Camera": {
+        "specs": "Nissan-specific targets",
+        "alignment": "PERFECT alignment MANDATORY - thrust angle ZERO",
+        "rideHeight": "Standard ride height"
+      },
+      "Front Radar": {
+        "specs": "Bubble level specifications",
+        "alignment": "PERFECT alignment MANDATORY",
+        "rideHeight": "Standard ride height"
+      },
+      "Around View Monitor": {
+        "specs": "4-corner target boards",
+        "alignment": "Standard alignment",
+        "rideHeight": "Standard ride height"
+      }
+    },
+    "Subaru": {
+      "EyeSight Cameras": {
+        "specs": "Target 4070mm from front wheel centers",
+        "alignment": "FULL alignment with thrust angle in spec MANDATORY",
+        "rideHeight": "Standard ride height"
+      }
+    },
+    "Mazda": {
+      "BSM Sensors": {
+        "specs": "Doppler frequency specs",
+        "alignment": "Standard alignment",
+        "rideHeight": "Standard ride height"
+      }
+    },
+    "Volkswagen": {
+      "Front Camera": {
+        "specs": "VAS 6430 target boards",
+        "alignment": "Wheel alignment verified",
+        "rideHeight": "Air suspension: control position cal first"
+      },
+      "ACC Radar": {
+        "specs": "VAS radar targets",
+        "alignment": "Wheel alignment verified",
+        "rideHeight": "Air suspension: control position cal first"
+      }
+    },
+    "Audi": {
+      "Front Camera": {
+        "specs": "VAS 6430 targets",
+        "alignment": "Wheel alignment verified",
+        "rideHeight": "Air suspension cal first"
+      },
+      "LiDAR": {
+        "specs": "Audi-specific LiDAR targets",
+        "alignment": "Wheel alignment verified",
+        "rideHeight": "Air suspension cal first"
+      }
+    },
+    "BMW": {
+      "Front Camera": {
+        "specs": "N/A - dynamic learning",
+        "alignment": "Standard alignment",
+        "rideHeight": "Standard ride height"
+      },
+      "Front Radar": {
+        "specs": "BMW radar targets",
+        "alignment": "Standard alignment",
+        "rideHeight": "Standard ride height"
+      }
+    },
+    "Mercedes-Benz": {
+      "Front Camera": {
+        "specs": "MB-specific fixture",
+        "alignment": "Check Airmatic/ABC ride height FIRST",
+        "rideHeight": "Airmatic/ABC check required"
+      },
+      "DISTRONIC Radar": {
+        "specs": "MB radar targets",
+        "alignment": "Check ride height first",
+        "rideHeight": "Airmatic/ABC check required"
+      }
+    },
+    "GM": {
+      "Frontview Camera": {
+        "specs": "N/A - plug and play",
+        "alignment": "Standard alignment",
+        "rideHeight": "Standard ride height"
+      },
+      "Surround Vision Cameras": {
+        "specs": "GDS2 guided procedure",
+        "alignment": "Standard alignment",
+        "rideHeight": "Standard ride height"
+      }
+    },
+    "Ford": {
+      "Windshield Camera": {
+        "specs": "Ford-specific targets",
+        "alignment": "Standard alignment",
+        "rideHeight": "Full fuel tank for leveling"
+      },
+      "Front Radar": {
+        "specs": "Ford radar targets",
+        "alignment": "Standard alignment",
+        "rideHeight": "Full fuel tank"
+      },
+      "360 Cameras": {
+        "specs": "4-corner target system",
+        "alignment": "Standard alignment",
+        "rideHeight": "Standard ride height"
+      },
+      "BSM Sensors": {
+        "specs": "Ford BSM targets",
+        "alignment": "Standard alignment",
+        "rideHeight": "Standard ride height"
+      }
+    },
+    "Stellantis": {
+      "Forward Camera": {
+        "specs": "Autel or OEM targets",
+        "alignment": "Standard alignment",
+        "rideHeight": "Standard ride height"
+      },
+      "Front Radar": {
+        "specs": "Autel or OEM targets",
+        "alignment": "Standard alignment",
+        "rideHeight": "Standard ride height"
+      }
+    },
+    "Hyundai": {
+      "Forward Camera": {
+        "specs": "Hyundai-specific targets",
+        "alignment": "Rear axle reference point",
+        "rideHeight": "Standard ride height"
+      },
+      "Front Radar": {
+        "specs": "Hyundai radar targets",
+        "alignment": "Rear axle reference point",
+        "rideHeight": "Standard ride height"
+      }
+    },
+    "Kia": {
+      "Forward Camera": {
+        "specs": "Kia-specific targets",
+        "alignment": "Rear axle reference point",
+        "rideHeight": "Standard ride height"
+      },
+      "Front Radar": {
+        "specs": "Kia radar targets",
+        "alignment": "Rear axle reference point",
+        "rideHeight": "Standard ride height"
+      }
+    },
+    "Volvo": {
+      "Forward Camera": {
+        "specs": "Volvo-specific targets",
+        "alignment": "Standard alignment",
+        "rideHeight": "Standard ride height"
+      },
+      "ASDM Radar": {
+        "specs": "Volvo radar specs",
+        "alignment": "Standard alignment",
+        "rideHeight": "Standard ride height"
+      }
+    },
+    "Tesla": {
+      "Autopilot Cameras": {
+        "specs": "3 feet above ground target placement",
+        "alignment": "Standard alignment",
+        "rideHeight": "Standard ride height"
+      },
+      "Radar": {
+        "specs": "Tesla-specific procedure",
+        "alignment": "Standard alignment",
+        "rideHeight": "Standard ride height"
+      }
+    }
+  }
+}

@@ -1,0 +1,298 @@
+{
+  "metadata": {
+    "name": "ADAS Knowledge Base Index",
+    "description": "Master index of all OEM knowledge base contents",
+    "generated": "2025-12-03T02:14:34.037Z",
+    "version": "1.0",
+    "totalBrands": 20,
+    "totalSystems": 55,
+    "totalCalibrations": 44
+  },
+  "brandsAvailable": [
+    "Audi",
+    "BMW",
+    "Ford",
+    "GM",
+    "Genesis",
+    "Honda",
+    "Hyundai",
+    "Jaguar Land Rover",
+    "Kia",
+    "Mazda",
+    "Mercedes-Benz",
+    "Nissan",
+    "Porsche",
+    "Rivian",
+    "Stellantis",
+    "Subaru",
+    "Tesla",
+    "Toyota",
+    "Volkswagen",
+    "Volvo"
+  ],
+  "systemsCovered": [
+    "360 Cameras",
+    "360C",
+    "ACC",
+    "ACC Radar",
+    "APC",
+    "ASDM",
+    "ASDM Radar",
+    "AVM",
+    "Around View Monitor",
+    "Autopilot Cameras",
+    "BSI",
+    "BSI Radar",
+    "BSM",
+    "BSM Sensors",
+    "DISTRONIC Radar",
+    "DTR",
+    "ESC",
+    "EyeSight Cameras",
+    "FCAM",
+    "FRR",
+    "FVC",
+    "Forward Camera",
+    "Front Camera",
+    "Front Radar",
+    "Frontview Camera",
+    "KAFAS Camera HIGH",
+    "KAFAS Camera MID",
+    "KAFAS-H",
+    "KAFAS-M",
+    "LGS",
+    "LIDAR",
+    "LRR",
+    "LWC",
+    "LaneWatch Camera",
+    "Lateral G-Force Sensor",
+    "LiDAR",
+    "Long-Range Radar",
+    "MPC",
+    "MWR",
+    "Millimeter Wave Radar",
+    "Multipurpose Camera",
+    "PARK",
+    "Parking Sensors",
+    "RADAR",
+    "Radar",
+    "SAS",
+    "SOS",
+    "SRR",
+    "SVC",
+    "Short-Range Radar",
+    "Side Object Sensors",
+    "Steering Angle Sensor",
+    "Surround Vision Cameras",
+    "WSC",
+    "Windshield Camera"
+  ],
+  "calibrationMethods": {
+    "static": [
+      "Ford"
+    ],
+    "dynamic": [],
+    "selfCalibrating": [
+      "GM"
+    ]
+  },
+  "thirdPartySupport": {
+    "ALLDATA": {
+      "code": "ALLD",
+      "category": "Repair Information",
+      "adasQuality": "Excellent",
+      "coverage": "95% of vehicles"
+    },
+    "Mitchell1 ProDemand": {
+      "code": "M1PD",
+      "category": "Repair Information",
+      "adasQuality": "Excellent",
+      "coverage": "All makes"
+    },
+    "Identifix Direct-Hit": {
+      "code": "IDTX",
+      "category": "Repair Information",
+      "adasQuality": "Good",
+      "coverage": "All makes"
+    },
+    "CCC ONE": {
+      "code": "CCC1",
+      "category": "Collision Estimating",
+      "adasQuality": "Via integrations",
+      "coverage": "All makes - collision focus"
+    },
+    "RepairLogic": {
+      "code": "RPLG",
+      "category": "OEM Collision Procedures",
+      "adasQuality": "Excellent - OEM-direct",
+      "coverage": "Top 9 North American OEMs"
+    },
+    "I-CAR RTS": {
+      "code": "ICAR",
+      "category": "ADAS Calibration Requirements",
+      "adasQuality": "Industry-first calibration database",
+      "coverage": "All major OEMs"
+    },
+    "OEM1Stop": {
+      "code": "OEM1",
+      "category": "Portal Hub",
+      "adasQuality": "Links to OEM sites",
+      "coverage": "40+ manufacturers"
+    },
+    "Bosch ESI[tronic]": {
+      "code": "BESI",
+      "category": "Repair Information",
+      "adasQuality": "Good - European strength",
+      "coverage": "150+ brands, 90K vehicles"
+    },
+    "HaynesPro": {
+      "code": "HPRO",
+      "category": "Repair Information",
+      "adasQuality": "Strong ADAS",
+      "coverage": "80+ makes"
+    },
+    "Autodata": {
+      "code": "ADAT",
+      "category": "Service Data",
+      "adasQuality": "Moderate",
+      "coverage": "43K+ models"
+    }
+  },
+  "legalAccessLevels": {
+    "Toyota": {
+      "nastfRequired": true,
+      "sgwSecurity": false,
+      "freeAccess": "Owner manuals;Recalls"
+    },
+    "Honda": {
+      "nastfRequired": true,
+      "sgwSecurity": false,
+      "freeAccess": "Basic specs"
+    },
+    "Nissan": {
+      "nastfRequired": true,
+      "sgwSecurity": false,
+      "freeAccess": "Limited"
+    },
+    "GM": {
+      "nastfRequired": false,
+      "sgwSecurity": false,
+      "freeAccess": "TSBs index"
+    },
+    "Ford": {
+      "nastfRequired": false,
+      "sgwSecurity": false,
+      "freeAccess": "Basic info"
+    },
+    "Stellantis": {
+      "nastfRequired": false,
+      "sgwSecurity": true,
+      "freeAccess": "Recalls"
+    },
+    "Volkswagen": {
+      "nastfRequired": true,
+      "sgwSecurity": true,
+      "freeAccess": "Digital Service Schedule"
+    },
+    "Audi": {
+      "nastfRequired": true,
+      "sgwSecurity": true,
+      "freeAccess": "Limited"
+    },
+    "Porsche": {
+      "nastfRequired": false,
+      "sgwSecurity": true,
+      "freeAccess": "None"
+    },
+    "BMW": {
+      "nastfRequired": true,
+      "sgwSecurity": false,
+      "freeAccess": "Some bulletins"
+    },
+    "Mercedes-Benz": {
+      "nastfRequired": true,
+      "sgwSecurity": false,
+      "freeAccess": "Recalls;Star Bulletins"
+    },
+    "Hyundai": {
+      "nastfRequired": true,
+      "sgwSecurity": false,
+      "freeAccess": "None noted"
+    },
+    "Kia": {
+      "nastfRequired": true,
+      "sgwSecurity": false,
+      "freeAccess": "None noted"
+    },
+    "Genesis": {
+      "nastfRequired": true,
+      "sgwSecurity": false,
+      "freeAccess": "None noted"
+    },
+    "Volvo": {
+      "nastfRequired": true,
+      "sgwSecurity": false,
+      "freeAccess": "None noted"
+    },
+    "Jaguar Land Rover": {
+      "nastfRequired": false,
+      "sgwSecurity": true,
+      "freeAccess": "None noted"
+    },
+    "Tesla": {
+      "nastfRequired": false,
+      "sgwSecurity": true,
+      "freeAccess": "Service docs FREE"
+    },
+    "Rivian": {
+      "nastfRequired": false,
+      "sgwSecurity": true,
+      "freeAccess": "Parts ordering FREE"
+    }
+  },
+  "sourceFiles": {
+    "oemMaster": "OEM_Master/oem_master_table.json",
+    "adasCalibrations": "ADAS/adas_calibration_dataset.csv",
+    "equipment": "Equipment/adas_equipment_providers.csv",
+    "thirdParty": "Third_Party/third_party_platforms.json",
+    "legal": "Legal/legal_access_dataset.csv",
+    "downloadPlan": "OEM_Master/DOWNLOAD_PLAN.md"
+  },
+  "derivedFiles": {
+    "targetSpecs": "ADAS/target_specs.json",
+    "prerequisites": "ADAS/prerequisites.json",
+    "quirks": "ADAS/quirks.json",
+    "blockerDTCs": "ADAS/blockerDTCs_from_dataset.json",
+    "equipmentProviders": "Equipment/adas_equipment_providers.json"
+  },
+  "criticalQuirks": [
+    {
+      "brand": "Nissan",
+      "quirk": "Thrust angle MUST be ZERO - no exceptions"
+    },
+    {
+      "brand": "Subaru",
+      "quirk": "Level floor ±4mm tolerance; calibration sequence: alignment → SAS → lateral G → camera"
+    },
+    {
+      "brand": "Honda",
+      "quirk": "Battery support STRONGLY recommended; OEM windshield required"
+    },
+    {
+      "brand": "BMW",
+      "quirk": "Uses DYNAMIC camera calibration - unique among OEMs"
+    },
+    {
+      "brand": "Stellantis",
+      "quirk": "Autel is factory-approved; SGW bypass required 2020+"
+    },
+    {
+      "brand": "Mercedes-Benz",
+      "quirk": "Clone Xentry cannot perform Initial Startup"
+    },
+    {
+      "brand": "Tesla",
+      "quirk": "Owner can self-initiate dynamic calibration via menu"
+    }
+  ]
+}

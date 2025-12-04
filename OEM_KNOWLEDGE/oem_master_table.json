@@ -1,0 +1,646 @@
+{
+  "metadata": {
+    "dataset_name": "OEM Master Table",
+    "version": "1.0",
+    "created_date": "2025-12-02",
+    "total_records": 54,
+    "description": "Complete directory of OEM service information portals, ADAS calibration sources, and programming access",
+    "tags": ["oem", "service_info", "adas", "programming", "subscriptions"]
+  },
+  "oem_portals": [
+    {
+      "id": "OEM-001",
+      "brand": "Toyota",
+      "parent_group": "Toyota Motor Corporation",
+      "region": "US",
+      "official_portal": "techinfo.toyota.com",
+      "portal_url": "https://techinfo.toyota.com",
+      "adas_calibration": {
+        "included": true,
+        "system_name": "TSS",
+        "coverage": "TSS 2.0+ procedures"
+      },
+      "programming": {
+        "software": "Techstream",
+        "access_method": "TIS",
+        "j2534_compatible": true
+      },
+      "security": {
+        "nastf_required": true,
+        "credential_type": "VSP",
+        "additional_requirements": []
+      },
+      "pricing": {
+        "daily": "$20-25",
+        "annual_standard": "$505",
+        "annual_professional": "$1360",
+        "currency": "USD"
+      },
+      "known_gaps": [],
+      "notes": "VCH must be cleared after calibration; all procedures available for PDF download",
+      "last_verified": "2025-12"
+    },
+    {
+      "id": "OEM-002",
+      "brand": "Honda",
+      "parent_group": "Honda Motor Company",
+      "region": "US",
+      "official_portal": "techinfo.honda.com",
+      "portal_url": "https://techinfo.honda.com",
+      "adas_calibration": {
+        "included": true,
+        "system_name": "Honda Sensing",
+        "coverage": "Full procedures"
+      },
+      "programming": {
+        "software": "i-HDS",
+        "access_method": "eStore",
+        "j2534_compatible": true
+      },
+      "security": {
+        "nastf_required": true,
+        "credential_type": "VSP",
+        "additional_requirements": []
+      },
+      "pricing": {
+        "daily": "Contact",
+        "annual": "Contact eStore",
+        "currency": "USD"
+      },
+      "known_gaps": ["2024+ Prologue uses GM TLC"],
+      "notes": "Battery support strongly recommended; OEM windshield required for ADAS",
+      "last_verified": "2025-12"
+    },
+    {
+      "id": "OEM-003",
+      "brand": "Nissan",
+      "parent_group": "Nissan Motor Corporation",
+      "region": "US",
+      "official_portal": "nissan-techinfo.com",
+      "portal_url": "https://nissan-techinfo.com",
+      "adas_calibration": {
+        "included": true,
+        "system_name": "Safety Shield",
+        "coverage": "Full procedures"
+      },
+      "programming": {
+        "software": "CONSULT-III Plus",
+        "access_method": "Portal",
+        "j2534_compatible": true
+      },
+      "security": {
+        "nastf_required": true,
+        "credential_type": "VSP",
+        "additional_requirements": []
+      },
+      "pricing": {
+        "daily": "$19.99",
+        "monthly": "$75",
+        "annual": "$720",
+        "ecu_files": "$19.50-$35 per file",
+        "currency": "USD"
+      },
+      "known_gaps": ["ECU calibration files charged separately"],
+      "notes": "Perfect wheel alignment with thrust angle at zero is MANDATORY",
+      "last_verified": "2025-12"
+    },
+    {
+      "id": "OEM-004",
+      "brand": "Subaru",
+      "parent_group": "Subaru Corporation",
+      "region": "US",
+      "official_portal": "techinfo.subaru.com",
+      "portal_url": "https://techinfo.subaru.com",
+      "adas_calibration": {
+        "included": true,
+        "system_name": "EyeSight",
+        "coverage": "Full procedures"
+      },
+      "programming": {
+        "software": "SSM4/SSM5",
+        "access_method": "Portal",
+        "j2534_compatible": true
+      },
+      "security": {
+        "nastf_required": true,
+        "credential_type": "VSP",
+        "additional_requirements": []
+      },
+      "pricing": {
+        "72_hour": "$34.95",
+        "j2534_cdrom": "$75",
+        "currency": "USD"
+      },
+      "known_gaps": ["J2534 CD-ROM sold separately", "Updated quarterly"],
+      "notes": "Level floor ±4mm required; full alignment with thrust angle mandatory",
+      "last_verified": "2025-12"
+    },
+    {
+      "id": "OEM-005",
+      "brand": "Mazda",
+      "parent_group": "Mazda Motor Corporation",
+      "region": "US/CA",
+      "official_portal": "mazdaserviceinfo.com",
+      "portal_url": "https://mazdaserviceinfo.com",
+      "adas_calibration": {
+        "included": true,
+        "system_name": "i-ACTIVSENSE",
+        "coverage": "Standard procedures"
+      },
+      "programming": {
+        "software": "IDS",
+        "access_method": "Portal",
+        "j2534_compatible": true
+      },
+      "security": {
+        "nastf_required": true,
+        "credential_type": "VSP",
+        "additional_requirements": []
+      },
+      "pricing": {
+        "starting": "$29.95",
+        "currency": "USD"
+      },
+      "known_gaps": ["Limited ADAS coverage vs competitors"],
+      "notes": "BSM calibration requires special Doppler simulator tool P/N 49 G067 0A0",
+      "last_verified": "2025-12"
+    },
+    {
+      "id": "OEM-006",
+      "brand": "Volkswagen",
+      "parent_group": "Volkswagen AG",
+      "region": "US",
+      "official_portal": "erwin.vw.com",
+      "portal_url": "https://erwin.vw.com",
+      "adas_calibration": {
+        "included": true,
+        "system_name": "IQ.DRIVE",
+        "coverage": "Full procedures"
+      },
+      "programming": {
+        "software": "ODIS",
+        "access_method": "erWin",
+        "j2534_compatible": true
+      },
+      "security": {
+        "nastf_required": true,
+        "credential_type": "VSP",
+        "additional_requirements": ["GeKo for online coding"]
+      },
+      "pricing": {
+        "daily": "$35",
+        "3_day": "$60",
+        "monthly": "$250",
+        "annual": "$1500",
+        "currency": "USD"
+      },
+      "known_gaps": ["Online coding restricted without dealer credentials"],
+      "notes": "GeKo required for component protection/adaptation",
+      "last_verified": "2025-12"
+    },
+    {
+      "id": "OEM-007",
+      "brand": "Audi",
+      "parent_group": "Volkswagen AG",
+      "region": "US",
+      "official_portal": "erwin.audiusa.com",
+      "portal_url": "https://erwin.audiusa.com",
+      "adas_calibration": {
+        "included": true,
+        "system_name": "Audi pre sense",
+        "coverage": "Full procedures"
+      },
+      "programming": {
+        "software": "ODIS",
+        "access_method": "erWin",
+        "j2534_compatible": true
+      },
+      "security": {
+        "nastf_required": true,
+        "credential_type": "VSP",
+        "additional_requirements": ["GeKo for online coding"]
+      },
+      "pricing": {
+        "annual": "$1500",
+        "currency": "USD"
+      },
+      "known_gaps": [],
+      "notes": "2018+ A8 has LiDAR requiring specialized calibration",
+      "last_verified": "2025-12"
+    },
+    {
+      "id": "OEM-008",
+      "brand": "Porsche",
+      "parent_group": "Volkswagen AG",
+      "region": "Global",
+      "official_portal": "pcss-tsi.porsche.com",
+      "portal_url": "https://pcss-tsi.porsche.com",
+      "adas_calibration": {
+        "included": true,
+        "system_name": "Porsche InnoDrive",
+        "coverage": "Full procedures"
+      },
+      "programming": {
+        "software": "PIWIS III/4",
+        "access_method": "TSI",
+        "j2534_compatible": false
+      },
+      "security": {
+        "nastf_required": false,
+        "credential_type": "PPN",
+        "additional_requirements": ["PPN membership required"]
+      },
+      "pricing": {
+        "hourly": "$14",
+        "annual_full": "$23000+",
+        "renewal": "$12000",
+        "currency": "USD"
+      },
+      "known_gaps": ["PIWIS lease extremely expensive"],
+      "notes": "Full PIWIS requires Porsche Partner Network membership; tester non-functional without subscription",
+      "last_verified": "2025-12"
+    },
+    {
+      "id": "OEM-009",
+      "brand": "BMW",
+      "parent_group": "BMW AG",
+      "region": "US/CA",
+      "official_portal": "bmwtechinfo.bmwgroup.com",
+      "portal_url": "https://bmwtechinfo.bmwgroup.com",
+      "adas_calibration": {
+        "included": true,
+        "system_name": "BMW Driving Assistant",
+        "coverage": "Dynamic camera, static radar"
+      },
+      "programming": {
+        "software": "ISTA",
+        "access_method": "TIS",
+        "j2534_compatible": true
+      },
+      "security": {
+        "nastf_required": true,
+        "credential_type": "VSP",
+        "additional_requirements": ["Key codes CA only"]
+      },
+      "pricing": {
+        "annual": "$2700",
+        "currency": "USD"
+      },
+      "known_gaps": ["Key codes not available except California"],
+      "notes": "BMW uses DYNAMIC calibration for cameras - unique approach",
+      "last_verified": "2025-12"
+    },
+    {
+      "id": "OEM-010",
+      "brand": "Mercedes-Benz",
+      "parent_group": "Mercedes-Benz Group AG",
+      "region": "US",
+      "official_portal": "startekinfo.com",
+      "portal_url": "https://startekinfo.com",
+      "adas_calibration": {
+        "included": true,
+        "system_name": "DISTRONIC/Active Safety",
+        "coverage": "Full procedures"
+      },
+      "programming": {
+        "software": "Xentry",
+        "access_method": "StarTekInfo",
+        "j2534_compatible": true
+      },
+      "security": {
+        "nastf_required": true,
+        "credential_type": "VSP",
+        "additional_requirements": []
+      },
+      "pricing": {
+        "daily_wis": "$60",
+        "weekly": "$169",
+        "annual_wis": "$3770",
+        "annual_epc": "$75-98",
+        "currency": "USD"
+      },
+      "known_gaps": ["Clone tools cannot perform Initial Startup"],
+      "notes": "Genuine online Xentry connection required for many functions",
+      "last_verified": "2025-12"
+    },
+    {
+      "id": "OEM-011",
+      "brand": "GM",
+      "parent_group": "General Motors",
+      "region": "US",
+      "official_portal": "acdelcotds.com",
+      "portal_url": "https://acdelcotds.com",
+      "adas_calibration": {
+        "included": true,
+        "system_name": "Super Cruise",
+        "coverage": "Self-calibrating systems"
+      },
+      "programming": {
+        "software": "GDS2/SPS2",
+        "access_method": "ACDelco TDS",
+        "j2534_compatible": true
+      },
+      "security": {
+        "nastf_required": true,
+        "credential_type": "VSP",
+        "additional_requirements": ["2020+ MY required"]
+      },
+      "pricing": {
+        "3_day": "$20",
+        "annual": "$1200",
+        "per_vin_programming": "$40-45",
+        "currency": "USD"
+      },
+      "known_gaps": ["Per-VIN programming charges apply"],
+      "notes": "Most GM ADAS systems are plug-and-play with automatic self-calibration",
+      "last_verified": "2025-12"
+    },
+    {
+      "id": "OEM-012",
+      "brand": "Ford",
+      "parent_group": "Ford Motor Company",
+      "region": "US",
+      "official_portal": "motorcraftservice.com",
+      "portal_url": "https://motorcraftservice.com",
+      "adas_calibration": {
+        "included": true,
+        "system_name": "BlueCruise",
+        "coverage": "Full procedures"
+      },
+      "programming": {
+        "software": "FDRS",
+        "access_method": "Motorcraft Service",
+        "j2534_compatible": true
+      },
+      "security": {
+        "nastf_required": true,
+        "credential_type": "VSP",
+        "additional_requirements": ["PATS separate access", "2020+ MY"]
+      },
+      "pricing": {
+        "2_day": "$120",
+        "monthly": "$300",
+        "annual": "$1200",
+        "currency": "USD"
+      },
+      "known_gaps": ["PATS functions require separate subscription"],
+      "notes": "October 2025 unified pricing model; up to 3 concurrent sessions allowed",
+      "last_verified": "2025-12"
+    },
+    {
+      "id": "OEM-013",
+      "brand": "Stellantis",
+      "parent_group": "Stellantis NV",
+      "region": "US",
+      "official_portal": "stellantisiop.com",
+      "portal_url": "https://stellantisiop.com",
+      "adas_calibration": {
+        "included": true,
+        "system_name": "Active Safety Systems",
+        "coverage": "Full procedures"
+      },
+      "programming": {
+        "software": "wiTECH 2.0",
+        "access_method": "TechAuthority",
+        "j2534_compatible": true
+      },
+      "security": {
+        "nastf_required": true,
+        "credential_type": "VSP",
+        "additional_requirements": ["SGW bypass", "2016+ MY"]
+      },
+      "pricing": {
+        "3_day": "$35-50",
+        "annual_techauthority": "$1978",
+        "annual_witech": "$1785",
+        "flash_tokens": "$35/VIN",
+        "currency": "USD"
+      },
+      "known_gaps": ["Flash tokens required per VIN"],
+      "notes": "SGW present on nearly 100% of 2020+ models; Autel is factory-approved ADAS tool",
+      "last_verified": "2025-12"
+    },
+    {
+      "id": "OEM-014",
+      "brand": "Hyundai",
+      "parent_group": "Hyundai Motor Group",
+      "region": "US",
+      "official_portal": "hyundaitechinfo.com",
+      "portal_url": "https://hyundaitechinfo.com",
+      "adas_calibration": {
+        "included": true,
+        "system_name": "SmartSense",
+        "coverage": "Full procedures"
+      },
+      "programming": {
+        "software": "GDS SMART",
+        "access_method": "Portal",
+        "j2534_compatible": true
+      },
+      "security": {
+        "nastf_required": true,
+        "credential_type": "VSP",
+        "additional_requirements": []
+      },
+      "pricing": {
+        "72_hour": "$19",
+        "monthly": "$150",
+        "annual": "$1500",
+        "security_codes": "$14/VIN",
+        "currency": "USD"
+      },
+      "known_gaps": [],
+      "notes": "VCI II/III interface required; can share VCI with Kia",
+      "last_verified": "2025-12"
+    },
+    {
+      "id": "OEM-015",
+      "brand": "Kia",
+      "parent_group": "Hyundai Motor Group",
+      "region": "US",
+      "official_portal": "kiatechinfo.com",
+      "portal_url": "https://kiatechinfo.com",
+      "adas_calibration": {
+        "included": true,
+        "system_name": "Drive Wise",
+        "coverage": "Full procedures"
+      },
+      "programming": {
+        "software": "KDS 2.0",
+        "access_method": "Portal",
+        "j2534_compatible": true
+      },
+      "security": {
+        "nastf_required": true,
+        "credential_type": "VSP",
+        "additional_requirements": []
+      },
+      "pricing": {
+        "72_hour": "$19",
+        "monthly": "$150",
+        "annual": "$1500",
+        "currency": "USD"
+      },
+      "known_gaps": [],
+      "notes": "VCI can be shared with Hyundai; separate software licenses required",
+      "last_verified": "2025-12"
+    },
+    {
+      "id": "OEM-016",
+      "brand": "Genesis",
+      "parent_group": "Hyundai Motor Group",
+      "region": "US",
+      "official_portal": "genesistechinfo.com",
+      "portal_url": "https://genesistechinfo.com",
+      "adas_calibration": {
+        "included": true,
+        "system_name": "Genesis Active Safety",
+        "coverage": "Full procedures"
+      },
+      "programming": {
+        "software": "GDSM",
+        "access_method": "Portal",
+        "j2534_compatible": true
+      },
+      "security": {
+        "nastf_required": true,
+        "credential_type": "VSP",
+        "additional_requirements": []
+      },
+      "pricing": {
+        "annual": "$1680",
+        "currency": "USD"
+      },
+      "known_gaps": [],
+      "notes": "Separate portal from Hyundai/Kia",
+      "last_verified": "2025-12"
+    },
+    {
+      "id": "OEM-017",
+      "brand": "Volvo",
+      "parent_group": "Geely",
+      "region": "US/CA",
+      "official_portal": "volvotechinfo.com/vida",
+      "portal_url": "https://volvotechinfo.com/vida",
+      "adas_calibration": {
+        "included": true,
+        "system_name": "IntelliSafe",
+        "coverage": "Full procedures"
+      },
+      "programming": {
+        "software": "VIDA",
+        "access_method": "Portal",
+        "j2534_compatible": true
+      },
+      "security": {
+        "nastf_required": true,
+        "credential_type": "VSP",
+        "additional_requirements": []
+      },
+      "pricing": {
+        "3_day": "$73",
+        "monthly": "$648",
+        "annual": "$7548",
+        "currency": "USD"
+      },
+      "known_gaps": ["NA subscriptions for NA vehicles only"],
+      "notes": "Special radar angle setting tools required for 2007-2018 models",
+      "last_verified": "2025-12"
+    },
+    {
+      "id": "OEM-018",
+      "brand": "Jaguar Land Rover",
+      "parent_group": "Tata Motors",
+      "region": "Global",
+      "official_portal": "topix.jlrext.com",
+      "portal_url": "https://topix.jlrext.com",
+      "adas_calibration": {
+        "included": true,
+        "system_name": "Driver Assist",
+        "coverage": "Full procedures"
+      },
+      "programming": {
+        "software": "Pathfinder/TOPIx Cloud",
+        "access_method": "TOPIx",
+        "j2534_compatible": false
+      },
+      "security": {
+        "nastf_required": false,
+        "credential_type": "LSID",
+        "additional_requirements": ["DoIP VCI required 2017+"]
+      },
+      "pricing": {
+        "contact": true,
+        "currency": "USD"
+      },
+      "known_gaps": ["DoIP VCI required for EVA/EVA2 architecture"],
+      "notes": "25MY+ vehicles require secure diagnostics with approved DoIP SST",
+      "last_verified": "2025-12"
+    },
+    {
+      "id": "OEM-019",
+      "brand": "Tesla",
+      "parent_group": "Tesla Inc",
+      "region": "Global",
+      "official_portal": "service.tesla.com",
+      "portal_url": "https://service.tesla.com",
+      "adas_calibration": {
+        "included": true,
+        "system_name": "Autopilot/FSD",
+        "coverage": "Dynamic and static procedures"
+      },
+      "programming": {
+        "software": "Toolbox 3.0",
+        "access_method": "Portal",
+        "j2534_compatible": false
+      },
+      "security": {
+        "nastf_required": false,
+        "credential_type": "Limited",
+        "additional_requirements": []
+      },
+      "pricing": {
+        "daily": "$75",
+        "monthly": "$150",
+        "annual": "$700",
+        "service_docs": "FREE",
+        "currency": "USD"
+      },
+      "known_gaps": ["Some security functions service-center only"],
+      "notes": "Service info documents FREE since May 2022; camera calibration via owner Controls menu",
+      "last_verified": "2025-12"
+    },
+    {
+      "id": "OEM-020",
+      "brand": "Rivian",
+      "parent_group": "Rivian Automotive",
+      "region": "US",
+      "official_portal": "Email support",
+      "portal_url": "aftersalessupport@rivian.com",
+      "adas_calibration": {
+        "included": true,
+        "system_name": "Driver+",
+        "coverage": "Developing"
+      },
+      "programming": {
+        "software": "Via portal",
+        "access_method": "Email",
+        "j2534_compatible": false
+      },
+      "security": {
+        "nastf_required": false,
+        "credential_type": "Developing",
+        "additional_requirements": []
+      },
+      "pricing": {
+        "parts_only": "Free",
+        "manual_training": "$2500/year",
+        "full_access": "$5500/year",
+        "currency": "USD"
+      },
+      "known_gaps": ["Limited independent access", "Service website under development"],
+      "notes": "Service information website under development",
+      "last_verified": "2025-12"
+    }
+  ]
+}

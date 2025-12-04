@@ -1,0 +1,80 @@
+{
+  "metadata": {
+    "name": "DTC Blockers for ADAS Calibration",
+    "description": "DTCs that prevent calibration from completing by brand and system",
+    "generated": "2025-12-03T02:14:34.035Z",
+    "version": "1.0"
+  },
+  "brands": {
+    "Toyota": {
+      "Forward Camera": "Active DTCs in camera system",
+      "Front Radar": "Radar DTCs"
+    },
+    "Honda": {
+      "Multipurpose Camera": "Camera DTCs;Module faults",
+      "Millimeter Wave Radar": "Radar DTCs",
+      "BSI Radar": "BSI DTCs"
+    },
+    "Nissan": {
+      "Forward Camera": "Camera DTCs",
+      "Front Radar": "Radar DTCs",
+      "Around View Monitor": "Camera DTCs",
+      "Steering Angle Sensor": "SAS DTCs"
+    },
+    "Subaru": {
+      "EyeSight Cameras": "EyeSight DTCs;SAS DTCs",
+      "Steering Angle Sensor": "SAS DTCs",
+      "Lateral G-Force Sensor": "Lateral G DTCs"
+    },
+    "Mazda": {
+      "BSM Sensors": "BSM DTCs"
+    },
+    "Volkswagen": {
+      "Front Camera": "Camera DTCs",
+      "ACC Radar": "Radar DTCs"
+    },
+    "Audi": {
+      "Front Camera": "Camera DTCs",
+      "LiDAR": "LiDAR DTCs"
+    },
+    "BMW": {
+      "Front Camera": "Camera DTCs",
+      "Front Radar": "Radar DTCs",
+      "KAFAS Camera MID": "KAFAS DTCs",
+      "KAFAS Camera HIGH": "KAFAS DTCs"
+    },
+    "Mercedes-Benz": {
+      "Front Camera": "Camera DTCs",
+      "DISTRONIC Radar": "Radar DTCs"
+    },
+    "GM": {
+      "Surround Vision Cameras": "Camera DTCs"
+    },
+    "Ford": {
+      "Windshield Camera": "Camera DTCs",
+      "Front Radar": "Radar DTCs",
+      "360 Cameras": "Camera DTCs",
+      "BSM Sensors": "BSM DTCs"
+    },
+    "Stellantis": {
+      "Forward Camera": "Camera DTCs",
+      "Front Radar": "Radar DTCs"
+    },
+    "Hyundai": {
+      "Forward Camera": "Camera DTCs",
+      "Front Radar": "Radar DTCs"
+    },
+    "Kia": {
+      "Forward Camera": "Camera DTCs",
+      "Front Radar": "Radar DTCs"
+    },
+    "Volvo": {
+      "Forward Camera": "Camera DTCs",
+      "ASDM Radar": "Radar DTCs"
+    },
+    "Tesla": {
+      "Autopilot Cameras": "Camera DTCs",
+      "Radar": "Radar DTCs"
+    }
+  }
+}

@@ -1,0 +1,372 @@
+{
+  "metadata": {
+    "name": "ADAS Equipment Providers",
+    "description": "ADAS calibration equipment manufacturers and capabilities",
+    "generated": "2025-12-03T02:14:34.036Z",
+    "version": "1.0"
+  },
+  "providers": [
+    {
+      "manufacturer": "Autel",
+      "code": "AUTL",
+      "entryCost": "$10K-15K",
+      "fullSystemCost": "$30K-50K",
+      "oemApprovals": [
+        "Rivian IA900",
+        "Stellantis factory-approved"
+      ],
+      "coverage": "95%+",
+      "strengths": [
+        "Best mobile frame",
+        "Wide coverage",
+        "Integrated data"
+      ],
+      "targetSystem": "Proprietary targets",
+      "softwareUpdates": "Subscription-based",
+      "notes": "Best mobile frame option for independents"
+    },
+    {
+      "manufacturer": "Hunter",
+      "code": "HUNT",
+      "entryCost": "Premium",
+      "fullSystemCost": "$50K+",
+      "oemApprovals": [
+        "Honda",
+        "Acura",
+        "Nissan",
+        "Infiniti",
+        "Subaru",
+        "Kia",
+        "Toyota",
+        "Lexus"
+      ],
+      "coverage": "OEM-approved brands",
+      "strengths": [
+        "100K+ units deployed",
+        "Alignment integration",
+        "OEM approvals"
+      ],
+      "targetSystem": "Integrated with alignment",
+      "softwareUpdates": "With service contract",
+      "notes": "Best for shops with Hunter alignment equipment"
+    },
+    {
+      "manufacturer": "Bosch DAS 3000",
+      "code": "BDAS",
+      "entryCost": "$20K-25K",
+      "fullSystemCost": "$35K-45K",
+      "oemApprovals": [
+        "OEM co-developer"
+      ],
+      "coverage": "European + NA",
+      "strengths": [
+        "European strength",
+        "Future-proof",
+        "OEM relationships"
+      ],
+      "targetSystem": "Bosch targets",
+      "softwareUpdates": "ESI[tronic] subscription",
+      "notes": "OEM relationships provide early access to procedures"
+    },
+    {
+      "manufacturer": "Snap-on/John Bean",
+      "code": "SNAP",
+      "entryCost": "Premium",
+      "fullSystemCost": "$40K+",
+      "oemApprovals": [
+        "OEM-approved software"
+      ],
+      "coverage": "Professional",
+      "strengths": [
+        "Professional standard",
+        "Snap-on integration",
+        "Quality"
+      ],
+      "targetSystem": "Snap-on targets",
+      "softwareUpdates": "With tool subscription",
+      "notes": "Professional shops with existing Snap-on investment"
+    },
+    {
+      "manufacturer": "Hella Gutmann",
+      "code": "HGUT",
+      "entryCost": "£6450+",
+      "fullSystemCost": "£15K+",
+      "oemApprovals": [
+        "Thatcham compliant"
+      ],
+      "coverage": "European + global",
+      "strengths": [
+        "Award-winning",
+        "10+ years experience",
+        "Thatcham certified"
+      ],
+      "targetSystem": "Hella targets",
+      "softwareUpdates": "Subscription-based",
+      "notes": "Award-winning system with Thatcham certification"
+    },
+    {
+      "manufacturer": "TEXA",
+      "code": "TEXA",
+      "entryCost": "$15K-20K",
+      "fullSystemCost": "$30K-40K",
+      "oemApprovals": [
+        "European OEMs"
+      ],
+      "coverage": "30% higher claimed",
+      "strengths": [
+        "Italian engineering",
+        "Comprehensive database",
+        "European focus"
+      ],
+      "targetSystem": "TEXA targets",
+      "softwareUpdates": "Subscription-based",
+      "notes": "Italian engineering with claimed 30% higher coverage"
+    },
+    {
+      "manufacturer": "Mahle",
+      "code": "MAHL",
+      "entryCost": "Mid-range",
+      "fullSystemCost": "$25K-35K",
+      "oemApprovals": [
+        "TÜV Süd validated"
+      ],
+      "coverage": "Professional",
+      "strengths": [
+        "TÜV validated",
+        "Digital efficiency",
+        "Quality German engineering"
+      ],
+      "targetSystem": "Mahle targets",
+      "softwareUpdates": "Subscription-based",
+      "notes": "TÜV Süd validated for quality assurance"
+    },
+    {
+      "manufacturer": "Launch",
+      "code": "LNCH",
+      "entryCost": "$8K-12K",
+      "fullSystemCost": "$20K-30K",
+      "oemApprovals": [
+        "None listed"
+      ],
+      "coverage": "Wide",
+      "strengths": [
+        "Budget-professional",
+        "Good value",
+        "Entry point"
+      ],
+      "targetSystem": "Launch targets",
+      "softwareUpdates": "Subscription-based",
+      "notes": "Good entry point for shops starting in ADAS"
+    },
+    {
+      "manufacturer": "Thinkcar",
+      "code": "THNK",
+      "entryCost": "$5K-8K",
+      "fullSystemCost": "$15K-20K",
+      "oemApprovals": [
+        "None listed"
+      ],
+      "coverage": "Growing",
+      "strengths": [
+        "Value leader",
+        "Entry-level professional",
+        "Low cost"
+      ],
+      "targetSystem": "Thinkcar targets",
+      "softwareUpdates": "Subscription-based",
+      "notes": "Lowest cost professional option"
+    }
+  ],
+  "additionalFromThirdParty": [
+    {
+      "id": "EQ-001",
+      "name": "Autel ADAS",
+      "code": "AUTL",
+      "category": "ADAS Calibration Equipment",
+      "entry_cost": "$10K-15K",
+      "full_system_cost": "$30K-50K",
+      "coverage": "95%+ vehicles",
+      "oem_approvals": [
+        "Rivian (IA900)",
+        "Stellantis (factory-approved)"
+      ],
+      "strengths": [
+        "Best mobile frame",
+        "95% coverage",
+        "Integrated data"
+      ],
+      "equipment_models": [
+        "IA900",
+        "IA800",
+        "MaxiSYS ADAS"
+      ],
+      "url": "https://autel.com",
+      "tags": [
+        "mobile_frame",
+        "wide_coverage",
+        "rivian_approved"
+      ]
+    },
+    {
+      "id": "EQ-002",
+      "name": "Hunter ADAS",
+      "code": "HUNT",
+      "category": "ADAS Calibration Equipment",
+      "entry_cost": "Premium",
+      "full_system_cost": "$50K+",
+      "coverage": "Honda, Acura, Nissan, Infiniti, Subaru, Kia, Toyota, Lexus",
+      "oem_approvals": [
+        "Honda",
+        "Acura",
+        "Nissan",
+        "Infiniti",
+        "Subaru",
+        "Kia",
+        "Toyota",
+        "Lexus"
+      ],
+      "strengths": [
+        "100K+ units deployed",
+        "Alignment integration",
+        "OEM approvals"
+      ],
+      "url": "https://hunter.com",
+      "tags": [
+        "alignment_integration",
+        "oem_approved",
+        "professional"
+      ]
+    },
+    {
+      "id": "EQ-003",
+      "name": "Bosch DAS 3000",
+      "code": "BDAS",
+      "category": "ADAS Calibration Equipment",
+      "entry_cost": "$20K-25K",
+      "full_system_cost": "$35K-45K",
+      "coverage": "Broad European and NA coverage",
+      "oem_approvals": [
+        "OEM co-developer"
+      ],
+      "strengths": [
+        "European strength",
+        "Future-proof",
+        "OEM relationships"
+      ],
+      "url": "https://www.boschaftermarket.com",
+      "tags": [
+        "european",
+        "oem_codeveloper",
+        "future_proof"
+      ]
+    },
+    {
+      "id": "EQ-004",
+      "name": "Snap-on/John Bean ADAS",
+      "code": "SNAP",
+      "category": "ADAS Calibration Equipment",
+      "entry_cost": "Premium",
+      "full_system_cost": "$40K+",
+      "coverage": "Professional coverage",
+      "oem_approvals": [
+        "OEM-approved software"
+      ],
+      "strengths": [
+        "Professional standard",
+        "Snap-on integration",
+        "Quality"
+      ],
+      "url": "https://snapon.com",
+      "tags": [
+        "professional",
+        "snap_on",
+        "quality"
+      ]
+    },
+    {
+      "id": "EQ-005",
+      "name": "Hella Gutmann ADAS",
+      "code": "HGUT",
+      "category": "ADAS Calibration Equipment",
+      "entry_cost": "£6,450+",
+      "full_system_cost": "£15K+",
+      "coverage": "European and global",
+      "oem_approvals": [
+        "Thatcham compliant"
+      ],
+      "strengths": [
+        "Award-winning",
+        "10+ years experience",
+        "Thatcham certified"
+      ],
+      "url": "https://www.hella-gutmann.com",
+      "tags": [
+        "thatcham",
+        "award_winning",
+        "european"
+      ]
+    },
+    {
+      "id": "EQ-006",
+      "name": "TEXA ADAS",
+      "code": "TEXA",
+      "category": "ADAS Calibration Equipment",
+      "entry_cost": "$15K-20K",
+      "full_system_cost": "$30K-40K",
+      "coverage": "30% higher coverage claimed",
+      "oem_approvals": [
+        "European OEMs"
+      ],
+      "strengths": [
+        "Italian engineering",
+        "Comprehensive database",
+        "European focus"
+      ],
+      "url": "https://texa.com",
+      "tags": [
+        "italian",
+        "european_focus",
+        "comprehensive"
+      ]
+    },
+    {
+      "id": "EQ-007",
+      "name": "Launch ADAS",
+      "code": "LNCH",
+      "category": "ADAS Calibration Equipment",
+      "entry_cost": "$8K-12K",
+      "full_system_cost": "$20K-30K",
+      "coverage": "Wide coverage",
+      "oem_approvals": [],
+      "strengths": [
+        "Budget-professional option",
+        "Good value"
+      ],
+      "url": "https://launch.com",
+      "tags": [
+        "budget",
+        "value",
+        "professional"
+      ]
+    },
+    {
+      "id": "EQ-008",
+      "name": "Thinkcar ADAS",
+      "code": "THNK",
+      "category": "ADAS Calibration Equipment",
+      "entry_cost": "$5K-8K",
+      "full_system_cost": "$15K-20K",
+      "coverage": "Growing coverage",
+      "oem_approvals": [],
+      "strengths": [
+        "Value leader",
+        "Entry-level professional"
+      ],
+      "url": "https://thinkcar.com",
+      "tags": [
+        "value_leader",
+        "entry_level"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,55 @@
+brand,region,official_oem_portal,adas_calibration_source,programming_portal,security_requirements,pricing_model,known_gaps,notes,direct_links
+Toyota,US,techinfo.toyota.com,Included (TSS procedures),Techstream via TIS,NASTF VSP,$505-$1360/year,None significant,VCH must be cleared after calibration; all procedures available for PDF download,https://techinfo.toyota.com
+Lexus,US,techinfo.toyota.com,Included (TSS procedures),Techstream via TIS,NASTF VSP,$505-$1360/year,None significant,Same portal as Toyota,https://techinfo.toyota.com
+Honda,US,techinfo.honda.com,Included (Honda Sensing),i-HDS via eStore,NASTF VSP,Contact eStore,2024+ Prologue uses GM TLC,Battery support strongly recommended; OEM windshield required,https://techinfo.honda.com
+Acura,US,techinfo.honda.com,Included (Honda Sensing),i-HDS via eStore,NASTF VSP,Contact eStore,2024+ ZDX uses GM TLC,Same portal as Honda,https://techinfo.honda.com
+Nissan,US,nissan-techinfo.com,Included (Safety Shield),CONSULT-III Plus,NASTF VSP,$720/year,ECU files $19.50-$35 extra,Perfect alignment with thrust angle zero MANDATORY,https://nissan-techinfo.com
+Infiniti,US,nissan-techinfo.com,Included (Safety Shield),CONSULT-III Plus,NASTF VSP,$720/year,ECU files extra,Same portal as Nissan,https://nissan-techinfo.com
+Mazda,US/CA,mazdaserviceinfo.com,Included,IDS via portal,NASTF VSP,From $29.95,Limited ADAS vs competitors,BSM requires special Doppler simulator tool,https://mazdaserviceinfo.com
+Subaru,US,techinfo.subaru.com,Included (EyeSight),SSM4/SSM5,NASTF VSP,$34.95/72hr,J2534 CD-ROM $75 separate,Level floor ±4mm required; full alignment mandatory,https://techinfo.subaru.com
+Mitsubishi,US,mitsubishitechinfo.com,Included,MUT-III,NASTF VSP,$19/day,Some models use Renault ASOS,Check ECU Reprogramming section with VIN,https://mitsubishitechinfo.com
+Mitsubishi,EU,mitsubishitechinfo.eu,Included,MUT-III,N/A,€1600/year,None noted,European portal,https://mitsubishitechinfo.eu
+Volkswagen,US,erwin.vw.com,Included,ODIS,NASTF + GeKo,$1500/year,Online coding restricted,GeKo required for component protection,https://erwin.vw.com
+Volkswagen,EU,volkswagen.erwin-store.com,Included,ODIS,GeKo,Variable,Consumer access ends Dec 2025,European portal with different pricing,https://volkswagen.erwin-store.com
+Audi,US,erwin.audiusa.com,Included,ODIS,NASTF + GeKo,$1500/year,None noted,Same system as VW,https://erwin.audiusa.com
+Audi,EU,audi.erwin-store.com,Included,ODIS,GeKo,Variable,None noted,European portal,https://audi.erwin-store.com
+Porsche,Global,pcss-tsi.porsche.com,Included,PIWIS III/4,PPN membership,$14/hr or $23K+/year,PIWIS lease extremely expensive,Full PIWIS requires PPN membership,https://pcss-tsi.porsche.com
+Bentley,Global,bentleymotors.erwin-store.com,Included,ODIS,GeKo,Per erWin,None noted,Uses VW Group erWin system,https://bentleymotors.erwin-store.com
+Lamborghini,Global,serviceinformation.lamborghini.com,Included,ODIS,Dealer credentials,Contact dealer,Limited independent access,Dealer-focused portal,https://serviceinformation.lamborghini.com
+BMW,US/CA,bmwtechinfo.bmwgroup.com,Included (dynamic cal),ISTA,NASTF (key codes CA only),~$2700/year,Key codes not available except CA,Dynamic camera cal unique to BMW,https://bmwtechinfo.bmwgroup.com
+MINI,US/CA,minitechinfo.bmwgroup.com,Included,ISTA,Same as BMW,Separate subscription,None noted,BMW Group portal,https://minitechinfo.bmwgroup.com
+Rolls-Royce,US/CA,rollsroycetechinfo.bmwgroup.com,Included,ISTA,Same as BMW,Separate subscription,None noted,BMW Group portal,https://rollsroycetechinfo.bmwgroup.com
+Mercedes-Benz,US,startekinfo.com,Included,Xentry,NASTF VSP,$3770/year WIS,Clone tools cannot do Initial Startup,Genuine online Xentry required for many functions,https://startekinfo.com
+Chevrolet,US,acdelcotds.com,Included (Super Cruise),GDS2/SPS2,NASTF VSP (2020+),$1200/year,Per-VIN programming $40-45,Most ADAS self-calibrating,https://acdelcotds.com
+Buick,US,acdelcotds.com,Included,GDS2/SPS2,NASTF VSP (2020+),$1200/year,Per-VIN programming extra,Same as Chevrolet,https://acdelcotds.com
+GMC,US,acdelcotds.com,Included,GDS2/SPS2,NASTF VSP (2020+),$1200/year,Per-VIN programming extra,Same as Chevrolet,https://acdelcotds.com
+Cadillac,US,acdelcotds.com,Included (Super Cruise),GDS2/SPS2,NASTF VSP (2020+),$1200/year,Per-VIN programming extra,Same as Chevrolet,https://acdelcotds.com
+Ford,US,motorcraftservice.com,Included (BlueCruise),IDS/FDRS,NASTF VSP (2020+),$1200/year unified,PATS requires separate access,PATS security separate from standard subscription,https://motorcraftservice.com
+Lincoln,US,motorcraftservice.com,Included (BlueCruise),IDS/FDRS,NASTF VSP (2020+),$1200/year unified,PATS separate,Same as Ford,https://motorcraftservice.com
+Chrysler,US,stellantisiop.com,Included,wiTECH 2.0,NASTF (2016+) + SGW,$1978/year,Flash tokens $35/VIN extra,SGW bypass requires TechAuthority,https://stellantisiop.com
+Dodge,US,stellantisiop.com,Included,wiTECH 2.0,NASTF (2016+) + SGW,$1978/year,Flash tokens extra,Same as Chrysler,https://stellantisiop.com
+Jeep,US,stellantisiop.com,Included,wiTECH 2.0,NASTF (2016+) + SGW,$1978/year,Flash tokens extra,Same as Chrysler,https://stellantisiop.com
+Ram,US,stellantisiop.com,Included,wiTECH 2.0,NASTF (2016+) + SGW,$1978/year,Flash tokens extra,Same as Chrysler,https://stellantisiop.com
+Alfa Romeo,US,stellantisiop.com,Included,wiTECH 2.0,Same as Stellantis,Same pricing,Same gaps,Stellantis portal,https://stellantisiop.com
+Fiat,US,stellantisiop.com,Included,wiTECH 2.0,Same as Stellantis,Same pricing,Same gaps,Stellantis portal,https://stellantisiop.com
+Maserati,US,stellantisiop.com,Included,wiTECH 2.0,Same as Stellantis,Same pricing,Same gaps,Stellantis portal,https://stellantisiop.com
+Hyundai,US,hyundaitechinfo.com,Included (SmartSense),GDS SMART,NASTF VSP,$1500/year,None noted,VCI II/III interface required,https://hyundaitechinfo.com
+Hyundai,EU,service.hyundai-motor.com,Included,GDS SMART,N/A,€900/year,None noted,European portal,https://service.hyundai-motor.com
+Kia,US,kiatechinfo.com,Included,KDS 2.0,NASTF VSP,$1500/year,None noted,VCI can be shared with Hyundai,https://kiatechinfo.com
+Genesis,US,genesistechinfo.com,Included,GDSM,NASTF VSP,$1680/year,None noted,Separate from Hyundai/Kia,https://genesistechinfo.com
+Volvo,US/CA,volvotechinfo.com/vida,Included (IntelliSafe),VIDA,NASTF,$7548/year,NA vehicles only,Special radar angle setting tools required,https://volvotechinfo.com/vida
+Volvo,EU,tis.volvocars.biz,Included,VIDA,N/A,Variable,None noted,European portal,https://tis.volvocars.biz
+Jaguar,Global,topix.jlrext.com,Included,Pathfinder/TOPIx Cloud,LSID for some,Contact,DoIP VCI required 2017+,25MY+ requires secure diagnostics,https://topix.jlrext.com
+Land Rover,Global,topix.jlrext.com,Included,Pathfinder/TOPIx Cloud,LSID for some,Contact,DoIP VCI required 2017+,Same as Jaguar,https://topix.jlrext.com
+Renault,EU,newdialogys.renault.com,Included,CAN CLIP/Reprog,Token-based,Token purchase,Online programming needs codes,Server access and authorization codes required,https://newdialogys.renault.com
+Peugeot,EU,public.servicebox.peugeot.com,Included,DiagBox,Token-based,€45.80/token,None noted,PSA Service Box system,https://public.servicebox.peugeot.com
+Citroen,EU,servicebox.citroen.com,Included,DiagBox,Token-based,€45.80/token,None noted,PSA Service Box system,https://servicebox.citroen.com
+Ferrari,Global,techinfo.ferrari.com,Included,DEIS,Dealer-focused,Contact,Portal reliability issues reported,Dealer-focused portal,https://techinfo.ferrari.com
+McLaren,Global,mclarencars.techinfoportal.com,Included,Dealer system,N/A,~$35/hour,PayPal payment issues,Limited independent access,https://mclarencars.techinfoportal.com
+Aston Martin,Global,astonmartintechinfo.com,Included,Dealer system,N/A,Subscription,None noted,VIN lookup and subscription download,https://astonmartintechinfo.com
+Lotus,Global,vsic.lotuscars.com,Included,20/20 Software,N/A,Contact,J2534 compatibility varies,Limited support,https://vsic.lotuscars.com
+Tesla,Global,service.tesla.com,Included (Autopilot/FSD),Toolbox 3.0,Limited functions,$700/year (reduced),Some functions service-center only,Service info documents FREE since May 2022,https://service.tesla.com
+Rivian,US,Email support,Developing,Via portal,Developing,$2500-$5500/year,Limited independent access,Website under development,aftersalessupport@rivian.com
+Lucid,US,lucidmotors.com/knowledge,Limited,Lucid-only,Lucid network,Owner only,No independent portal,Service through Lucid network only,https://lucidmotors.com/knowledge
+VinFast,EU,serviceinfo.vinfastauto.eu,Via DSA portal,Via portal,Subscription,Tiered pricing,Daily excludes diagnostics,J2534 compatible,https://serviceinfo.vinfastauto.eu
+Polestar,US,Via Volvo dealers,Via Volvo VIDA,VIDA,Via Volvo,Via Volvo,No dedicated portal,Uses Volvo dealer infrastructure,Via Volvo dealers
