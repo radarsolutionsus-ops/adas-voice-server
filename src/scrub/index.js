@@ -24,6 +24,7 @@ const LOG_TAG = '[SCRUB]';
 /**
  * Backwards-compatible wrapper for scrubEstimateNew
  * Converts old function signature to new scrubEstimateV2 signature
+ * AND transforms the new result format into the old expected format
  *
  * Old signature: scrubEstimateNew(pdfText, roPo, options = {})
  * New signature: scrubEstimateV2({ estimateText, vin, brand, year, revvText, vehicle })
@@ -31,7 +32,7 @@ const LOG_TAG = '[SCRUB]';
 export async function scrubEstimateNew(pdfText, roPo, options = {}) {
   console.log(`${LOG_TAG} Using NEW RevvADAS 4-stage scrubber for RO: ${roPo}`);
 
-  const result = await _scrubEstimateV2({
+  const newResult = await _scrubEstimateV2({
     estimateText: pdfText,
     vin: options.vin || null,
     brand: options.brand || null,
@@ -40,10 +41,98 @@ export async function scrubEstimateNew(pdfText, roPo, options = {}) {
     vehicle: options.vehicle || null
   });
 
-  // Add roPo to result for reference
-  result.roPo = roPo;
+  // Transform new result format to old expected format for backwards compatibility
+  // Old format expected flat fields like: vin, vehicleMake, status, foundOperations, etc.
+  const result = {
+    // Metadata
+    roPo,
+    scrubVersion: newResult.scrubVersion,
+    scrubTimestamp: newResult.scrubTimestamp,
+    processingTimeMs: newResult.processingTimeMs,
+
+    // Flatten vehicle info (old format had flat fields)
+    vin: newResult.vehicle?.vin || null,
+    vehicleMake: newResult.vehicle?.brand || null,
+    vehicleYear: newResult.vehicle?.year || null,
+    vehicle: newResult.vehicle?.vehicleString || buildVehicleString(newResult.vehicle),
+
+    // Map repair operations to old format
+    foundOperations: (newResult.repairOperations?.lines || []).map(line => ({
+      lineNumber: line.lineNumber,
+      operation: line.operation,
+      category: line.category,
+      description: line.description,
+      location: line.location
+    })),
+
+    // Map triggered calibrations to old "requiredFromEstimate" format
+    requiredFromEstimate: (newResult.triggeredCalibrations || []).map(tc => ({
+      system: tc.calibration,
+      calibrationType: tc.type,
+      triggeredBy: tc.triggeredBy,
+      reason: tc.reason,
+      confidence: tc.confidence
+    })),
+
+    // Map RevvADAS reconciliation
+    requiredFromRevv: (newResult.revvReconciliation?.details?.revvItems || []),
+    missingCalibrations: (newResult.revvReconciliation?.details?.scrubOnly || []).map(item => item.system || item),
+
+    // Status mapping
+    status: mapReconciliationStatus(newResult.revvReconciliation?.status),
+    statusMessage: newResult.revvReconciliation?.notes || '',
+    needsAttention: newResult.summary?.needsAttention || false,
+
+    // Final calibrations list
+    calibrationsRequired: newResult.calibrationsRequired || [],
+    calibrationsNeedingVerification: newResult.calibrationsNeedingVerification || [],
+
+    // Summary counts
+    operationsCount: newResult.repairOperations?.totalFound || 0,
+    calibrationsTriggered: newResult.summary?.calibrationsTriggered || 0,
+    reconciliationStatus: newResult.revvReconciliation?.status || 'OK',
+
+    // Keep full new result for reference
+    _newFormatResult: newResult
+  };
+
+  console.log(`${LOG_TAG} Scrub complete: ${result.operationsCount} ops, ${result.calibrationsTriggered} calibrations, status: ${result.status}`);
+  console.log(`${LOG_TAG} Vehicle: ${result.vehicle || 'Unknown'}, VIN: ${result.vin || 'N/A'}`);
 
   return result;
+}
+
+/**
+ * Build vehicle string from vehicle object
+ */
+function buildVehicleString(vehicle) {
+  if (!vehicle) return null;
+  const parts = [vehicle.year, vehicle.brand, vehicle.model].filter(Boolean);
+  return parts.length > 0 ? parts.join(' ') : null;
+}
+
+/**
+ * Map new reconciliation status to old status format
+ */
+function mapReconciliationStatus(status) {
+  switch (status) {
+    case 'OK':
+    case 'MATCH':
+      return 'OK';
+    case 'DISCREPANCY':
+    case 'MISMATCH':
+      return 'DISCREPANCY';
+    case 'REVV_ONLY':
+      return 'REVV_ONLY';
+    case 'SCRUB_ONLY':
+      return 'SCRUB_ONLY';
+    case 'NO_REVV':
+      return 'NO_REVV_DATA';
+    case 'ERROR':
+      return 'ERROR';
+    default:
+      return status || 'UNKNOWN';
+  }
 }
 
 import {
