@@ -67,14 +67,652 @@ const KNOWN_SHOPS = [
   { patterns: ['paintmax', 'paint max', 'paint-max'], name: 'PaintMax' },
   { patterns: ['autosport', 'auto sport', 'autosport international'], name: 'AutoSport' },
   { patterns: ['ccnm', 'collision center', 'north miami'], name: 'CCNM' },
-  { patterns: ['jmd', 'j.m.d', 'j m d'], name: 'JMD' },
-  { patterns: ['reinaldo', 'reynaldo'], name: 'Reinaldo Body Shop' },
+  { patterns: ['jmd', 'j.m.d', 'j m d', 'jmd body'], name: 'JMD Body Shop' },
+  { patterns: ['reinaldo', 'reynaldo', 'reinaldo body'], name: 'Reinaldo Body Shop' },
   { patterns: ['caliber', 'caliber collision'], name: 'Caliber Collision' },
   { patterns: ['gerber', 'gerber collision'], name: 'Gerber Collision' },
   { patterns: ['service king'], name: 'Service King' },
   { patterns: ['maaco'], name: 'Maaco' },
-  { patterns: ['carstar'], name: 'Carstar' }
+  { patterns: ['carstar'], name: 'Carstar' },
+  { patterns: ['abra auto body', 'abra auto'], name: 'ABRA Auto Body' },
+  { patterns: ['fix auto'], name: 'Fix Auto' },
+  { patterns: ['crash champions'], name: 'Crash Champions' },
+  { patterns: ['classic collision'], name: 'Classic Collision' }
 ];
+
+// Known vehicle makes for extraction
+const KNOWN_MAKES = [
+  'Toyota', 'Honda', 'Ford', 'Chevrolet', 'Chevy', 'Kia', 'Hyundai', 'Nissan',
+  'BMW', 'Mercedes-Benz', 'Mercedes', 'Benz', 'Audi', 'Lexus', 'Acura', 'Mazda',
+  'Subaru', 'Volkswagen', 'VW', 'Jeep', 'Ram', 'Dodge', 'Chrysler', 'GMC',
+  'Buick', 'Cadillac', 'Lincoln', 'Infiniti', 'Genesis', 'Volvo', 'Porsche',
+  'Land Rover', 'Range Rover', 'Jaguar', 'Mini', 'Mitsubishi', 'Tesla',
+  'Rivian', 'Lucid', 'Alfa Romeo', 'Fiat', 'Maserati', 'Ferrari', 'Lamborghini',
+  'Bentley', 'Rolls-Royce', 'Aston Martin', 'McLaren', 'Polestar'
+];
+
+// Normalize make names
+const MAKE_NORMALIZATIONS = {
+  'chevy': 'Chevrolet',
+  'mercedes': 'Mercedes-Benz',
+  'benz': 'Mercedes-Benz',
+  'vw': 'Volkswagen',
+  'range rover': 'Land Rover'
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// COMPREHENSIVE ESTIMATE FIELD EXTRACTION
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Extract all key fields from an estimate PDF text
+ * Returns: { vin, vehicle, shopName, roNumber, customerName, confidence }
+ * @param {string} estimateText - Full text extracted from estimate PDF
+ * @returns {Object} - Extracted fields with confidence scores
+ */
+export async function extractEstimateFields(estimateText) {
+  if (!estimateText || typeof estimateText !== 'string') {
+    return { error: 'No estimate text provided', fields: {} };
+  }
+
+  console.log(`${LOG_TAG} Extracting fields from estimate (${estimateText.length} chars)`);
+
+  const fields = {
+    vin: null,
+    year: null,
+    make: null,
+    model: null,
+    vehicle: null, // Combined "Year Make Model"
+    shopName: null,
+    roNumber: null,
+    customerName: null,
+    claimNumber: null,
+    insuranceCompany: null
+  };
+
+  const confidence = {
+    vin: 0,
+    vehicle: 0,
+    shopName: 0,
+    roNumber: 0
+  };
+
+  // Extract each field
+  const vinResult = extractVINEnhanced(estimateText);
+  if (vinResult) {
+    fields.vin = vinResult.vin;
+    confidence.vin = vinResult.confidence;
+  }
+
+  const vehicleResult = extractVehicleInfo(estimateText);
+  if (vehicleResult) {
+    fields.year = vehicleResult.year;
+    fields.make = vehicleResult.make;
+    fields.model = vehicleResult.model;
+    fields.vehicle = vehicleResult.vehicle;
+    confidence.vehicle = vehicleResult.confidence;
+  }
+
+  const shopResult = extractShopNameEnhanced(estimateText);
+  if (shopResult) {
+    fields.shopName = shopResult.shopName;
+    confidence.shopName = shopResult.confidence;
+  }
+
+  const roResult = extractROEnhanced(estimateText);
+  if (roResult) {
+    fields.roNumber = roResult.roNumber;
+    fields.claimNumber = roResult.claimNumber;
+    confidence.roNumber = roResult.confidence;
+  }
+
+  // Extract customer name
+  const customerResult = extractCustomerName(estimateText);
+  if (customerResult) {
+    fields.customerName = customerResult;
+  }
+
+  // Extract insurance company
+  const insuranceResult = extractInsuranceCompany(estimateText);
+  if (insuranceResult) {
+    fields.insuranceCompany = insuranceResult;
+  }
+
+  // Calculate overall extraction quality
+  const overallConfidence = (confidence.vin + confidence.vehicle + confidence.shopName + confidence.roNumber) / 4;
+
+  // If extraction quality is low, try LLM fallback
+  if (overallConfidence < 0.5) {
+    console.log(`${LOG_TAG} Low extraction confidence (${overallConfidence.toFixed(2)}), attempting LLM fallback`);
+    const llmResult = await extractFieldsWithLLM(estimateText, fields);
+    if (llmResult) {
+      // Merge LLM results with pattern-matched results (prefer pattern-matched if high confidence)
+      if (!fields.vin && llmResult.vin) fields.vin = llmResult.vin;
+      if (!fields.vehicle && llmResult.vehicle) {
+        fields.vehicle = llmResult.vehicle;
+        fields.year = llmResult.year;
+        fields.make = llmResult.make;
+        fields.model = llmResult.model;
+      }
+      if (!fields.shopName && llmResult.shopName) fields.shopName = llmResult.shopName;
+      if (!fields.roNumber && llmResult.roNumber) fields.roNumber = llmResult.roNumber;
+    }
+  }
+
+  console.log(`${LOG_TAG} Extraction complete:`, {
+    vin: fields.vin ? `${fields.vin.substring(0, 5)}***` : null,
+    vehicle: fields.vehicle,
+    shop: fields.shopName,
+    ro: fields.roNumber
+  });
+
+  return {
+    fields,
+    confidence,
+    overallConfidence
+  };
+}
+
+/**
+ * Enhanced VIN extraction with multiple patterns and validation
+ * @param {string} text - Estimate text
+ * @returns {Object|null} - { vin, confidence, source }
+ */
+function extractVINEnhanced(text) {
+  if (!text) return null;
+
+  // VIN-17 regex (excludes I, O, Q per ISO 3779)
+  const VIN_REGEX = /[A-HJ-NPR-Z0-9]{17}/gi;
+
+  // Pattern 1: Explicit VIN labels (highest confidence)
+  const labelPatterns = [
+    { regex: /VIN[:\s#]*([A-HJ-NPR-Z0-9]{17})\b/i, confidence: 1.0, source: 'labeled' },
+    { regex: /V\.?I\.?N\.?\s*[:\s#]+\s*([A-HJ-NPR-Z0-9]{17})\b/i, confidence: 1.0, source: 'labeled' },
+    { regex: /Vehicle\s+Ident(?:ification)?\s*(?:Number|No\.?)?[:\s]+([A-HJ-NPR-Z0-9]{17})\b/i, confidence: 1.0, source: 'labeled' },
+    { regex: /VIN\s*\/\s*Serial[:\s]+([A-HJ-NPR-Z0-9]{17})\b/i, confidence: 1.0, source: 'labeled' }
+  ];
+
+  for (const { regex, confidence, source } of labelPatterns) {
+    const match = text.match(regex);
+    if (match && match[1]) {
+      const vin = match[1].toUpperCase();
+      if (isValidVIN(vin)) {
+        console.log(`${LOG_TAG} VIN found with label: ${vin}`);
+        return { vin, confidence, source };
+      }
+    }
+  }
+
+  // Pattern 2: VIN on line after "VIN" label
+  const lines = text.split('\n');
+  for (let i = 0; i < lines.length - 1; i++) {
+    if (/\bVIN\b/i.test(lines[i]) && !VIN_REGEX.test(lines[i])) {
+      const nextLine = lines[i + 1];
+      const vinMatch = nextLine.match(VIN_REGEX);
+      if (vinMatch && isValidVIN(vinMatch[0])) {
+        console.log(`${LOG_TAG} VIN found on line after label: ${vinMatch[0]}`);
+        return { vin: vinMatch[0].toUpperCase(), confidence: 0.9, source: 'next-line' };
+      }
+    }
+  }
+
+  // Pattern 3: Standalone 17-char VIN (lower confidence)
+  const allVins = text.match(VIN_REGEX) || [];
+  for (const candidate of allVins) {
+    const vin = candidate.toUpperCase();
+    if (isValidVIN(vin)) {
+      // Check it's not in a context that suggests it's not a VIN
+      const context = getContext(text, candidate, 20);
+      if (!/(phone|fax|tel|zip|postal|date|claim|policy)/i.test(context)) {
+        console.log(`${LOG_TAG} VIN found (standalone): ${vin}`);
+        return { vin, confidence: 0.7, source: 'standalone' };
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Validate a VIN using check digit (position 9)
+ * @param {string} vin - 17-character VIN
+ * @returns {boolean} - True if valid
+ */
+function isValidVIN(vin) {
+  if (!vin || vin.length !== 17) return false;
+
+  // Must have both letters and numbers
+  if (!/[A-HJ-NPR-Z]/i.test(vin) || !/[0-9]/.test(vin)) return false;
+
+  // Character values for check digit calculation
+  const transliteration = {
+    'A': 1, 'B': 2, 'C': 3, 'D': 4, 'E': 5, 'F': 6, 'G': 7, 'H': 8,
+    'J': 1, 'K': 2, 'L': 3, 'M': 4, 'N': 5, 'P': 7, 'R': 9,
+    'S': 2, 'T': 3, 'U': 4, 'V': 5, 'W': 6, 'X': 7, 'Y': 8, 'Z': 9
+  };
+
+  const weights = [8, 7, 6, 5, 4, 3, 2, 10, 0, 9, 8, 7, 6, 5, 4, 3, 2];
+
+  try {
+    let sum = 0;
+    for (let i = 0; i < 17; i++) {
+      const char = vin[i].toUpperCase();
+      const value = /[0-9]/.test(char) ? parseInt(char) : (transliteration[char] || 0);
+      sum += value * weights[i];
+    }
+
+    const checkDigit = sum % 11;
+    const expectedChar = checkDigit === 10 ? 'X' : checkDigit.toString();
+
+    // Position 9 is the check digit (0-indexed = 8)
+    return vin[8].toUpperCase() === expectedChar;
+  } catch (e) {
+    // If check digit validation fails, still accept if format is correct
+    return true;
+  }
+}
+
+/**
+ * Extract vehicle year, make, and model
+ * @param {string} text - Estimate text
+ * @returns {Object|null} - { year, make, model, vehicle, confidence }
+ */
+function extractVehicleInfo(text) {
+  if (!text) return null;
+
+  // Build make regex pattern
+  const makePattern = KNOWN_MAKES.map(m => m.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+
+  // Pattern 1: Explicit "Vehicle:" or "Year/Make/Model:" labels
+  const vehicleLabelPatterns = [
+    // "Vehicle: 2022 Toyota Camry" or "Vehicle: 22 Toyota Camry"
+    new RegExp(`Vehicle[:\\s]+(?:'?)(20[1-2][0-9]|[1-2][0-9])\\s+(${makePattern})\\s+([A-Za-z0-9\\s-]{2,30})`, 'i'),
+    // "Year/Make/Model: 2022 / Toyota / Camry"
+    new RegExp(`Year[/\\s]*Make[/\\s]*Model[:\\s]+(?:'?)(20[1-2][0-9]|[1-2][0-9])\\s*[/\\s]+\\s*(${makePattern})\\s*[/\\s]+\\s*([A-Za-z0-9\\s-]{2,30})`, 'i'),
+    // "Year: 2022 Make: Toyota Model: Camry"
+    /Year[:\s]+(?:'?)(20[1-2][0-9]|[1-2][0-9])\s+Make[:\s]+([A-Za-z-]+)\s+Model[:\s]+([A-Za-z0-9\s-]{2,30})/i
+  ];
+
+  for (const pattern of vehicleLabelPatterns) {
+    const match = text.match(pattern);
+    if (match) {
+      const year = normalizeYear(match[1]);
+      const make = normalizeMake(match[2]);
+      const model = cleanModel(match[3]);
+
+      if (year && make) {
+        console.log(`${LOG_TAG} Vehicle found with label: ${year} ${make} ${model}`);
+        return {
+          year,
+          make,
+          model,
+          vehicle: `${year} ${make} ${model}`.trim(),
+          confidence: 1.0
+        };
+      }
+    }
+  }
+
+  // Pattern 2: Year + Make + Model in sequence (no label)
+  const sequencePattern = new RegExp(`\\b(20[1-2][0-9])\\s+(${makePattern})\\s+([A-Za-z0-9][A-Za-z0-9\\s-]{1,25})\\b`, 'i');
+  const seqMatch = text.match(sequencePattern);
+  if (seqMatch) {
+    const year = seqMatch[1];
+    const make = normalizeMake(seqMatch[2]);
+    const model = cleanModel(seqMatch[3]);
+
+    console.log(`${LOG_TAG} Vehicle found in sequence: ${year} ${make} ${model}`);
+    return {
+      year,
+      make,
+      model,
+      vehicle: `${year} ${make} ${model}`.trim(),
+      confidence: 0.8
+    };
+  }
+
+  // Pattern 3: Just Year + Make (model might be on next line or missing)
+  const yearMakePattern = new RegExp(`\\b(20[1-2][0-9])\\s+(${makePattern})\\b`, 'i');
+  const ymMatch = text.match(yearMakePattern);
+  if (ymMatch) {
+    const year = ymMatch[1];
+    const make = normalizeMake(ymMatch[2]);
+
+    // Try to find model on same line after make
+    const afterMake = text.substring(text.indexOf(ymMatch[0]) + ymMatch[0].length);
+    const modelMatch = afterMake.match(/^\s*([A-Za-z0-9][A-Za-z0-9\s-]{1,20})/);
+    const model = modelMatch ? cleanModel(modelMatch[1]) : '';
+
+    console.log(`${LOG_TAG} Vehicle found (year+make): ${year} ${make} ${model}`);
+    return {
+      year,
+      make,
+      model,
+      vehicle: `${year} ${make} ${model}`.trim(),
+      confidence: 0.6
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Normalize 2-digit year to 4-digit
+ * @param {string} year - 2 or 4 digit year
+ * @returns {string} - 4-digit year
+ */
+function normalizeYear(year) {
+  if (!year) return null;
+  const y = year.replace(/'/g, '');
+  if (y.length === 4) return y;
+  if (y.length === 2) {
+    const num = parseInt(y);
+    return num >= 50 ? `19${y}` : `20${y.padStart(2, '0')}`;
+  }
+  return null;
+}
+
+/**
+ * Normalize make name
+ * @param {string} make - Raw make name
+ * @returns {string} - Normalized make name
+ */
+function normalizeMake(make) {
+  if (!make) return null;
+  const lower = make.toLowerCase().trim();
+  return MAKE_NORMALIZATIONS[lower] || make.charAt(0).toUpperCase() + make.slice(1).toLowerCase();
+}
+
+/**
+ * Clean model name (remove trailing junk)
+ * @param {string} model - Raw model name
+ * @returns {string} - Cleaned model name
+ */
+function cleanModel(model) {
+  if (!model) return '';
+  return model
+    .replace(/\s+(vin|vehicle|year|make|model|ro|claim|est|labor|parts?|total)/gi, '')
+    .replace(/\s+\d+\.\d{2}$/, '') // Remove trailing price
+    .replace(/[,;:]+$/, '')
+    .trim();
+}
+
+/**
+ * Enhanced shop name extraction
+ * @param {string} text - Estimate text
+ * @returns {Object|null} - { shopName, confidence }
+ */
+function extractShopNameEnhanced(text) {
+  if (!text) return null;
+
+  // Get header area (first 3000 chars)
+  const headerArea = text.substring(0, 3000);
+  const headerLower = headerArea.toLowerCase();
+
+  // Pattern 1: Match known shops (highest confidence)
+  for (const shop of KNOWN_SHOPS) {
+    for (const pattern of shop.patterns) {
+      if (headerLower.includes(pattern)) {
+        console.log(`${LOG_TAG} Shop matched from known list: ${shop.name}`);
+        return { shopName: shop.name, confidence: 1.0 };
+      }
+    }
+  }
+
+  // Pattern 2: Explicit shop labels
+  const shopLabelPatterns = [
+    /(?:Repair\s+Facility|Body\s*Shop|Shop\s*Name|Repairer)[:\s]+([A-Za-z0-9\s&'.,-]{3,50}?)(?:\n|$|Phone|Address|Tel)/i,
+    /(?:Shop|Dealer)[:\s]+([A-Za-z0-9\s&'.,-]{3,50}?)(?:\n|$|Phone|Address)/i
+  ];
+
+  for (const pattern of shopLabelPatterns) {
+    const match = headerArea.match(pattern);
+    if (match && match[1]) {
+      const shopName = match[1].trim();
+      if (isValidShopName(shopName)) {
+        console.log(`${LOG_TAG} Shop found with label: ${shopName}`);
+        return { shopName, confidence: 0.9 };
+      }
+    }
+  }
+
+  // Pattern 3: First line(s) that look like a business name
+  const lines = headerArea.split('\n').slice(0, 10);
+  for (const line of lines) {
+    const trimmed = line.trim();
+    // Look for lines that look like business names
+    if (/^[A-Z][A-Za-z0-9\s&'.,-]{5,40}$/.test(trimmed)) {
+      if (isValidShopName(trimmed)) {
+        // Check if followed by address-like pattern
+        const idx = lines.indexOf(line);
+        if (idx < lines.length - 1) {
+          const nextLine = lines[idx + 1];
+          if (/\d+\s+[A-Za-z]/.test(nextLine) || /[A-Za-z]+,\s*[A-Z]{2}\s+\d{5}/.test(nextLine)) {
+            console.log(`${LOG_TAG} Shop inferred from header: ${trimmed}`);
+            return { shopName: trimmed, confidence: 0.6 };
+          }
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Validate shop name (not a vehicle or generic term)
+ * @param {string} name - Candidate shop name
+ * @returns {boolean}
+ */
+function isValidShopName(name) {
+  if (!name || name.length < 3) return false;
+  const lower = name.toLowerCase();
+  const invalidTerms = [
+    'toyota', 'honda', 'ford', 'nissan', 'kia', 'hyundai', 'chevrolet', 'bmw', 'mercedes',
+    'estimate', 'repair order', 'work order', 'vehicle', 'year', 'make', 'model',
+    'insured', 'claimant', 'owner', 'customer', 'date', 'total', 'labor', 'parts'
+  ];
+  return !invalidTerms.some(term => lower.includes(term));
+}
+
+/**
+ * Enhanced RO/PO number extraction
+ * @param {string} text - Estimate text
+ * @returns {Object|null} - { roNumber, claimNumber, confidence }
+ */
+function extractROEnhanced(text) {
+  if (!text) return null;
+
+  let roNumber = null;
+  let claimNumber = null;
+  let confidence = 0;
+
+  // Pattern 1: Explicit RO/Estimate/Work Order labels
+  const roPatterns = [
+    { regex: /(?:RO|R\.O\.|Repair\s*Order|Work\s*Order)[#:\s]+(\d{4,10})\b/i, confidence: 1.0 },
+    { regex: /(?:Estimate|Est)[#:\s]+(\d{4,10})\b/i, confidence: 0.9 },
+    { regex: /(?:File|Job)[#:\s]+(\d{4,10})\b/i, confidence: 0.8 },
+    { regex: /(?:PO|P\.O\.|Purchase\s*Order)[#:\s]+(\d{4,10})\b/i, confidence: 0.8 },
+    { regex: /Order[#:\s]+(\d{4,10})\b/i, confidence: 0.7 }
+  ];
+
+  for (const { regex, confidence: conf } of roPatterns) {
+    const match = text.match(regex);
+    if (match && match[1]) {
+      roNumber = match[1];
+      confidence = conf;
+      console.log(`${LOG_TAG} RO found: ${roNumber}`);
+      break;
+    }
+  }
+
+  // Pattern 2: Claim number (separate from RO)
+  const claimPatterns = [
+    /Claim[#:\s]+([A-Z0-9-]{5,20})\b/i,
+    /Claim\s*(?:Number|No\.?)[:\s]+([A-Z0-9-]{5,20})\b/i
+  ];
+
+  for (const pattern of claimPatterns) {
+    const match = text.match(pattern);
+    if (match && match[1]) {
+      claimNumber = match[1];
+      console.log(`${LOG_TAG} Claim number found: ${claimNumber}`);
+      break;
+    }
+  }
+
+  if (roNumber || claimNumber) {
+    return { roNumber, claimNumber, confidence };
+  }
+
+  return null;
+}
+
+/**
+ * Extract customer/owner name
+ * @param {string} text - Estimate text
+ * @returns {string|null}
+ */
+function extractCustomerName(text) {
+  if (!text) return null;
+
+  const patterns = [
+    /(?:Owner|Customer|Insured|Claimant)[:\s]+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})/,
+    /(?:Owner|Customer|Insured)[:\s]+([A-Z][A-Z\s]+)/,
+    /Name[:\s]+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})/
+  ];
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match && match[1]) {
+      const name = match[1].trim();
+      // Validate it's a name (not a business)
+      if (name.length > 3 && name.length < 50 && !/\b(inc|llc|corp|shop|auto|body)\b/i.test(name)) {
+        return name;
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Extract insurance company
+ * @param {string} text - Estimate text
+ * @returns {string|null}
+ */
+function extractInsuranceCompany(text) {
+  if (!text) return null;
+
+  const insurers = [
+    'State Farm', 'Geico', 'Progressive', 'Allstate', 'USAA', 'Liberty Mutual',
+    'Farmers', 'Nationwide', 'Travelers', 'American Family', 'Erie Insurance',
+    'Hartford', 'Auto-Owners', 'Amica', 'Mercury', 'Esurance', 'MetLife',
+    'AAA', 'Safeco', 'The General', 'Root', 'Lemonade'
+  ];
+
+  const textLower = text.toLowerCase();
+  for (const insurer of insurers) {
+    if (textLower.includes(insurer.toLowerCase())) {
+      return insurer;
+    }
+  }
+
+  // Try pattern matching
+  const patterns = [
+    /(?:Insurance|Insurer|Carrier)[:\s]+([A-Za-z\s]+?)(?:\n|Claim|Policy)/i
+  ];
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match && match[1]) {
+      return match[1].trim();
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Get context around a match (for validation)
+ * @param {string} text - Full text
+ * @param {string} match - Matched string
+ * @param {number} chars - Characters to include before/after
+ * @returns {string}
+ */
+function getContext(text, match, chars) {
+  const idx = text.indexOf(match);
+  if (idx === -1) return '';
+  const start = Math.max(0, idx - chars);
+  const end = Math.min(text.length, idx + match.length + chars);
+  return text.substring(start, end);
+}
+
+/**
+ * LLM fallback for field extraction when pattern matching fails
+ * Uses OpenAI to extract fields from estimate text
+ * @param {string} estimateText - Estimate text
+ * @param {Object} existingFields - Already extracted fields (to avoid duplicating)
+ * @returns {Object|null}
+ */
+async function extractFieldsWithLLM(estimateText, existingFields = {}) {
+  try {
+    // Only use first 4000 chars to save tokens
+    const textSample = estimateText.substring(0, 4000);
+
+    // Import OpenAI dynamically to avoid circular dependency
+    const OpenAI = (await import('openai')).default;
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+    if (!process.env.OPENAI_API_KEY) {
+      console.log(`${LOG_TAG} No OpenAI API key, skipping LLM fallback`);
+      return null;
+    }
+
+    console.log(`${LOG_TAG} Using LLM to extract fields...`);
+
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: `Extract key fields from this auto body repair estimate. Return ONLY valid JSON with these fields:
+{
+  "vin": "17-character VIN or null",
+  "year": "4-digit year or null",
+  "make": "Vehicle make or null",
+  "model": "Vehicle model or null",
+  "vehicle": "Full vehicle string (Year Make Model) or null",
+  "shopName": "Repair shop name or null",
+  "roNumber": "RO/Work Order number or null"
+}
+Do not make up values. If a field cannot be found, use null.`
+        },
+        {
+          role: 'user',
+          content: textSample
+        }
+      ],
+      max_tokens: 300,
+      temperature: 0
+    });
+
+    const content = response.choices[0]?.message?.content;
+    if (!content) return null;
+
+    // Parse JSON response
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return null;
+
+    const parsed = JSON.parse(jsonMatch[0]);
+    console.log(`${LOG_TAG} LLM extraction result:`, parsed);
+
+    return parsed;
+  } catch (err) {
+    console.error(`${LOG_TAG} LLM extraction failed:`, err.message);
+    return null;
+  }
+}
 
 /**
  * Extract shop name from estimate text
@@ -1979,10 +2617,14 @@ export default {
   convertSpanishNumbersToDigits,
   padRO,
 
-  // Bug fixes: New helper functions
+  // Comprehensive field extraction (NEW)
+  extractEstimateFields,
+
+  // Helper functions
   extractShopFromEstimate,
   extractVIN,
   determineScrubStatus,
   normalizeCalibrationName,
-  OPERATION_CATEGORIES
+  OPERATION_CATEGORIES,
+  KNOWN_MAKES
 };
