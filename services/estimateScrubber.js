@@ -386,8 +386,188 @@ const OPERATION_CATEGORIES = {
   ALIGNMENT: 'alignment',
   HEADLAMP: 'headlamp',
   LANE_ASSIST: 'lane_assist',
+  FENDER: 'fender',
+  DOOR: 'door',
+  ROOF: 'roof',
+  TRUNK: 'trunk',
+  LIFTGATE: 'liftgate',
   UNKNOWN: 'unknown'
 };
+
+/**
+ * Parse an estimate line to extract operation type and part name
+ * @param {string} line - Raw estimate line
+ * @returns {Object|null} - { operationType, partName, normalizedPart } or null
+ */
+function parseEstimateLine(line) {
+  if (!line || typeof line !== 'string') return null;
+
+  const trimmed = line.trim();
+  if (trimmed.length < 3) return null;
+
+  // Operation type patterns (order matters - more specific first)
+  const operationPatterns = [
+    { pattern: /^(?:remove\s*(?:&|and)\s*install|r\s*[&\/]\s*i)\s+/i, type: 'r&i' },
+    { pattern: /^(?:remove\s*(?:&|and)\s*replace|r\s*[&\/]\s*r)\s+/i, type: 'r&r' },
+    { pattern: /^replace\s+/i, type: 'replace' },
+    { pattern: /^refinish\s+/i, type: 'refinish' },
+    { pattern: /^repair\s+/i, type: 'repair' },
+    { pattern: /^remove\s+/i, type: 'remove' },
+    { pattern: /^install\s+/i, type: 'install' },
+    { pattern: /^overhaul\s+/i, type: 'overhaul' },
+    { pattern: /^blend\s+/i, type: 'blend' },
+    { pattern: /^aim\s+/i, type: 'aim' },
+    { pattern: /^align\s+/i, type: 'align' },
+    { pattern: /^calibrate\s+/i, type: 'calibrate' },
+    { pattern: /^program\s+/i, type: 'program' }
+  ];
+
+  let operationType = null;
+  let remainder = trimmed;
+
+  // Extract operation type
+  for (const { pattern, type } of operationPatterns) {
+    if (pattern.test(trimmed)) {
+      operationType = type;
+      remainder = trimmed.replace(pattern, '').trim();
+      break;
+    }
+  }
+
+  // If no operation found, return null
+  if (!operationType) return null;
+
+  // Clean up the part name
+  let partName = remainder
+    .replace(/\s+/g, ' ')           // Normalize whitespace
+    .replace(/^\d+\.?\s*/, '')      // Remove leading line numbers
+    .replace(/\s*\d+\.\d{2}\s*$/, '') // Remove trailing prices
+    .replace(/\s*-?\s*labor\s*$/i, '') // Remove trailing "labor"
+    .replace(/\s*-?\s*part[s]?\s*$/i, '') // Remove trailing "parts"
+    .trim();
+
+  // Normalize the part name to a standard category
+  const normalizedPart = normalizePartName(partName);
+
+  return {
+    operationType,
+    partName: partName || 'unknown',
+    normalizedPart,
+    rawLine: trimmed
+  };
+}
+
+/**
+ * Normalize part name to a standard component identifier
+ * @param {string} partName - Raw part name from estimate
+ * @returns {string} - Normalized part identifier
+ */
+function normalizePartName(partName) {
+  if (!partName) return 'unknown';
+
+  const lower = partName.toLowerCase();
+
+  // Position/side detection
+  let side = '';
+  if (/\b(lh|left|l\/h|driver)\b/i.test(lower)) side = '_left';
+  else if (/\b(rh|right|r\/h|passenger)\b/i.test(lower)) side = '_right';
+
+  let position = '';
+  if (/\bfront\b/i.test(lower)) position = 'front_';
+  else if (/\brear\b/i.test(lower)) position = 'rear_';
+
+  // Part type detection (order matters - more specific first)
+  const partMappings = [
+    // Bumper components
+    { patterns: [/bumper\s*cover/, /bumper\s*fascia/, /fascia/], base: 'bumper' },
+    { patterns: [/bumper\s*absorber/, /absorber/], base: 'bumper_absorber' },
+    { patterns: [/bumper\s*reinforcement/, /rebar/, /reinforcement/], base: 'bumper_reinforcement' },
+    { patterns: [/bumper/], base: 'bumper' },
+
+    // Lighting
+    { patterns: [/headl(?:amp|ight)\s*(?:assy|assembly)?/], base: 'headlamp' },
+    { patterns: [/tail\s*l(?:amp|ight)/, /rear\s*l(?:amp|ight)/], base: 'tail_lamp' },
+    { patterns: [/fog\s*l(?:amp|ight)/], base: 'fog_lamp' },
+    { patterns: [/turn\s*signal/, /marker\s*l(?:amp|ight)/], base: 'signal_lamp' },
+
+    // Glass
+    { patterns: [/windshield/, /front\s*glass/, /laminated\s*glass/], base: 'windshield' },
+    { patterns: [/back\s*glass/, /rear\s*window/, /backlight/], base: 'rear_glass' },
+    { patterns: [/door\s*glass/, /side\s*glass/, /quarter\s*glass/], base: 'door_glass' },
+
+    // Mirrors
+    { patterns: [/(?:side|door|exterior)\s*mirror/, /mirror\s*(?:assy|assembly)/], base: 'mirror' },
+    { patterns: [/mirror\s*glass/], base: 'mirror_glass' },
+    { patterns: [/mirror\s*(?:cover|cap)/], base: 'mirror_cover' },
+
+    // Body panels
+    { patterns: [/fender/], base: 'fender' },
+    { patterns: [/quarter\s*panel/, /rear\s*quarter/], base: 'quarter_panel' },
+    { patterns: [/rocker\s*panel/, /rocker/], base: 'rocker' },
+    { patterns: [/door\s*(?:shell|panel|skin)?/], base: 'door' },
+    { patterns: [/hood/], base: 'hood' },
+    { patterns: [/trunk\s*(?:lid)?/, /deck\s*lid/], base: 'trunk' },
+    { patterns: [/liftgate/, /tailgate/, /hatch/], base: 'liftgate' },
+    { patterns: [/roof\s*(?:panel)?/], base: 'roof' },
+
+    // Grille and front end
+    { patterns: [/grille/, /grill/], base: 'grille' },
+    { patterns: [/header\s*panel/, /radiator\s*support/], base: 'header_panel' },
+    { patterns: [/valance/], base: 'valance' },
+    { patterns: [/splash\s*(?:shield|guard)/, /fender\s*liner/, /inner\s*fender/], base: 'fender_liner' },
+
+    // ADAS components
+    { patterns: [/(?:front|forward)\s*(?:radar|sensor)/, /acc\s*sensor/, /cruise\s*sensor/], base: 'front_radar' },
+    { patterns: [/rear\s*(?:radar|sensor)/, /parking\s*sensor/, /ultrasonic/], base: 'rear_radar' },
+    { patterns: [/(?:front|forward)\s*camera/, /windshield\s*camera/, /lane\s*(?:departure|keeping)\s*camera/], base: 'front_camera' },
+    { patterns: [/(?:rear|backup)\s*camera/], base: 'rear_camera' },
+    { patterns: [/blind\s*spot/, /bsm\s*sensor/, /side\s*radar/], base: 'blind_spot_sensor' },
+    { patterns: [/surround\s*view/, /360\s*camera/], base: 'surround_camera' },
+
+    // Suspension / steering
+    { patterns: [/strut/, /shock\s*absorber/], base: 'strut' },
+    { patterns: [/control\s*arm/, /a[\s-]?arm/], base: 'control_arm' },
+    { patterns: [/tie\s*rod/], base: 'tie_rod' },
+    { patterns: [/wheel\s*(?:alignment|align)/], base: 'wheel_alignment' },
+    { patterns: [/knuckle/, /spindle/], base: 'knuckle' },
+
+    // Modules / electrical
+    { patterns: [/abs\s*(?:module|control|unit)/], base: 'abs_module' },
+    { patterns: [/airbag\s*(?:module|sensor)/, /srs\s*(?:module|unit)/], base: 'airbag_module' },
+    { patterns: [/bcm/, /body\s*control/], base: 'bcm' },
+    { patterns: [/ecm/, /engine\s*control/, /pcm/, /powertrain/], base: 'ecm' },
+    { patterns: [/steering\s*angle/, /sas/], base: 'steering_angle_sensor' },
+    { patterns: [/eps/, /power\s*steering\s*(?:module|motor)/], base: 'eps_module' },
+
+    // Wiring
+    { patterns: [/wiring\s*(?:harness|assy)/, /wire\s*harness/], base: 'wiring_harness' },
+    { patterns: [/connector/, /pigtail/], base: 'connector' }
+  ];
+
+  for (const { patterns, base } of partMappings) {
+    for (const pattern of patterns) {
+      if (pattern.test(lower)) {
+        // Don't double-add position if already in base
+        if (base.startsWith('front_') || base.startsWith('rear_')) {
+          return base + side;
+        }
+        return position + base + side;
+      }
+    }
+  }
+
+  // Fallback: use cleaned part name
+  const cleaned = lower
+    .replace(/\b(assy|assembly|asm)\b/gi, '')
+    .replace(/\b(lh|rh|left|right|l\/h|r\/h|driver|passenger)\b/gi, '')
+    .replace(/\b(front|rear|frt|rr)\b/gi, '')
+    .replace(/[^a-z0-9]/gi, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '')
+    .trim();
+
+  return cleaned || 'unknown';
+}
 
 // Patterns to detect ADAS-related operations in estimate text
 const OPERATION_PATTERNS = [
@@ -536,6 +716,7 @@ const CATEGORY_TO_CALIBRATION = {
 
 /**
  * Extract operations from estimate text
+ * Uses both pattern matching AND line parsing for comprehensive extraction
  * @param {string} text - Estimate text
  * @returns {Array} - Array of found operations
  */
@@ -546,27 +727,113 @@ function extractOperations(text) {
   const lines = text.split('\n');
 
   for (const line of lines) {
+    // Method 1: Try new line parser first (extracts operation type + part name)
+    const parsed = parseEstimateLine(line);
+    if (parsed && parsed.normalizedPart !== 'unknown') {
+      // Map normalized part to category
+      const category = mapPartToCategory(parsed.normalizedPart);
+      operations.push({
+        operationText: `${parsed.operationType} [${parsed.normalizedPart}]`,
+        operationType: parsed.operationType,
+        partName: parsed.partName,
+        normalizedPart: parsed.normalizedPart,
+        category,
+        lineContext: line.trim().substring(0, 100)
+      });
+    }
+
+    // Method 2: Also use pattern matching for ADAS-specific items
     for (const { pattern, category } of OPERATION_PATTERNS) {
       pattern.lastIndex = 0; // Reset regex
       const match = pattern.exec(line);
       if (match) {
-        operations.push({
-          operationText: match[0].trim(),
-          category,
-          lineContext: line.trim().substring(0, 100)
-        });
+        // Check if we already captured this line with the line parser
+        const alreadyCaptured = operations.some(op =>
+          op.lineContext === line.trim().substring(0, 100) &&
+          op.category === category
+        );
+
+        if (!alreadyCaptured) {
+          // Try to get operation type from line parser for better formatting
+          const lineParsed = parseEstimateLine(line);
+          const opType = lineParsed?.operationType || 'detected';
+          const partName = lineParsed?.partName || match[0].trim();
+
+          operations.push({
+            operationText: `${opType} [${partName}]`,
+            operationType: opType,
+            partName: partName,
+            normalizedPart: lineParsed?.normalizedPart || category,
+            category,
+            lineContext: line.trim().substring(0, 100)
+          });
+        }
       }
     }
   }
 
-  // Deduplicate by category
+  // Deduplicate by category + normalized part
   const seen = new Set();
   return operations.filter(op => {
-    const key = `${op.category}:${op.operationText.toLowerCase()}`;
+    const key = `${op.category}:${op.normalizedPart || op.operationText.toLowerCase()}`;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
   });
+}
+
+/**
+ * Map a normalized part name to an operation category
+ * @param {string} normalizedPart - Normalized part identifier
+ * @returns {string} - Category from OPERATION_CATEGORIES
+ */
+function mapPartToCategory(normalizedPart) {
+  if (!normalizedPart) return OPERATION_CATEGORIES.UNKNOWN;
+
+  const lower = normalizedPart.toLowerCase();
+
+  // Bumpers
+  if (lower.includes('front_bumper') || lower === 'front_bumper') return OPERATION_CATEGORIES.FRONT_BUMPER;
+  if (lower.includes('rear_bumper') || lower === 'rear_bumper') return OPERATION_CATEGORIES.REAR_BUMPER;
+
+  // Glass
+  if (lower.includes('windshield')) return OPERATION_CATEGORIES.WINDSHIELD;
+
+  // ADAS components
+  if (lower.includes('front_camera')) return OPERATION_CATEGORIES.FRONT_CAMERA;
+  if (lower.includes('front_radar')) return OPERATION_CATEGORIES.FRONT_RADAR;
+  if (lower.includes('rear_radar') || lower.includes('parking')) return OPERATION_CATEGORIES.REAR_RADAR;
+  if (lower.includes('blind_spot') || lower.includes('side_radar')) return OPERATION_CATEGORIES.BLIND_SPOT;
+
+  // Mirrors
+  if (lower.includes('mirror')) return OPERATION_CATEGORIES.SIDE_MIRROR;
+
+  // Body panels
+  if (lower.includes('grille')) return OPERATION_CATEGORIES.GRILLE;
+  if (lower.includes('hood')) return OPERATION_CATEGORIES.HOOD;
+  if (lower.includes('quarter_panel')) return OPERATION_CATEGORIES.QUARTER_PANEL;
+  if (lower.includes('tail_lamp') || lower.includes('rear_lamp')) return OPERATION_CATEGORIES.TAIL_LAMP;
+  if (lower.includes('headlamp')) return OPERATION_CATEGORIES.HEADLAMP;
+  if (lower.includes('fender')) return OPERATION_CATEGORIES.FENDER;
+  if (lower.includes('door')) return OPERATION_CATEGORIES.DOOR;
+  if (lower.includes('roof')) return OPERATION_CATEGORIES.ROOF;
+  if (lower.includes('trunk') || lower.includes('liftgate')) return OPERATION_CATEGORIES.LIFTGATE;
+
+  // Suspension / alignment
+  if (lower.includes('strut') || lower.includes('control_arm') || lower.includes('suspension')) return OPERATION_CATEGORIES.SUSPENSION;
+  if (lower.includes('alignment') || lower.includes('wheel_align')) return OPERATION_CATEGORIES.ALIGNMENT;
+
+  // Modules
+  if (lower.includes('abs_module')) return OPERATION_CATEGORIES.MODULE_ABS;
+  if (lower.includes('bcm')) return OPERATION_CATEGORIES.MODULE_BCM;
+  if (lower.includes('ecm') || lower.includes('pcm')) return OPERATION_CATEGORIES.MODULE_ECM;
+  if (lower.includes('steering_angle') || lower.includes('sas')) return OPERATION_CATEGORIES.MODULE_SAS;
+  if (lower.includes('eps')) return OPERATION_CATEGORIES.MODULE_EPS;
+
+  // Wiring
+  if (lower.includes('wiring') || lower.includes('harness')) return OPERATION_CATEGORIES.WIRING;
+
+  return OPERATION_CATEGORIES.UNKNOWN;
 }
 
 /**
