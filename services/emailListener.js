@@ -350,12 +350,52 @@ function extractRoFromFilename(filename) {
   }
 
   // Pattern 2: RO/PO prefix in filename
-  const prefixMatch = name.match(/(?:RO|PO|WO)[\s_\-]*(\d{3,})/i);
+  const prefixMatch = name.match(/(?:RO|PO|WO)[\s_\-]*(\d{3,}(?:[-_][A-Za-z0-9]+)?)/i);
   if (prefixMatch) return prefixMatch[1];
 
-  // Pattern 3: Number at start or end of filename
+  // Pattern 3: Number with optional suffix at start of filename (e.g., "12313-1 CAMRY")
+  // This captures RO numbers like "12313-1", "12313-A", "12313_REV"
+  const roWithSuffix = name.match(/^(\d{4,6}[-_][A-Za-z0-9]+)/);
+  if (roWithSuffix) return roWithSuffix[1];
+
+  // Pattern 4: Number at start or end of filename (without suffix)
   const numberMatch = name.match(/(?:^|[\s_\-])(\d{4,6})(?:[\s_\-]|$)/);
   if (numberMatch) return numberMatch[1];
+
+  return null;
+}
+
+/**
+ * Extract RO/PO from estimate document content
+ * Enhanced patterns for estimates: RO#, Work Order, PO#, Claim#, File#
+ * @param {string} estimateText - Full extracted PDF text
+ * @returns {string|null} - Extracted RO/PO or null
+ */
+function extractRoFromEstimate(estimateText) {
+  if (!estimateText) return null;
+
+  // Common RO patterns in estimates (in priority order)
+  const patterns = [
+    // Explicit RO/PO patterns: "RO#12345", "RO: 12345", "R.O. 12345"
+    /(?:RO|R\.O\.|Repair\s*Order|Work\s*Order|WO)[\s#:\-]*(\d{4,10}(?:[-_][A-Za-z0-9]+)?)/i,
+    // PO patterns: "PO#12345", "PO: 12345"
+    /(?:PO|P\.O\.)[\s#:\-]*(\d{4,10}(?:[-_][A-Za-z0-9]+)?)/i,
+    // Claim/File patterns: "Claim#12345", "File #12345"
+    /(?:Claim|File|Reference)[\s#:\-]*(\d{4,10})/i,
+    // Order patterns: "Order #12345", "Order: 12345"
+    /Order[\s#:\-]*(\d{4,10})/i,
+    // Estimate number patterns: "Estimate #12345"
+    /Estimate[\s#:\-]*(\d{4,10})/i
+  ];
+
+  for (const pattern of patterns) {
+    const match = estimateText.match(pattern);
+    if (match) {
+      const ro = match[1].trim();
+      console.log(`${LOG_TAG} Extracted RO from estimate content: ${ro}`);
+      return ro;
+    }
+  }
 
   return null;
 }
@@ -368,7 +408,11 @@ function extractRoFromFilename(filename) {
 function extractRoFromPdfText(pdfText) {
   if (!pdfText) return null;
 
-  // Try explicit patterns first
+  // Try estimate-specific patterns first (more comprehensive)
+  const fromEstimate = extractRoFromEstimate(pdfText);
+  if (fromEstimate) return fromEstimate;
+
+  // Try explicit patterns
   const explicit = extractRoFromText(pdfText);
   if (explicit) return explicit;
 
@@ -655,20 +699,45 @@ async function processEmail(message) {
     }
 
     // === RO/PO EXTRACTION CHAIN ===
-    // Try multiple sources to find RO/PO
+    // Priority: PDF content > Email subject > Email body > Filename > Synthetic
+    // This ensures RO from estimate/RevvADAS PDFs takes precedence over subject line
     let roPo = null;
     let roSource = null;
     let isSyntheticRo = false;
 
-    // 1. Try subject first
-    const subjectResult = parseEmailSubject(subject);
-    if (subjectResult.roPo) {
-      roPo = subjectResult.roPo;
-      roSource = 'subject';
-      console.log(`${LOG_TAG} Found RO in subject: ${roPo}`);
+    // 1. Try PDF text content FIRST (primary source - from estimate or RevvADAS)
+    if (pdfs.length > 0) {
+      try {
+        const pdfParse = await import('pdf-parse');
+        // Check all PDFs for RO, prioritizing estimates
+        for (const pdf of pdfs) {
+          const pdfData = await pdfParse.default(pdf.buffer);
+          const pdfText = pdfData.text || '';
+
+          const pdfRo = extractRoFromPdfText(pdfText);
+          if (pdfRo) {
+            roPo = pdfRo;
+            roSource = `pdf_content:${pdf.filename}`;
+            console.log(`${LOG_TAG} Extracted RO from PDF content: ${roPo} (${pdf.filename})`);
+            break;
+          }
+        }
+      } catch (pdfErr) {
+        console.log(`${LOG_TAG} Could not extract RO from PDF content: ${pdfErr.message}`);
+      }
     }
 
-    // 2. If not in subject, try email body
+    // 2. Try email subject as fallback
+    if (!roPo) {
+      const subjectResult = parseEmailSubject(subject);
+      if (subjectResult.roPo) {
+        roPo = subjectResult.roPo;
+        roSource = 'subject';
+        console.log(`${LOG_TAG} Found RO in subject (fallback): ${roPo}`);
+      }
+    }
+
+    // 3. If not in subject, try email body
     if (!roPo) {
       console.log(`${LOG_TAG} No RO found in subject — attempting extraction from body`);
       const bodyRo = extractRoFromText(body);
@@ -679,7 +748,7 @@ async function processEmail(message) {
       }
     }
 
-    // 3. Try PDF filenames
+    // 4. Try PDF filenames
     if (!roPo) {
       for (const pdf of pdfs) {
         const filenameRo = extractRoFromFilename(pdf.filename);
@@ -689,25 +758,6 @@ async function processEmail(message) {
           console.log(`${LOG_TAG} Extracted RO from PDF filename: ${roPo}`);
           break;
         }
-      }
-    }
-
-    // 4. Try PDF text content (quick extraction from first PDF)
-    if (!roPo && pdfs.length > 0) {
-      try {
-        const pdfParse = await import('pdf-parse');
-        const firstPdf = pdfs[0];
-        const pdfData = await pdfParse.default(firstPdf.buffer);
-        const pdfText = pdfData.text || '';
-
-        const pdfRo = extractRoFromPdfText(pdfText);
-        if (pdfRo) {
-          roPo = pdfRo;
-          roSource = `pdf_text:${firstPdf.filename}`;
-          console.log(`${LOG_TAG} Extracted RO from PDF text: ${roPo}`);
-        }
-      } catch (pdfErr) {
-        console.log(`${LOG_TAG} Could not extract RO from PDF text: ${pdfErr.message}`);
       }
     }
 
@@ -769,6 +819,16 @@ async function processEmail(message) {
 
       // Store full scrub text separately for sidebar (Column T - hidden)
       mergedData.fullScrubText = fullNotes;
+
+      // Extract OEM Position Statement links (Column U)
+      // Format: "Brand: fileName" for each job aid found
+      if (scrubResult.oemJobAids && scrubResult.oemJobAids.length > 0) {
+        const oemLinks = scrubResult.oemJobAids.map(aid => {
+          return `${aid.brand || 'OEM'}: ${aid.fileName}`;
+        }).join('\n');
+        mergedData.oemPosition = oemLinks;
+        console.log(`${LOG_TAG} OEM Position links populated: ${scrubResult.oemJobAids.length} job aid(s)`);
+      }
 
       // Log attention status
       if (scrubResult.needsAttention) {

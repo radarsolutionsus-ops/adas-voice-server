@@ -3,7 +3,7 @@
  * Web App for Node.js server communication
  *
  * Sheet: ADAS_FIRST_Operations
- * Main tab: ADAS_Schedule (Columns A-T)
+ * Main tab: ADAS_Schedule (Columns A-U)
  *
  * Column Mapping:
  * A: Timestamp Created (MM/dd/yyyy HH:mm)
@@ -26,13 +26,14 @@
  * R: Invoice Date
  * S: Notes (Short Preview - single line)
  * T: Full Scrub Text (hidden, for sidebar)
+ * U: OEM Position Statement links
  */
 
 const SCHEDULE_SHEET = 'ADAS_Schedule';
 const BILLING_SHEET = 'Billing';
 const SHOPS_SHEET = 'Shops';
 const SCRUB_DETAILS_SHEET = 'Scrub_Details';
-const TOTAL_COLUMNS = 20; // A through T
+const TOTAL_COLUMNS = 21; // A through U
 
 // Column indices (0-based)
 const COL = {
@@ -55,7 +56,8 @@ const COL = {
   INVOICE_AMOUNT: 16, // Q
   INVOICE_DATE: 17,   // R
   NOTES: 18,          // S
-  FULL_SCRUB: 19      // T
+  FULL_SCRUB: 19,     // T
+  OEM_POSITION: 20    // U - OEM Position Statement links
 };
 
 /**
@@ -213,17 +215,48 @@ function upsertScheduleRow(data) {
 }
 
 /**
+ * Normalize RO/PO for fuzzy matching
+ * Strips common suffixes like -1, -A, _REV so "12313-1" matches "12313"
+ * @param {string} ro - Raw RO/PO number
+ * @returns {string} - Normalized RO for matching
+ */
+function normalizeRO(ro) {
+  if (!ro) return '';
+  let normalized = String(ro).trim();
+  // Remove common suffixes: -1, -A, _REV, -REV, etc.
+  // Pattern handles: 12345-1, 12345-A, 12345_REV, 12345-REV1, etc.
+  normalized = normalized.replace(/[-_]?(REV|rev)?\d*$/, '');
+  normalized = normalized.replace(/[-_]?[A-Za-z]$/, '');
+  return normalized.trim();
+}
+
+/**
  * Find row number by RO/PO (returns 0 if not found)
+ * First tries exact match, then falls back to fuzzy/normalized match
  */
 function findRowByRO(sheet, roPo) {
   const data = sheet.getDataRange().getValues();
   const roPoStr = String(roPo).trim().toLowerCase();
 
+  // First pass: exact match
   for (let i = 1; i < data.length; i++) {
     if (String(data[i][COL.RO_PO]).trim().toLowerCase() === roPoStr) {
       return i + 1; // 1-based row number
     }
   }
+
+  // Second pass: fuzzy match using normalized RO
+  const normalizedIncoming = normalizeRO(roPo).toLowerCase();
+  if (normalizedIncoming) {
+    for (let i = 1; i < data.length; i++) {
+      const normalizedExisting = normalizeRO(data[i][COL.RO_PO]).toLowerCase();
+      if (normalizedExisting === normalizedIncoming) {
+        Logger.log('Fuzzy RO match: "' + roPo + '" matched existing "' + data[i][COL.RO_PO] + '"');
+        return i + 1; // 1-based row number
+      }
+    }
+  }
+
   return 0;
 }
 
@@ -251,7 +284,10 @@ function createNewRow(sheet, data, roPo) {
   // Store full scrub text DIRECTLY in Column T (not a reference)
   const fullScrubText = data.full_scrub_text || data.fullScrubText || '';
 
-  // Build new row (A through T = 20 columns)
+  // OEM Position Statement links for Column U
+  const oemPosition = data.oem_position || data.oemPosition || '';
+
+  // Build new row (A through U = 21 columns)
   const newRow = [
     timestamp,                                                    // A: Timestamp
     shopName,                                                     // B: Shop Name
@@ -272,7 +308,8 @@ function createNewRow(sheet, data, roPo) {
     data.invoice_amount || data.invoiceAmount || '',             // Q: Invoice Amount
     data.invoice_date || data.invoiceDate || '',                 // R: Invoice Date
     data.notes || data.shop_notes || '',                         // S: Notes (short preview)
-    fullScrubText                                                 // T: Full Scrub Text
+    fullScrubText,                                                // T: Full Scrub Text
+    oemPosition                                                   // U: OEM Position Statement links
   ];
 
   sheet.appendRow(newRow);
@@ -325,6 +362,13 @@ function updateExistingRow(sheet, rowNum, data) {
     fullScrubText = newFullScrubText;
   }
 
+  // Handle OEM Position Statement links (Column U)
+  let oemPosition = curr[COL.OEM_POSITION] || '';
+  const newOemPosition = data.oem_position || data.oemPosition || '';
+  if (newOemPosition && newOemPosition.trim().length > 0) {
+    oemPosition = newOemPosition;
+  }
+
   const updatedRow = [
     curr[COL.TIMESTAMP],                                          // A: Keep original timestamp
     shopName,                                                     // B: Shop Name
@@ -345,7 +389,8 @@ function updateExistingRow(sheet, rowNum, data) {
     data.invoice_amount || data.invoiceAmount || curr[COL.INVOICE_AMOUNT], // Q
     data.invoice_date || data.invoiceDate || curr[COL.INVOICE_DATE], // R
     notes,                                                        // S: Notes (short preview)
-    fullScrubText                                                 // T: Full Scrub Text
+    fullScrubText,                                                // T: Full Scrub Text
+    oemPosition                                                   // U: OEM Position Statement links
   ];
 
   range.setValues([updatedRow]);
@@ -408,7 +453,8 @@ function techUpdateRow(data) {
     curr[COL.INVOICE_AMOUNT],                                     // Q: KEEP
     curr[COL.INVOICE_DATE],                                       // R: KEEP
     data.notes ? (curr[COL.NOTES] ? curr[COL.NOTES] + ' | ' + data.notes : data.notes) : curr[COL.NOTES], // S: Append
-    curr[COL.FULL_SCRUB]                                          // T: KEEP
+    curr[COL.FULL_SCRUB],                                         // T: KEEP
+    curr[COL.OEM_POSITION] || ''                                  // U: KEEP
   ];
 
   range.setValues([updatedRow]);
@@ -498,7 +544,8 @@ function getScheduleByRO(roPo) {
       invoice_amount: data[COL.INVOICE_AMOUNT],
       invoice_date: data[COL.INVOICE_DATE],
       notes: data[COL.NOTES],
-      full_scrub: data[COL.FULL_SCRUB]
+      full_scrub: data[COL.FULL_SCRUB],
+      oem_position: data[COL.OEM_POSITION] || ''
     },
     rowNumber: rowNum
   };

@@ -93,7 +93,7 @@ const BILLING_SHEET_NAME = process.env.BILLING_SHEET_ID || 'Billing';
 const SHOPS_SHEET_NAME = process.env.SHOPS_SHEET_ID || 'Shops';
 const CONFIG_SHEET_NAME = 'Config';
 
-// Column mappings for ADAS_Schedule (A-T)
+// Column mappings for ADAS_Schedule (A-U)
 const SCHEDULE_COLUMNS = {
   TIMESTAMP_CREATED: 0,    // A
   SHOP_NAME: 1,            // B
@@ -114,7 +114,8 @@ const SCHEDULE_COLUMNS = {
   INVOICE_AMOUNT: 16,      // Q
   INVOICE_DATE: 17,        // R
   NOTES: 18,               // S - Short summary notes (2-3 lines max)
-  FULL_SCRUB_TEXT: 19      // T - Hidden column for full scrub text (sidebar)
+  FULL_SCRUB_TEXT: 19,     // T - Hidden column for full scrub text (sidebar)
+  OEM_POSITION: 20         // U - OEM Position Statement links
 };
 
 // Column mappings for Billing (A-L)
@@ -380,7 +381,8 @@ function scheduleRowToObject(row, rowIndex) {
     invoiceAmount: row[SCHEDULE_COLUMNS.INVOICE_AMOUNT] || '',
     invoiceDate: row[SCHEDULE_COLUMNS.INVOICE_DATE] || '',
     notes: row[SCHEDULE_COLUMNS.NOTES] || '',
-    fullScrubText: row[SCHEDULE_COLUMNS.FULL_SCRUB_TEXT] || ''
+    fullScrubText: row[SCHEDULE_COLUMNS.FULL_SCRUB_TEXT] || '',
+    oemPosition: row[SCHEDULE_COLUMNS.OEM_POSITION] || ''
   };
 }
 
@@ -591,7 +593,9 @@ export async function upsertScheduleRowByRO(roPo, dataObject) {
     // Column S: Notes (compact summary for display)
     notes: dataObject.notes || '',
     // Column T: Full Scrub Text (for sidebar, hidden in sheet)
-    full_scrub_text: dataObject.fullScrubText || ''
+    full_scrub_text: dataObject.fullScrubText || '',
+    // Column U: OEM Position Statement links
+    oem_position: dataObject.oemPosition || dataObject.oem_position || dataObject.oemLinks || ''
   };
 
   // Remove empty string values (but keep roPo)
@@ -817,7 +821,7 @@ export async function searchScheduleRows(criteria) {
   console.log(`${LOG_TAG} Searching schedule rows with criteria:`, JSON.stringify(criteria));
 
   try {
-    const rows = await readSheetData(SCHEDULE_SHEET_NAME, 'A:T');
+    const rows = await readSheetData(SCHEDULE_SHEET_NAME, 'A:U');
 
     if (rows.length <= 1) {
       console.log(`${LOG_TAG} No data rows found in ${SCHEDULE_SHEET_NAME}`);
@@ -921,7 +925,7 @@ export async function getScheduledJobsForTechOnDate(technician, date) {
   console.log(`${LOG_TAG} Getting scheduled jobs for ${technician} on ${date}`);
 
   try {
-    const rows = await readSheetData(SCHEDULE_SHEET_NAME, 'A:T');
+    const rows = await readSheetData(SCHEDULE_SHEET_NAME, 'A:U');
 
     if (rows.length <= 1) {
       console.log(`${LOG_TAG} No data rows found in ${SCHEDULE_SHEET_NAME}`);
