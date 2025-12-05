@@ -46,26 +46,34 @@ app.use(express.urlencoded({ extended: true }));
 
 // Health check - MUST be first, responds immediately for Railway
 app.get("/health", (req, res) => {
-  console.log("[HEALTH] Check received");
+  console.log("[HEALTH] Check received - responding OK");
   res.status(200).send("OK");
 });
 
+// Root path also returns health for Railway compatibility
+app.get("/", (req, res) => {
+  res.status(200).json({ status: "ok", service: "adas-voice-server" });
+});
+
 const PORT = process.env.PORT || 8080;
-const server = app.listen(PORT, () => {
+
+// Start server immediately - no async operations before listen
+const server = app.listen(PORT, "0.0.0.0", () => {
   console.log(`✅ ADAS First Voice Server LIVE on port ${PORT}`);
   console.log(`📞 Ops webhook: /voice-ops`);
   console.log(`🔧 Tech webhook: /voice-tech`);
-
-  // Delay email listener start to not block health checks
-  setTimeout(() => {
-    if (!emailListener.isRunning()) {
-      console.log("[EMAIL_PIPELINE] Auto-starting email listener...");
-      emailListener.startListener().catch(err =>
-        console.error("[EMAIL_PIPELINE] Failed to auto-start listener:", err)
-      );
-    }
-  }, 5000);  // Wait 5 seconds after server starts
+  console.log(`[STARTUP] Server ready for health checks`);
 });
+
+// Start email listener AFTER server is fully running (longer delay for Railway)
+setTimeout(() => {
+  if (!emailListener.isRunning()) {
+    console.log("[EMAIL_PIPELINE] Auto-starting email listener...");
+    emailListener.startListener().catch(err =>
+      console.error("[EMAIL_PIPELINE] Failed to auto-start listener:", err)
+    );
+  }
+}, 10000);  // Wait 10 seconds after server starts
 
 const wss = new WebSocketServer({ server });  // Handle all WebSocket paths
 
