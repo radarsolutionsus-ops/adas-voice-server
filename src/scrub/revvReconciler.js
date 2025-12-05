@@ -17,39 +17,88 @@ const LOG_TAG = '[REVV_RECONCILER]';
 /**
  * Normalize calibration names for comparison
  * Different sources may use different naming conventions
+ *
+ * OEM TERMINOLOGY MAPPING:
+ * - Assistant/internal terms map to OEM/RevvADAS terms
+ * - This ensures "Front Radar" matches "Millimeter Wave Radar Sensor"
  */
 const CALIBRATION_ALIASES = {
   // Front Camera variations
-  'front camera': ['front camera', 'forward camera', 'windshield camera', 'fcam', 'sensing camera', 'adas camera', 'eyesight', 'multipurpose camera', 'mpc'],
+  'front camera': ['front camera', 'forward camera', 'windshield camera', 'fcam', 'sensing camera', 'adas camera', 'eyesight', 'multipurpose camera', 'mpc', 'forward recognition camera', 'frc'],
   'front camera static': ['front camera static', 'front camera (static)', 'static camera', 'camera static calibration'],
   'front camera dynamic': ['front camera dynamic', 'front camera (dynamic)', 'dynamic camera', 'kafas'],
 
-  // Front Radar variations
-  'front radar': ['front radar', 'forward radar', 'acc radar', 'adaptive cruise radar', 'millimeter wave', 'mwr', 'distronic', 'long range radar', 'lrr'],
+  // Front Radar variations - CRITICAL: millimeter wave = front radar
+  'front radar': [
+    'front radar', 'forward radar', 'acc radar', 'adaptive cruise radar',
+    'millimeter wave', 'millimeter wave radar', 'millimeter wave radar sensor',
+    'mwr', 'distronic', 'long range radar', 'lrr',
+    'distance sensor', 'acc sensor', 'adaptive cruise control sensor',
+    'forward sensing radar', 'pre collision radar', 'precollision radar'
+  ],
 
-  // Rear Radar variations
-  'rear radar': ['rear radar', 'rcta', 'rear cross traffic', 'rear cross-traffic', 'short range radar', 'srr'],
+  // Rear Radar variations - includes rear cross traffic alert
+  'rear radar': [
+    'rear radar', 'rcta', 'rear cross traffic', 'rear cross-traffic',
+    'short range radar', 'srr', 'rear cross traffic alert'
+  ],
 
-  // Blind Spot variations
-  'blind spot': ['blind spot', 'bsm', 'blind spot monitor', 'blind spot sensor', 'blis', 'side radar', 'bsi', 'side object sensor', 'lane change assist'],
+  // Blind Spot Monitor variations
+  'blind spot': [
+    'blind spot', 'bsm', 'blind spot monitor', 'blind spot sensor',
+    'blind spot monitor sensor', 'blis', 'side radar', 'bsi',
+    'side object sensor', 'lane change assist', 'blind spot information'
+  ],
 
-  // Surround View variations
-  'surround view': ['surround view', '360 camera', '360 degree camera', 'around view', 'avm', 'surround vision', 'bird eye view', 'birds eye'],
+  // Surround View / 360 Camera variations
+  'surround view': [
+    'surround view', 'surround view monitor', 'surround view monitor cameras',
+    '360 camera', '360 degree camera', 'around view', 'around view monitor',
+    'avm', 'surround vision', 'bird eye view', 'birds eye', 'panoramic view'
+  ],
 
   // Rear Camera variations
-  'rear camera': ['rear camera', 'backup camera', 'reverse camera', 'rearview camera'],
+  'rear camera': ['rear camera', 'backup camera', 'reverse camera', 'rearview camera', 'rear view camera'],
 
-  // Parking Sensor variations
-  'parking sensor': ['parking sensor', 'parking aid', 'park assist', 'ultrasonic sensor', 'sonar sensor', 'front parking', 'rear parking'],
+  // Parking Sensor variations - includes clearance/back sonar
+  'parking sensor': [
+    'parking sensor', 'parking aid', 'park assist', 'ultrasonic sensor',
+    'sonar sensor', 'front parking', 'rear parking', 'clearance sonar',
+    'back sonar', 'clearance/back sonar', 'parking sonar'
+  ],
 
-  // Steering Angle Sensor variations
+  // Steering Angle Sensor / Yaw Rate Sensor variations
   'steering angle': ['steering angle', 'sas', 'steering angle sensor', 'steering sensor reset', 'sas reset', 'sas calibration', 'zero point'],
+  'yaw rate': [
+    'yaw rate', 'yaw rate sensor', 'yaw rate and acceleration',
+    'yaw rate and acceleration sensor', 'yaw sensor', 'stability sensor',
+    'g sensor', 'lateral acceleration sensor'
+  ],
 
   // Headlamp variations
-  'headlamp': ['headlamp', 'headlight', 'headlamp aim', 'headlight aim', 'afs', 'adaptive front lighting', 'auto leveling'],
+  'headlamp': ['headlamp', 'headlight', 'headlamp aim', 'headlight aim', 'afs', 'adaptive front lighting', 'auto leveling', 'headlamp leveling'],
 
-  // Lane assist variations
-  'lane assist': ['lane departure', 'ldw', 'lane keep', 'lkas', 'lane keeping', 'lda']
+  // Lane assist / Lane Departure variations
+  'lane assist': ['lane departure', 'ldw', 'lane keep', 'lkas', 'lane keeping', 'lda', 'lane departure warning', 'lane departure warning camera']
+};
+
+/**
+ * OEM-specific terminology conversions
+ * Maps internal system names to OEM/RevvADAS display names
+ */
+const OEM_DISPLAY_NAMES = {
+  'front_radar': 'Millimeter Wave Radar Sensor',
+  'front_camera': 'Forward Recognition Camera',
+  'rear_camera': 'Backup Camera',
+  'bsm': 'Blind Spot Monitor Sensor',
+  'blind_spot': 'Blind Spot Monitor Sensor',
+  'lkas': 'Lane Departure Warning Camera',
+  'lane_assist': 'Lane Departure Warning Camera',
+  'acc': 'Adaptive Cruise Control Sensor',
+  'surround_view': 'Surround View Monitor Cameras',
+  'parking_sensors': 'Clearance/Back Sonar',
+  'yaw_rate': 'Yaw Rate and Acceleration Sensor',
+  'steering_angle': 'Steering Angle Sensor'
 };
 
 /**

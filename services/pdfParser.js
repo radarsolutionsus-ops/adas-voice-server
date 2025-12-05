@@ -156,9 +156,9 @@ function extractShopNameFromPDF(text, pdfType = null) {
     if (/^\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}/.test(line)) continue; // Dates
 
     // Check for patterns that suggest a business name
-    // - Contains "Auto", "Body", "Collision", "Shop", "Motors", "Service"
+    // - Contains "Auto", "Body", "Collision", "Shop", "Motors", "Service", "Paint", "Max"
     // - Or is a capitalized phrase in the first few lines
-    if (/\b(auto|body|collision|shop|motors?|service|repair|garage|center|centre)\b/i.test(line)) {
+    if (/\b(auto|body|collision|shop|motors?|service|repair|garage|center|centre|paint|max|express|pro|precision)\b/i.test(line)) {
       // Clean up the name
       const cleaned = line
         .replace(/\s+/g, ' ')
@@ -178,7 +178,8 @@ function extractShopNameFromPDF(text, pdfType = null) {
     }
 
     // First capitalized line that looks like a company name (2+ words, proper case)
-    if (i < 5 && /^[A-Z][a-zA-Z]+(\s+[A-Z][a-zA-Z]+)+$/.test(line) && line.length >= 5) {
+    // Also match names like "Paint Max 1" with numbers
+    if (i < 5 && /^[A-Z][a-zA-Z]+(\s+[A-Z0-9][a-zA-Z0-9]*)+$/.test(line) && line.length >= 5) {
       // CRITICAL: Skip invalid shop names like "Vehicle Information"
       if (isInvalidShopName(line)) {
         console.log(`${LOG_TAG} Skipping invalid shop name from header: ${line}`);
@@ -186,6 +187,19 @@ function extractShopNameFromPDF(text, pdfType = null) {
       }
       console.log(`${LOG_TAG} Extracted shop name from header: ${line}`);
       return line;
+    }
+  }
+
+  // Pattern 1b: Check first line specifically - many estimates start with shop name
+  if (lines.length > 0) {
+    const firstLine = lines[0];
+    // Match patterns like "Paint Max 1", "ABC Auto Body", etc.
+    if (/^[A-Za-z][A-Za-z0-9\s&'\.]+$/i.test(firstLine) &&
+        firstLine.length >= 5 && firstLine.length <= 40 &&
+        !isInvalidShopName(firstLine) &&
+        !/^(estimate|invoice|repair|vehicle|customer|date|vin)/i.test(firstLine)) {
+      console.log(`${LOG_TAG} Extracted shop name from first line: ${firstLine}`);
+      return firstLine;
     }
   }
 
