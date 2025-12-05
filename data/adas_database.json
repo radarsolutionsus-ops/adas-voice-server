@@ -1,0 +1,850 @@
+{
+  "meta": {
+    "version": "1.0",
+    "last_updated": "2025-12-04",
+    "description": "ADAS Estimate Scrubbing Database - All calibration triggers, manufacturer specifications, and OEM position statements"
+  },
+  
+  "calibration_triggers": {
+    "critical": [
+      {
+        "repair_keywords": ["windshield", "windscreen", "front glass", "laminated glass", "w/s"],
+        "sensors_affected": ["forward_camera", "rain_sensor", "humidity_sensor"],
+        "calibration_type": "static_and_dynamic",
+        "priority": "CRITICAL",
+        "note": "89% of 2023+ vehicles require calibration after windshield replacement"
+      },
+      {
+        "repair_keywords": ["front bumper", "fr bumper", "front fascia", "front cover", "bumper cover front"],
+        "sensors_affected": ["front_radar", "acc_sensor", "front_parking_sensors", "aeb_sensor"],
+        "calibration_type": "static_and_dynamic",
+        "priority": "CRITICAL",
+        "note": "Even R&I of same bumper can misalign hidden sensors"
+      },
+      {
+        "repair_keywords": ["grille", "grill", "front grille", "radiator grille"],
+        "sensors_affected": ["front_radar", "acc_sensor"],
+        "calibration_type": "static_and_dynamic",
+        "priority": "CRITICAL",
+        "note": "Radar typically mounted behind brand emblem in grille"
+      },
+      {
+        "repair_keywords": ["rear bumper", "rr bumper", "rear fascia", "rear cover", "bumper cover rear"],
+        "sensors_affected": ["rear_radar", "bsm_sensors", "rcta_sensors", "rear_parking_sensors"],
+        "calibration_type": "static_and_dynamic",
+        "priority": "CRITICAL",
+        "note": "BSM and RCTA sensors located in rear bumper corners"
+      },
+      {
+        "repair_keywords": ["collision", "accident", "impact", "crash"],
+        "sensors_affected": ["all_adas_sensors"],
+        "calibration_type": "pre_post_scan_plus_calibration",
+        "priority": "CRITICAL",
+        "note": "All collision events require pre and post repair scanning regardless of severity"
+      },
+      {
+        "repair_keywords": ["frame", "structural", "unibody", "rail", "apron", "strut tower"],
+        "sensors_affected": ["all_adas_sensors"],
+        "calibration_type": "static_and_dynamic",
+        "priority": "CRITICAL",
+        "note": "Frame repairs alter vehicle geometry affecting all sensor angles"
+      },
+      {
+        "repair_keywords": ["airbag", "air bag", "srs", "restraint", "deployed"],
+        "sensors_affected": ["steering_angle_sensor", "occupant_sensors", "forward_camera"],
+        "calibration_type": "static",
+        "priority": "CRITICAL",
+        "note": "Airbag deployment requires steering angle calibration"
+      },
+      {
+        "repair_keywords": ["camera replace", "radar replace", "sensor replace", "module replace"],
+        "sensors_affected": ["per_component"],
+        "calibration_type": "per_oem",
+        "priority": "CRITICAL",
+        "note": "Any sensor/camera replacement always requires calibration"
+      }
+    ],
+    "high": [
+      {
+        "repair_keywords": ["suspension", "strut", "shock", "control arm", "ball joint", "tie rod"],
+        "sensors_affected": ["steering_angle_sensor", "forward_camera", "yaw_sensor"],
+        "calibration_type": "static",
+        "priority": "HIGH",
+        "note": "Changes in ride height affect camera field of view"
+      },
+      {
+        "repair_keywords": ["alignment", "wheel alignment", "4 wheel alignment", "thrust angle"],
+        "sensors_affected": ["steering_angle_sensor"],
+        "calibration_type": "static",
+        "priority": "HIGH",
+        "note": "Steering angle zero-point calibration required"
+      },
+      {
+        "repair_keywords": ["quarter panel", "qtr panel", "rear quarter", "rear fender"],
+        "sensors_affected": ["bsm_sensors"],
+        "calibration_type": "static",
+        "priority": "HIGH",
+        "note": "BSM sensors often located in rear quarter panel area"
+      },
+      {
+        "repair_keywords": ["mirror", "side mirror", "door mirror", "wing mirror", "o/s mirror"],
+        "sensors_affected": ["bsm_camera", "lane_change_camera", "360_camera"],
+        "calibration_type": "static",
+        "priority": "HIGH",
+        "note": "Many BSM cameras and 360 view cameras in mirrors"
+      },
+      {
+        "repair_keywords": ["headlamp", "headlight", "head lamp", "adaptive headlight"],
+        "sensors_affected": ["adaptive_headlights", "auto_high_beam"],
+        "calibration_type": "static",
+        "priority": "HIGH",
+        "note": "Adaptive and auto-leveling headlights require aiming"
+      },
+      {
+        "repair_keywords": ["tailgate", "liftgate", "hatch", "trunk lid"],
+        "sensors_affected": ["rear_camera", "360_camera"],
+        "calibration_type": "static",
+        "priority": "HIGH",
+        "note": "Rear camera and 360 view camera often mounted in tailgate"
+      }
+    ],
+    "conditional": [
+      {
+        "repair_keywords": ["hood", "bonnet"],
+        "check_for": "forward_camera_obstruction",
+        "calibration_if": "camera_affected",
+        "priority": "CONDITIONAL"
+      },
+      {
+        "repair_keywords": ["fender", "front fender", "wing"],
+        "check_for": "side_sensors_in_fender",
+        "calibration_if": "sensors_present",
+        "priority": "CONDITIONAL"
+      },
+      {
+        "repair_keywords": ["door", "front door", "rear door"],
+        "check_for": "side_impact_sensors_bsm_cameras",
+        "calibration_if": "per_oem",
+        "priority": "CONDITIONAL"
+      },
+      {
+        "repair_keywords": ["roof", "roof panel"],
+        "check_for": "roof_mounted_sensors",
+        "calibration_if": "sensors_present",
+        "priority": "CONDITIONAL",
+        "note": "Some EVs have roof-mounted LiDAR or GPS antennas"
+      },
+      {
+        "repair_keywords": ["tire", "wheel", "tire size"],
+        "check_for": "speed_dependent_adas",
+        "calibration_if": "oem_requires",
+        "priority": "CONDITIONAL"
+      }
+    ]
+  },
+
+  "manufacturers": {
+    "toyota": {
+      "brands": ["Toyota", "Lexus"],
+      "adas_system_name": "Toyota Safety Sense / Lexus Safety System+",
+      "generations": {
+        "TSS_2.0": {
+          "years": "2018-2020",
+          "features": ["PCS", "DRCC", "LDA", "AHB", "RSA"],
+          "sensors": {
+            "forward_camera": {"location": "windshield_upper_center", "type": "monocular"},
+            "front_radar": {"location": "behind_emblem_grille", "type": "millimeter_wave"}
+          }
+        },
+        "TSS_2.5": {
+          "years": "2020-2022",
+          "features": ["PCS", "DRCC", "LDA", "LTA", "AHB", "RSA"],
+          "sensors": {
+            "forward_camera": {"location": "windshield_upper_center", "type": "monocular"},
+            "front_radar": {"location": "behind_emblem_grille", "type": "millimeter_wave"}
+          }
+        },
+        "TSS_3.0": {
+          "years": "2023+",
+          "features": ["PCS", "DRCC", "LDA", "LTA", "AHB", "RSA", "PDA", "emergency_steering"],
+          "sensors": {
+            "forward_camera": {"location": "windshield_upper_center", "type": "monocular_enhanced"},
+            "front_radar": {"location": "behind_emblem_grille", "type": "millimeter_wave"}
+          },
+          "note": "40% longer/wider detection range, supports OTA updates"
+        }
+      },
+      "bsm_sensors": {"location": "rear_bumper_corners", "type": "radar"},
+      "calibration_requirements": {
+        "forward_camera": "static_required_after_windshield",
+        "front_radar": "static_after_bumper_grille_work",
+        "bsm": "static_after_rear_bumper_quarter"
+      },
+      "technical_portal": {"name": "TIS", "url": "techinfo.toyota.com"},
+      "oem1stop_page": "https://www.oem1stop.com/content/toyota"
+    },
+    
+    "honda": {
+      "brands": ["Honda", "Acura"],
+      "adas_system_name": "Honda Sensing / AcuraWatch",
+      "generations": {
+        "honda_sensing_1.0": {
+          "years": "2015-2020",
+          "features": ["CMBS", "ACC", "LKAS", "RDM", "AHB"],
+          "sensors": {
+            "forward_camera": {"location": "windshield_upper_center", "type": "monocular"},
+            "front_radar": {"location": "behind_h_emblem", "type": "millimeter_wave"}
+          }
+        },
+        "honda_sensing_360": {
+          "years": "2022+",
+          "features": ["CMBS", "ACC", "LKAS", "RDM", "AHB", "FCTW", "BSM", "LCA"],
+          "sensors": {
+            "forward_camera": {"location": "windshield_upper_center", "type": "wide_view_monocular"},
+            "front_radar": {"location": "behind_h_emblem", "type": "millimeter_wave"},
+            "corner_radars": {"location": "four_corners", "count": 4, "type": "short_range"}
+          },
+          "note": "5 radars + 1 camera for 360-degree sensing"
+        },
+        "honda_sensing_360_plus": {
+          "years": "2024+",
+          "features": ["all_360_features", "hands_free_driving", "traffic_jam_pilot"],
+          "sensors": {
+            "forward_camera": {"location": "windshield_upper_center", "type": "wide_view_monocular"},
+            "front_radar": {"location": "behind_h_emblem", "type": "millimeter_wave"},
+            "corner_radars": {"location": "four_corners", "count": 4, "type": "short_range"},
+            "driver_monitoring": {"location": "instrument_cluster", "type": "infrared_camera"}
+          }
+        }
+      },
+      "critical_oem_note": "Dashboard warning lights are NOT acceptable for determining scan necessity",
+      "bsm_sensors": {"location": "rear_bumper_fascia", "type": "radar"},
+      "calibration_requirements": {
+        "forward_camera": "static_required_after_windshield",
+        "front_radar": "static_after_bumper_work",
+        "bsm": "static_after_rear_bumper"
+      },
+      "technical_portal": {"name": "ServiceExpress", "url": "techinfo.honda.com"},
+      "oem1stop_page": "https://www.oem1stop.com/content/honda"
+    },
+
+    "ford": {
+      "brands": ["Ford", "Lincoln"],
+      "adas_system_name": "Ford Co-Pilot360 / BlueCruise",
+      "generations": {
+        "copilot360": {
+          "years": "2019+",
+          "features": ["PCA", "BLIS", "LKS", "AHB"],
+          "sensors": {
+            "forward_camera": {"location": "windshield_mounted", "type": "monocular"},
+            "front_radar": {"location": "behind_ford_oval", "type": "millimeter_wave"}
+          }
+        },
+        "copilot360_plus": {
+          "years": "2020+",
+          "features": ["PCA", "BLIS", "LKS", "AHB", "ACC", "evasive_steering"],
+          "sensors": {
+            "forward_camera": {"location": "windshield_mounted", "type": "monocular"},
+            "front_radar": {"location": "behind_ford_oval", "type": "millimeter_wave"},
+            "ultrasonic": {"location": "bumpers", "count": 12}
+          }
+        },
+        "bluecruise": {
+          "years": "2021+",
+          "features": ["hands_free_highway", "lane_change_assist", "in_lane_repositioning"],
+          "sensors": {
+            "forward_camera": {"location": "windshield_mounted", "type": "monocular"},
+            "front_radar": {"location": "behind_ford_oval", "type": "millimeter_wave"},
+            "driver_monitoring": {"location": "instrument_cluster", "type": "infrared_camera"}
+          },
+          "note": "200,000+ km of mapped Blue Zones"
+        }
+      },
+      "blis_sensors": {"location": "rear_quarter_panels", "type": "radar"},
+      "calibration_requirements": {
+        "forward_camera": "static_required_after_windshield",
+        "front_radar": "static_after_bumper_grille",
+        "blis": "static_after_quarter_panel_rear_bumper"
+      },
+      "technical_portal": {"name": "Motorcraft Service PTS", "url": "motorcraftservice.com"},
+      "oem1stop_page": "https://www.oem1stop.com/content/ford"
+    },
+
+    "gm": {
+      "brands": ["Chevrolet", "GMC", "Buick", "Cadillac"],
+      "adas_system_name": "Safety Features / Super Cruise / Ultra Cruise",
+      "generations": {
+        "standard_safety": {
+          "years": "2016+",
+          "features": ["FCW", "AEB", "LDW", "LKA"],
+          "sensors": {
+            "forward_camera": {"location": "windshield_mounted", "type": "monocular"}
+          }
+        },
+        "super_cruise": {
+          "years": "2017+",
+          "features": ["hands_free_highway", "automatic_lane_change"],
+          "sensors": {
+            "forward_camera": {"location": "windshield_mounted", "type": "monocular"},
+            "front_radar": {"location": "behind_emblem_grille", "type": "long_range"},
+            "rear_radar": {"location": "rear_bumper", "type": "mid_range"},
+            "driver_monitoring": {"location": "steering_column", "type": "infrared_camera"},
+            "gps": {"type": "hd_precision_mapping"}
+          },
+          "note": "200,000+ miles of mapped divided highways"
+        },
+        "ultra_cruise": {
+          "years": "2024+",
+          "features": ["95_percent_driving_scenarios", "city_driving", "turns"],
+          "sensors": {
+            "cameras": {"count": 7, "type": "long_range"},
+            "short_range_radar": {"count": 4},
+            "long_range_radar": {"count": 3, "type": "4D"},
+            "lidar": {"count": 1, "location": "roof_or_grille"},
+            "ultrasonic": {"count": 12}
+          },
+          "computing": "Qualcomm SoC"
+        }
+      },
+      "critical_oem_note": "All collision vehicles require pre and post repair scanning",
+      "calibration_requirements": {
+        "forward_camera": "static_required_after_windshield",
+        "front_radar": "static_after_bumper_grille",
+        "super_cruise": "precision_map_verification_required"
+      },
+      "technical_portal": {"name": "ACDelco TDS", "url": "acdelcotds.com"},
+      "oem1stop_pages": {
+        "chevrolet": "https://www.oem1stop.com/content/chevrolet",
+        "gmc": "https://www.oem1stop.com/content/gmc",
+        "buick": "https://www.oem1stop.com/content/buick",
+        "cadillac": "https://www.oem1stop.com/content/cadillac"
+      }
+    },
+
+    "stellantis": {
+      "brands": ["Jeep", "Ram", "Dodge", "Chrysler", "Fiat", "Alfa Romeo"],
+      "adas_system_name": "Active Driving Assist",
+      "generations": {
+        "full_speed_fca": {
+          "years": "2019+",
+          "features": ["FCW", "AEB", "ACC"],
+          "sensors": {
+            "forward_camera": {"location": "windshield_center", "type": "monocular"},
+            "front_radar": {"location": "behind_brand_badge", "type": "millimeter_wave"}
+          }
+        },
+        "hands_free_ada": {
+          "years": "2022+",
+          "features": ["hands_free_driving", "LKA", "night_vision"],
+          "sensors": {
+            "forward_camera": {"location": "windshield_center", "type": "monocular"},
+            "front_radar": {"location": "behind_brand_badge", "type": "millimeter_wave"},
+            "driver_monitoring": {"location": "instrument_cluster", "type": "infrared_camera"},
+            "night_vision": {"location": "front_grille", "type": "thermal_infrared"}
+          },
+          "note": "125,000+ miles mapped roads, up to 85 mph. Night vision has 200m range."
+        }
+      },
+      "available_on": ["Grand Cherokee", "Ram 1500", "Wagoneer", "Grand Wagoneer"],
+      "calibration_requirements": {
+        "forward_camera": "static_required_after_windshield",
+        "front_radar": "static_after_bumper",
+        "night_vision": "static_after_grille_work"
+      },
+      "technical_portal": {"name": "TechAuthority", "url": "techauthority.com"},
+      "oem1stop_pages": {
+        "jeep": "https://www.oem1stop.com/content/jeep",
+        "ram": "https://www.oem1stop.com/content/ram",
+        "dodge": "https://www.oem1stop.com/content/dodge",
+        "chrysler": "https://oem1stop.com/content/chrysler"
+      }
+    },
+
+    "hyundai_kia_genesis": {
+      "brands": ["Hyundai", "Kia", "Genesis"],
+      "adas_system_name": "SmartSense / Drive Wise / Highway Driving Assist",
+      "generations": {
+        "smartsense_1": {
+          "years": "2017-2020",
+          "features": ["FCA", "LKA", "LFA", "BCW", "RCCA", "SCC"],
+          "sensors": {
+            "forward_camera": {"location": "windshield_mounted", "type": "monocular"},
+            "front_radar": {"location": "behind_emblem", "type": "millimeter_wave"}
+          }
+        },
+        "hda_2": {
+          "years": "2021+",
+          "features": ["all_smartsense", "hands_free_highway", "safe_exit_assist", "blind_view_monitor"],
+          "sensors": {
+            "forward_camera": {"location": "windshield_mounted", "type": "monocular"},
+            "front_radar": {"location": "behind_emblem", "type": "millimeter_wave"},
+            "driver_monitoring": {"location": "cluster", "type": "infrared_camera"},
+            "bsm_cameras": {"location": "side_mirrors", "note": "feed to cluster when signaling"}
+          }
+        }
+      },
+      "unique_features": ["Blind-View Monitor", "Safe Exit Assist", "Remote Smart Parking"],
+      "bsm_sensors": {"location": "rear_bumper", "type": "radar"},
+      "calibration_requirements": {
+        "forward_camera": "static_required_after_windshield",
+        "front_radar": "static_after_bumper",
+        "bsm": "static_after_rear_bumper"
+      },
+      "technical_portals": {
+        "hyundai": {"name": "Hyundai Tech Info", "url": "hmaserviceinfo.com"},
+        "kia": {"name": "Kia GIS", "url": "kiatechinfo.com"}
+      },
+      "oem1stop_pages": {
+        "hyundai": "https://www.oem1stop.com/content/hyundai",
+        "kia": "https://www.oem1stop.com/content/kia",
+        "genesis": "https://www.oem1stop.com/content/genesis"
+      }
+    },
+
+    "subaru": {
+      "brands": ["Subaru"],
+      "adas_system_name": "EyeSight",
+      "critical_note": "UNIQUE: Uses stereo cameras instead of front radar. Requires genuine Subaru windshield.",
+      "generations": {
+        "eyesight_3": {
+          "years": "2015-2022",
+          "features": ["PCB", "ACC", "LKA", "LDW", "LSW"],
+          "sensors": {
+            "stereo_cameras": {
+              "location": "windshield_top_both_sides_of_mirror",
+              "type": "color_stereo",
+              "count": 2,
+              "note": "NO front radar - depth perception via stereo vision"
+            }
+          }
+        },
+        "eyesight_x": {
+          "years": "2023+",
+          "features": ["all_eyesight_3", "hands_free_highway"],
+          "sensors": {
+            "stereo_cameras": {
+              "location": "windshield_top_both_sides_of_mirror",
+              "type": "color_stereo_enhanced",
+              "count": 2
+            },
+            "hd_mapping": true
+          }
+        }
+      },
+      "bsm_sensors": {
+        "location": "rear_bumper",
+        "type": "radar",
+        "note": "BSM uses SEPARATE radar sensors from EyeSight camera system"
+      },
+      "calibration_requirements": {
+        "eyesight_cameras": "static_required_after_windshield",
+        "bsm": "static_after_rear_bumper",
+        "windshield_note": "MUST use genuine Subaru windshield"
+      },
+      "technical_portal": {"name": "STIS", "url": "stis.subaru.com"},
+      "oem1stop_page": "https://www.oem1stop.com/content/subaru"
+    },
+
+    "nissan": {
+      "brands": ["Nissan", "Infiniti"],
+      "adas_system_name": "Safety Shield 360 / ProPILOT Assist",
+      "generations": {
+        "safety_shield_360": {
+          "years": "2018+",
+          "features": ["AEB", "BSW", "RCTA", "LDW", "AHB", "rear_auto_brake"],
+          "sensors": {
+            "forward_camera": {"location": "behind_rearview_mirror", "type": "monocular"},
+            "front_radar": {"location": "behind_nissan_emblem", "type": "millimeter_wave"}
+          }
+        },
+        "propilot_1": {
+          "years": "2018-2021",
+          "features": ["ACC", "LKA"],
+          "sensors": {
+            "forward_camera": {"location": "behind_rearview_mirror", "type": "monocular"},
+            "front_radar": {"location": "behind_nissan_emblem", "type": "millimeter_wave"}
+          }
+        },
+        "propilot_2": {
+          "years": "2022+",
+          "features": ["hands_off_single_lane", "nav_highway_assist", "auto_lane_change"],
+          "sensors": {
+            "cameras": {"count": 7},
+            "front_radar": {"count": 1},
+            "side_radars": {"count": 4, "location": "front_and_rear_sides"},
+            "sonar": {"count": 12},
+            "driver_monitoring": {"type": "infrared_camera"},
+            "gps": {"type": "centimeter_level"}
+          }
+        }
+      },
+      "calibration_requirements": {
+        "forward_camera": "static_required_after_windshield",
+        "front_radar": "static_after_bumper",
+        "propilot_2": "centimeter_gps_verification"
+      },
+      "technical_portal": {"name": "Nissan Tech Info", "url": "nissan-techinfo.com"},
+      "oem1stop_page": "https://www.oem1stop.com/content/nissan"
+    },
+
+    "mazda": {
+      "brands": ["Mazda"],
+      "adas_system_name": "i-Activsense",
+      "features": ["SBS", "SCBS", "ACC", "LAS", "LDW", "BSM", "RCTA", "AFS", "driver_monitoring"],
+      "sensors": {
+        "forward_camera": {"location": "windshield_mounted", "type": "monocular"},
+        "front_radar": {"location": "behind_mazda_emblem", "type": "millimeter_wave"},
+        "rear_corner_radar": {"location": "rear_bumper_corners", "count": 2},
+        "ultrasonic": {"location": "bumpers"}
+      },
+      "calibration_requirements": {
+        "forward_camera": "static_required_after_windshield",
+        "front_radar": "static_after_bumper_grille",
+        "bsm": "static_after_rear_bumper",
+        "environment": "level_floor_within_1_degree"
+      },
+      "technical_portal": {"name": "Mazda Service Info", "url": "mazdausa.com/service"},
+      "oem1stop_page": "https://www.oem1stop.com/content/mazda"
+    },
+
+    "tesla": {
+      "brands": ["Tesla"],
+      "adas_system_name": "Autopilot / Full Self-Driving",
+      "generations": {
+        "hw3": {
+          "years": "2019-2023",
+          "features": ["autopilot", "fsd_beta"],
+          "sensors": {
+            "cameras": {"count": 8, "resolution": "1.2MP"},
+            "front_radar": {"count": 1, "type": "millimeter_wave"},
+            "ultrasonic": {"count": 12}
+          }
+        },
+        "hw4": {
+          "years": "2023+",
+          "features": ["autopilot", "fsd", "enhanced_vision"],
+          "sensors": {
+            "cameras": {"count": 8, "resolution": "5.4MP_Sony_IMX963"},
+            "front_radar": {"count": 1, "type": "Phoenix_HD_SAR_72GHz", "note": "reintroduced on some models"},
+            "ultrasonic": {"count": 0, "note": "removed October 2022-2023"}
+          },
+          "computing": "FSD Computer 2 with 16GB RAM"
+        }
+      },
+      "camera_locations": ["windshield_3_forward", "b_pillars", "c_pillars", "rear"],
+      "calibration_requirements": {
+        "cameras": "typically_via_ota_or_service_mode",
+        "note": "Tesla-specific procedures required"
+      },
+      "technical_portal": {"name": "Tesla Service", "url": "service.tesla.com"},
+      "oem1stop_page": "https://www.oem1stop.com/content/tesla"
+    },
+
+    "mercedes": {
+      "brands": ["Mercedes-Benz", "Mercedes-AMG", "Mercedes-Maybach"],
+      "adas_system_name": "Driver Assistance / DRIVE PILOT",
+      "generations": {
+        "driver_assistance": {
+          "years": "2016+",
+          "features": ["active_steering_assist", "active_braking_assist"],
+          "sensors": {
+            "forward_camera": {"location": "windshield", "type": "stereo"},
+            "front_radar": {"location": "grille", "type": "long_range"}
+          }
+        },
+        "drive_pilot": {
+          "years": "2023+",
+          "features": ["level_3_autonomous", "SAE_certified"],
+          "sensors": {
+            "lidar": {"location": "radiator_grille", "type": "Valeo_SCALA_2"},
+            "stereo_camera": {"location": "windshield"},
+            "rear_camera": {"location": "rear_window"},
+            "360_cameras": {"location": "mirrors"},
+            "front_radar": {"type": "long_range"},
+            "corner_radars": {"count": 4, "type": "multi_mode"},
+            "ultrasonic": {"location": "bumpers"},
+            "wetness_sensor": {"location": "wheel_arch"},
+            "microphones": {"purpose": "emergency_vehicle_detection"},
+            "gps": {"location": "roof", "type": "high_precision"}
+          },
+          "note": "World's first certified Level 3 system - most complex sensor suite in production"
+        }
+      },
+      "calibration_requirements": {
+        "all_sensors": "static_and_dynamic_per_component",
+        "drive_pilot": "extensive_calibration_required"
+      },
+      "technical_portal": {"name": "STAR TekInfo", "url": "startekinfo.com"},
+      "oem1stop_page": "https://www.oem1stop.com/content/mercedes-benz"
+    },
+
+    "bmw": {
+      "brands": ["BMW", "MINI", "Rolls-Royce"],
+      "adas_system_name": "Driving Assistant / Driving Assistant Professional",
+      "packages": {
+        "driving_assistant": {
+          "features": ["FCW", "LDW", "pedestrian_warning"]
+        },
+        "driving_assistant_professional": {
+          "features": ["all_da", "ACC", "LKA", "steering_assist"]
+        },
+        "highway_assistant": {
+          "features": ["hands_free_highway_up_to_85mph"]
+        }
+      },
+      "sensors": {
+        "forward_camera": {"location": "near_rearview_mirror"},
+        "front_radar": {"location": "behind_kidney_grille"},
+        "top_view_cameras": {"location": "mirrors"},
+        "side_radar": {"location": "front_and_rear"},
+        "ultrasonic": {"count": "8-12"}
+      },
+      "calibration_requirements": {
+        "forward_camera": "static_after_windshield",
+        "front_radar": "static_after_bumper_grille"
+      },
+      "technical_portal": {"name": "BMW TIS", "url": "bmwtechinfo.com"},
+      "oem1stop_page": "https://www.oem1stop.com/content/bmw"
+    },
+
+    "volvo": {
+      "brands": ["Volvo", "Polestar"],
+      "adas_system_name": "IntelliSafe / Pilot Assist",
+      "features": ["City_Safety_AEB", "LKA", "BSM", "semi_autonomous"],
+      "sensors": {
+        "forward_camera": {"location": "windshield_mounted"},
+        "front_radar": {"location": "behind_volvo_emblem"}
+      },
+      "note": "Volvo ADAS tech shared with Polestar",
+      "calibration_requirements": {
+        "forward_camera": "static_after_windshield",
+        "front_radar": "static_after_bumper"
+      },
+      "technical_portal": {"name": "Volvo Tech Info", "url": "volvotechinfo.com"},
+      "oem1stop_page": "https://www.oem1stop.com/content/volvo"
+    },
+
+    "rivian": {
+      "brands": ["Rivian"],
+      "adas_system_name": "Driver+",
+      "generations": {
+        "gen1": {
+          "features": ["highway_assist", "ACC", "LKA"],
+          "sensors": {
+            "cameras": {"type": "standard"},
+            "radar": {"count": 5},
+            "ultrasonic": {"count": 12}
+          }
+        },
+        "gen2": {
+          "features": ["enhanced_highway_assist"],
+          "sensors": {
+            "cameras": {"count": 11, "note": "highest_megapixel_count_US_EVs"},
+            "radar": {"count": 5},
+            "ultrasonic": {"count": 12}
+          },
+          "computing": "Autonomy Compute Module 10x Gen1"
+        }
+      },
+      "critical_note": "Front upper fascia around radar is NO-REPAIR ZONE (clearcoat only permitted)",
+      "calibration_requirements": {
+        "cameras": "static_and_dynamic",
+        "radar": "static_after_fascia_work"
+      },
+      "oem1stop_page": "https://www.oem1stop.com/content/rivian"
+    },
+
+    "lucid": {
+      "brands": ["Lucid"],
+      "adas_system_name": "DreamDrive / DreamDrive Pro",
+      "sensor_count": 32,
+      "note": "Most sensor-dense production vehicle",
+      "sensors": {
+        "lidar": {"location": "front_grille", "type": "solid_state", "note": "first_automotive_lidar_NA"},
+        "cameras": {"count": 18, "breakdown": "14_visible_light_4_surround_view"},
+        "radar": {"count": 5, "breakdown": "1_long_range_4_short_range"},
+        "ultrasonic": {"location": "bumpers"},
+        "driver_monitoring": {"type": "infrared"}
+      },
+      "architecture": "Ethernet Ring with four corner computer gateways for full redundancy",
+      "calibration_requirements": {
+        "all_sensors": "extensive_calibration_required",
+        "lidar": "static_calibration"
+      },
+      "oem1stop_page": "https://www.oem1stop.com/content/lucid"
+    }
+  },
+
+  "oem_position_statements": {
+    "source": "https://www.oem1stop.com/",
+    "date_collected": "2025-12-04",
+    "brands": [
+      {
+        "name": "Acura",
+        "page": "https://oem1stop.com/content/acura",
+        "statements": [
+          {"title": "AcuraWatch 360 Bumper Cover Repairs", "url": "https://oem1stop.com/sites/default/files/Acura_Pos_AcuraWatch-360-Bumper-Cover-Repairs%284-26-24%29.pdf"}
+        ]
+      },
+      {
+        "name": "Audi",
+        "page": "https://www.oem1stop.com/content/audi",
+        "statements": [
+          {"title": "Approved Welders", "url": "https://www.oem1stop.com/sites/default/files/Audi_Position_Approved-Welders%282-12%29.pdf"},
+          {"title": "Vehicle Structure and Unibody Component Replacement", "url": "https://www.oem1stop.com/sites/default/files/Audi_Position_Vehicle-Structure-and-Unibody-Component-Replacement%2812-4-18%29.pdf"}
+        ]
+      },
+      {"name": "Buick", "page": "https://www.oem1stop.com/content/buick", "statements": []},
+      {"name": "Cadillac", "page": "https://www.oem1stop.com/content/cadillac", "statements": []},
+      {"name": "Chevrolet", "page": "https://www.oem1stop.com/content/chevrolet", "statements": []},
+      {"name": "Chrysler", "page": "https://oem1stop.com/content/chrysler", "statements": []},
+      {"name": "Dodge", "page": "https://www.oem1stop.com/content/dodge", "statements": []},
+      {"name": "Fiat", "page": "https://www.oem1stop.com/content/fiat", "statements": []},
+      {
+        "name": "Ford",
+        "page": "https://www.oem1stop.com/content/ford",
+        "statements": [
+          {"title": "Pre- and Post-Diagnostic Scanning", "url": "https://www.oem1stop.com/sites/default/files/Ford_%20PrePost_Scan_Position%20Statement_%20FNL_2022.pdf"},
+          {"title": "Clear Coat Blending", "url": "https://www.oem1stop.com/sites/default/files/FORD%20Position%20Statement%20Clear%20Coat%20Blending%20-%20FNL%20%289-30-25%29.pdf"},
+          {"title": "Airbag Module Replacement", "url": "https://oem1stop.com/sites/default/files/Ford_Position_Airbag_Module_Replacement.pdf"},
+          {"title": "Replacement Lighting", "url": "https://oem1stop.com/sites/default/files/Ford_Position_Replacement_Lighting.pdf"},
+          {"title": "Safety Belt Assemblies", "url": "https://oem1stop.com/sites/default/files/Ford_Position_Safety_Belt_Assemblies.pdf"}
+        ]
+      },
+      {
+        "name": "Genesis",
+        "page": "https://www.oem1stop.com/content/genesis",
+        "statements": [
+          {"title": "Pre-Repair and Post-Repair Scanning", "url": "https://www.oem1stop.com/sites/default/files/Genesis_Pos_Pre-Repair-and-Post-Repair-Scanning%284-23%29.pdf"}
+        ]
+      },
+      {"name": "GMC", "page": "https://www.oem1stop.com/content/gmc", "statements": []},
+      {
+        "name": "Honda",
+        "page": "https://www.oem1stop.com/content/honda",
+        "statements": [
+          {"title": "Diagnostic Scans", "url": "https://www.oem1stop.com/sites/default/files/Honda_Pos_Diagnostic-Scans_Revised_FINAL%285-19%29.pdf", "key_point": "Dashboard warning lights NOT acceptable for determining scan necessity"}
+        ]
+      },
+      {
+        "name": "Hyundai",
+        "page": "https://www.oem1stop.com/content/hyundai",
+        "statements": [
+          {"title": "Pre-Repair and Post-Repair System Scanning", "url": "https://www.oem1stop.com/sites/default/files/Pre-Repair%20and%20Post-Repair%20System%20Scanning.pdf"}
+        ]
+      },
+      {"name": "Infiniti", "page": "https://www.oem1stop.com/content/infiniti", "statements": []},
+      {"name": "Jaguar", "page": "https://oem1stop.com/content/jaguar", "statements": []},
+      {"name": "Jeep", "page": "https://www.oem1stop.com/content/jeep", "statements": []},
+      {
+        "name": "Kia",
+        "page": "https://www.oem1stop.com/content/kia",
+        "statements": [
+          {"title": "Aftermarket Parts", "url": "https://www.oem1stop.com/sites/default/files/Kia_Pos_Aftermarket-Parts_Final%285-4-21%29.pdf"},
+          {"title": "Pre- and Post-Repair Scanning", "url": "https://oem1stop.com/sites/default/files/Kia_Pos_Pre-and-Post-Repair-Scanning_Final%285-4-21%29.pdf"}
+        ]
+      },
+      {"name": "Lexus", "page": "https://www.oem1stop.com/content/lexus", "statements": []},
+      {
+        "name": "Lincoln",
+        "page": "https://www.oem1stop.com/content/lincoln",
+        "statements": [
+          {"title": "Clearcoat Blending", "url": "https://oem1stop.com/sites/default/files/Lincoln_Clearcoat_Blending_FNL_2022.pdf"},
+          {"title": "Remanufacturing of Wheels", "url": "https://oem1stop.com/sites/default/files/Lincoln_Remanuafcturing_of_Wheels_FNL_2022.pdf"}
+        ]
+      },
+      {"name": "Lucid", "page": "https://www.oem1stop.com/content/lucid", "statements": []},
+      {
+        "name": "Mazda",
+        "page": "https://www.oem1stop.com/content/mazda",
+        "statements": [
+          {"title": "Pre- and Post-Repair Scanning", "url": "https://www.oem1stop.com/sites/default/files/Mazda_Pre-and-Post-Repair-Scanning_Position%281-18%29%20.pdf"},
+          {"title": "Use of Non-OEM Parts", "url": "https://www.oem1stop.com/sites/default/files/Mazda_Parts_Position_Statement%2812-6-24%29.pdf"}
+        ]
+      },
+      {
+        "name": "Mercedes-Benz",
+        "page": "https://www.oem1stop.com/content/mercedes-benz",
+        "statements": [
+          {"title": "Genuine Replacement Parts", "url": "https://www.oem1stop.com/sites/default/files/MBUSA%20Position%20Statement%20for%20Genuine%20Replacement%20Parts.pdf"}
+        ]
+      },
+      {
+        "name": "Nissan",
+        "page": "https://www.oem1stop.com/content/nissan",
+        "statements": [
+          {"title": "De-Nib & Polish and Finish Sand & Polish", "url": "https://oem1stop.com/sites/default/files/Nissan_Pos_De-Nib%26Polish-and-Finish-Sand-%26-Polish_Rev2_Dec2018%288-7-20%29.pdf"},
+          {"title": "Use of Non-OEM Parts", "url": "https://www.oem1stop.com/sites/default/files/Nissan_Pos_AM-Parts-Usage_2016%288-7-20%29.pdf"},
+          {"title": "Wheel Repair", "url": "https://www.oem1stop.com/sites/default/files/Nissan_Pos_Wheel-Repair_2016%288-7-20%29.pdf"},
+          {"title": "Seat Belt Replacement", "url": "https://www.oem1stop.com/sites/default/files/Nissan_Pos_Seat-Belt-Replacement_2016%288-7-20%29.pdf"}
+        ]
+      },
+      {"name": "Ram", "page": "https://www.oem1stop.com/content/ram", "statements": []},
+      {
+        "name": "Rivian",
+        "page": "https://www.oem1stop.com/content/rivian",
+        "statements": [
+          {"title": "Approved Fasteners", "url": "https://www.oem1stop.com/sites/default/files/Rivian_POS_Approved-Fasteners%284-17-23%29.pdf"}
+        ]
+      },
+      {
+        "name": "Subaru",
+        "page": "https://www.oem1stop.com/content/subaru",
+        "statements": [
+          {"title": "Pre- and Post-Scanning Revised", "url": "https://www.oem1stop.com/sites/default/files/Subaru_Pos_Pre-and-Post-Scan_Revised%288-7-20%29.pdf"},
+          {"title": "Use of Aftermarket Substitute Parts", "url": "https://oem1stop.com/sites/default/files/Subaru_Pos_Aftermarket-Parts_Revised%288-21%29.pdf"},
+          {"title": "Pre- and Post-Scanning FINAL", "url": "https://www.oem1stop.com/sites/default/files/Subaru_Pos_Pre-and-Post-Scan_FINAL%284-16-20%29.pdf"}
+        ]
+      },
+      {"name": "Tesla", "page": "https://www.oem1stop.com/content/tesla", "statements": []},
+      {"name": "Toyota", "page": "https://www.oem1stop.com/content/toyota", "statements": []},
+      {
+        "name": "Volkswagen",
+        "page": "https://www.oem1stop.com/content/volkswagen",
+        "statements": [
+          {"title": "Refinish Procedures for Clearcoat Application", "url": "https://www.oem1stop.com/sites/default/files/VW_Pos_Refinish-Procedures-for-Clearcoat-App%283-24-20%29.pdf"},
+          {"title": "Recycled Parts", "url": "https://www.oem1stop.com/sites/default/files/VW_Pos_Recycled-Parts%285-20-20%29.pdf"},
+          {"title": "Unibody Alignment and Repair", "url": "https://www.oem1stop.com/sites/default/files/VW_Pos_Unibody-Alignment-and-Repair%283-24-20%29.pdf"},
+          {"title": "Approved Welders", "url": "https://www.oem1stop.com/sites/default/files/VW_Pos_Approved-Welders%283-24-20%29.pdf"},
+          {"title": "Refinish Procedures for Clearcoat", "url": "https://www.oem1stop.com/sites/default/files/VW_Pos_Refinish-Procedures-for_Clearcoat%285-20-20%29.pdf"}
+        ]
+      },
+      {"name": "Volvo", "page": "https://www.oem1stop.com/content/volvo", "statements": []}
+    ]
+  },
+
+  "industry_statistics": {
+    "missed_calibrations_percentage": 88,
+    "source": "adasThink study of 100 Canadian estimates",
+    "estimates_with_post_scan_still_missing_calibrations": 66,
+    "vehicles_2023_plus_requiring_windshield_calibration": 89,
+    "average_missed_revenue_per_estimate": 1250,
+    "sensor_angle_impact": {
+      "0.6_degrees_off": "cuts AEB reaction time in half (IIHS)",
+      "1_degree_off": "8 feet off-target at 100 feet (AAA)"
+    }
+  },
+
+  "calibration_types": {
+    "static": {
+      "description": "Performed while vehicle stationary using specialized tools and targets",
+      "requirements": {
+        "space": "minimum 30x50 feet open area",
+        "floor": "level within 1 degree",
+        "lighting": "uniform adjustable, no direct sunlight",
+        "surfaces": "neutral colors, no reflective surfaces"
+      },
+      "equipment": ["OEM scan tool", "calibration frame", "aiming targets", "laser measuring"],
+      "time": "1-2 hours typical"
+    },
+    "dynamic": {
+      "description": "Performed while vehicle in motion using real-world driving conditions",
+      "requirements": {
+        "speed": "varies by OEM, often 30-60+ mph",
+        "road": "straight, well-marked lanes",
+        "weather": "clear conditions, visible lane markers"
+      },
+      "time": "2-3 hours typical"
+    }
+  }
+}
