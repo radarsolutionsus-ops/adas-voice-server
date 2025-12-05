@@ -374,18 +374,26 @@ function extractRoFromFilename(filename) {
 function extractRoFromEstimate(estimateText) {
   if (!estimateText) return null;
 
-  // Common RO patterns in estimates (in priority order)
+  // PRIORITY 1: Look specifically for "RO Number" pattern (CCC ONE format)
+  // This MUST be checked first before any other patterns
+  const roNumberMatch = estimateText.match(/RO\s*Number[\s:]+([A-Za-z0-9\-]+)/i);
+  if (roNumberMatch) {
+    const ro = roNumberMatch[1].trim();
+    console.log(`${LOG_TAG} Extracted RO from 'RO Number' field: ${ro}`);
+    return ro;
+  }
+
+  // PRIORITY 2: Other RO patterns (but NOT Claim # - those are different!)
   const patterns = [
     // Explicit RO/PO patterns: "RO#12345", "RO: 12345", "R.O. 12345"
     /(?:RO|R\.O\.|Repair\s*Order|Work\s*Order|WO)[\s#:\-]*(\d{4,10}(?:[-_][A-Za-z0-9]+)?)/i,
     // PO patterns: "PO#12345", "PO: 12345"
     /(?:PO|P\.O\.)[\s#:\-]*(\d{4,10}(?:[-_][A-Za-z0-9]+)?)/i,
-    // Claim/File patterns: "Claim#12345", "File #12345"
-    /(?:Claim|File|Reference)[\s#:\-]*(\d{4,10})/i,
     // Order patterns: "Order #12345", "Order: 12345"
     /Order[\s#:\-]*(\d{4,10})/i,
     // Estimate number patterns: "Estimate #12345"
     /Estimate[\s#:\-]*(\d{4,10})/i
+    // NOTE: Claim # is intentionally NOT included - it's an insurance claim, not a shop RO
   ];
 
   for (const pattern of patterns) {

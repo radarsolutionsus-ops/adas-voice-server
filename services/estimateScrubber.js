@@ -2086,6 +2086,18 @@ export function isEstimatePDF(text) {
 }
 
 /**
+ * Safely convert calibration item to string
+ * Handles both string and object calibrations
+ */
+function calibrationToString(c) {
+  if (typeof c === 'string') return c;
+  if (typeof c === 'object' && c !== null) {
+    return c.system || c.calibration || c.name || c.type || JSON.stringify(c);
+  }
+  return String(c);
+}
+
+/**
  * Format scrub results as text for Notes field
  * @param {Object} scrubResult - Result from scrubEstimate
  * @returns {string}
@@ -2105,16 +2117,16 @@ export function formatScrubResultsAsNotes(scrubResult) {
     scrubResult.foundOperations.length > 10 ? `  ... and ${scrubResult.foundOperations.length - 10} more` : '',
     '',
     `Required from Estimate (${scrubResult.requiredFromEstimate.length}):`,
-    ...scrubResult.requiredFromEstimate.map(c => `  - ${c}`),
+    ...scrubResult.requiredFromEstimate.map(c => `  - ${calibrationToString(c)}`),
     '',
     `Required from RevvADAS (${scrubResult.requiredFromRevv.length}):`,
-    ...scrubResult.requiredFromRevv.map(c => `  - ${c}`),
+    ...scrubResult.requiredFromRevv.map(c => `  - ${calibrationToString(c)}`),
     ''
   ];
 
   if (scrubResult.missingCalibrations.length > 0) {
     lines.push(`MISSING CALIBRATIONS (${scrubResult.missingCalibrations.length}):`);
-    lines.push(...scrubResult.missingCalibrations.map(c => `  ! ${c}`));
+    lines.push(...scrubResult.missingCalibrations.map(c => `  ! ${calibrationToString(c)}`));
     lines.push('');
   }
 
@@ -2382,7 +2394,9 @@ export function formatFullScrub(scrubResult, actualRevvCount = null, rawRevvText
 
   lines.push(`Estimate Required Calibrations (${estCount}):`);
   if (scrubResult.requiredFromEstimate?.length > 0) {
-    scrubResult.requiredFromEstimate.forEach(c => lines.push(`  - ${c}`));
+    scrubResult.requiredFromEstimate.forEach(c => {
+      lines.push(`  - ${calibrationToString(c)}`);
+    });
   } else {
     lines.push('  None');
   }

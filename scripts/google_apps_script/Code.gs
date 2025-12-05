@@ -201,17 +201,48 @@ function upsertScheduleRow(data) {
   }
 
   const roPo = String(data.roPo || data.ro_number || '').trim();
+  const vin = String(data.vin || '').trim();
+
   if (!roPo) {
     return { success: false, error: 'RO/PO number required' };
   }
 
-  // Check if RO already exists
-  const existingRow = findRowByRO(sheet, roPo);
+  // PRIORITY 1: Try VIN match first (most reliable identifier)
+  let existingRow = 0;
+  if (vin && vin.length === 17) {
+    existingRow = findRowByVIN(sheet, vin);
+    if (existingRow > 0) {
+      Logger.log('Found existing row by VIN: ' + vin + ' at row ' + existingRow);
+    }
+  }
+
+  // PRIORITY 2: Try RO match (exact then fuzzy)
+  if (existingRow === 0) {
+    existingRow = findRowByRO(sheet, roPo);
+  }
+
   if (existingRow > 0) {
     return updateExistingRow(sheet, existingRow, data);
   }
 
   return createNewRow(sheet, data, roPo);
+}
+
+/**
+ * Find row by VIN (most reliable match)
+ */
+function findRowByVIN(sheet, vin) {
+  if (!vin || vin.length !== 17) return 0;
+  const data = sheet.getDataRange().getValues();
+  const vinUpper = vin.toUpperCase();
+
+  for (let i = 1; i < data.length; i++) {
+    const rowVin = String(data[i][COL.VIN] || '').trim().toUpperCase();
+    if (rowVin === vinUpper) {
+      return i + 1; // 1-based row number
+    }
+  }
+  return 0;
 }
 
 /**
