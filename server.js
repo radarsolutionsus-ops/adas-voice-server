@@ -75,6 +75,25 @@ setTimeout(() => {
   }
 }, 10000);  // Wait 10 seconds after server starts
 
+// Graceful shutdown handlers for Railway
+process.on('SIGTERM', () => {
+  console.log('[SHUTDOWN] SIGTERM received - gracefully shutting down...');
+  emailListener.stopListener();
+  server.close(() => {
+    console.log('[SHUTDOWN] Server closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('[SHUTDOWN] SIGINT received - gracefully shutting down...');
+  emailListener.stopListener();
+  server.close(() => {
+    console.log('[SHUTDOWN] Server closed');
+    process.exit(0);
+  });
+});
+
 const wss = new WebSocketServer({ server });  // Handle all WebSocket paths
 
 const NGROK = (process.env.BASE_URL || process.env.NGROK_URL || "").replace("https://", "").replace(/\/$/, "");
