@@ -1137,6 +1137,7 @@ async function processEmail(message) {
       switch (effectiveType) {
         case 'revv_report':
           mergedData.revvReportPdf = upload.webViewLink;
+          console.log(`${LOG_TAG} *** SET mergedData.revvReportPdf = ${upload.webViewLink}`);
           jobState.recordDocument(roPo, jobState.DOC_TYPES.REVV_REPORT, docInfo);
           break;
         case 'scan_report':
@@ -1171,6 +1172,11 @@ async function processEmail(message) {
     // - adas_invoice = "Completed" (job is billed)
 
     // Check what document types we have
+    // DEBUG: Log all upload types to trace the issue
+    console.log(`${LOG_TAG} === DOCUMENT TYPE DETECTION ===`);
+    console.log(`${LOG_TAG} mergedData.revvReportPdf: ${mergedData.revvReportPdf || 'NOT SET'}`);
+    console.log(`${LOG_TAG} uploadResults.uploads:`, JSON.stringify(uploadResults.uploads.map(u => ({ filename: u.filename, type: u.type })), null, 2));
+
     const hasRevvReport = mergedData.revvReportPdf || uploadResults.uploads.some(u => u.type === 'revv_report');
     const hasEstimateOnly = (mergedData.estimatePdf || uploadResults.uploads.some(u =>
       u.type === 'shop_estimate' || u.type === 'estimate'
@@ -1179,6 +1185,8 @@ async function processEmail(message) {
     const hasPostScan = mergedData.postScanPdf || uploadResults.uploads.some(u =>
       u.type === 'scan_report' && (u.filename?.toLowerCase().includes('post') || u.filename?.toLowerCase().includes('final'))
     );
+
+    console.log(`${LOG_TAG} hasRevvReport: ${hasRevvReport}, hasEstimateOnly: ${hasEstimateOnly}, hasAdasInvoice: ${hasAdasInvoice}`);
 
     // Determine status and statusChangeNote based on document type hierarchy
     let status = 'New';  // Default for new estimates
@@ -1197,6 +1205,8 @@ async function processEmail(message) {
       statusChangeNote = 'Estimate received';
     }
 
+    console.log(`${LOG_TAG} === STATUS DECISION: ${status} (${statusChangeNote}) ===`);
+
     // Note: "Needs Attention" and "Needs Review" are deprecated
     // Synthetic ROs still need manual handling but stay as "New"
     if (isSyntheticRo) {
@@ -1205,6 +1215,13 @@ async function processEmail(message) {
     }
 
     // First upsert the row with all data (creates row if not exists)
+    // DEBUG: Log key fields being sent to sheet writer
+    console.log(`${LOG_TAG} === SENDING TO SHEET WRITER ===`);
+    console.log(`${LOG_TAG} status: ${status}`);
+    console.log(`${LOG_TAG} revvReportPdf: ${mergedData.revvReportPdf || 'NOT SET'}`);
+    console.log(`${LOG_TAG} requiredCalibrationsText: ${mergedData.requiredCalibrationsText || 'NONE'}`);
+    console.log(`${LOG_TAG} oemPosition: ${mergedData.oemPosition || 'NONE'}`);
+
     const scheduleResult = await sheetWriter.upsertScheduleRowByRO(roPo, {
       ...mergedData,
       status,
