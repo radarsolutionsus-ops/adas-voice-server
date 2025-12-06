@@ -190,7 +190,32 @@ function buildVehicleString(data) {
 }
 
 /**
+ * Find row number by VIN (returns 0 if not found)
+ * VIN is the most reliable identifier for matching rows
+ * @param {Sheet} sheet - Google Sheet object
+ * @param {string} vin - VIN to search for
+ * @returns {number} - Row number (1-based) or 0 if not found
+ */
+function findRowByVIN(sheet, vin) {
+  if (!vin || vin.length !== 17) return 0;
+
+  const data = sheet.getDataRange().getValues();
+  const vinUpper = vin.toUpperCase();
+
+  for (let i = 1; i < data.length; i++) {
+    const rowVin = String(data[i][COL.VIN] || '').trim().toUpperCase();
+    if (rowVin === vinUpper) {
+      Logger.log('VIN match found: "' + vin + '" at row ' + (i + 1));
+      return i + 1; // 1-based row number
+    }
+  }
+
+  return 0;
+}
+
+/**
  * Upsert (insert or update) a schedule row
+ * Uses VIN-first matching for reliability, then falls back to RO matching
  */
 function upsertScheduleRow(data) {
   const ss = SpreadsheetApp.getActive();
@@ -205,8 +230,26 @@ function upsertScheduleRow(data) {
     return { success: false, error: 'RO/PO number required' };
   }
 
-  // Check if RO already exists
-  const existingRow = findRowByRO(sheet, roPo);
+  const vin = String(data.vin || '').trim();
+
+  // PRIORITY 1: Try VIN match first (most reliable identifier)
+  let existingRow = 0;
+  if (vin && vin.length === 17) {
+    existingRow = findRowByVIN(sheet, vin);
+    if (existingRow > 0) {
+      Logger.log('Found existing row by VIN: ' + vin + ' at row ' + existingRow);
+    }
+  }
+
+  // PRIORITY 2: Try RO match (exact then fuzzy)
+  if (existingRow === 0) {
+    existingRow = findRowByRO(sheet, roPo);
+    if (existingRow > 0) {
+      Logger.log('Found existing row by RO: ' + roPo + ' at row ' + existingRow);
+    }
+  }
+
+  // Update existing or create new
   if (existingRow > 0) {
     return updateExistingRow(sheet, existingRow, data);
   }
@@ -285,7 +328,15 @@ function createNewRow(sheet, data, roPo) {
   const fullScrubText = data.full_scrub_text || data.fullScrubText || '';
 
   // OEM Position Statement links (Column U)
-  const oemPosition = data.oem_position || data.oemPosition || data.oem_links || '';
+  // Auto-populate from vehicle make if not provided
+  let oemPosition = data.oem_position || data.oemPosition || data.oem_links || '';
+  if (!oemPosition && vehicle) {
+    const oemInfo = getOemPortalFromVehicle(vehicle);
+    if (oemInfo) {
+      oemPosition = oemInfo.url;
+      Logger.log('Auto-populated OEM link from vehicle: ' + oemPosition);
+    }
+  }
 
   // Build new row (A through U = 21 columns)
   const newRow = [
@@ -363,10 +414,18 @@ function updateExistingRow(sheet, rowNum, data) {
   }
 
   // Handle OEM Position - update if new data provided
+  // Auto-populate from vehicle if empty
   let oemPosition = curr[COL.OEM_POSITION] || '';
   const newOemPosition = data.oem_position || data.oemPosition || data.oem_links || '';
   if (newOemPosition && newOemPosition.trim().length > 0) {
     oemPosition = newOemPosition;
+  } else if (!oemPosition && vehicle) {
+    // Auto-populate OEM link from vehicle make if not already set
+    const oemInfo = getOemPortalFromVehicle(vehicle);
+    if (oemInfo) {
+      oemPosition = oemInfo.url;
+      Logger.log('Auto-populated OEM link during update: ' + oemPosition);
+    }
   }
 
   const updatedRow = [
@@ -1121,14 +1180,12 @@ function onOpen() {
   const ui = SpreadsheetApp.getUi();
 
   ui.createMenu('ADAS Tools')
-    // Daily Use Tools - View
-    .addItem('View Status & Override', 'openApprovalSidebar')
-    .addItem('View Full Scrub Details', 'openScrubSidebar')
+    // Main sidebar - shows everything: status, scrub details, manual overrides
+    .addItem('View Job Details', 'openApprovalSidebar')
 
     .addSeparator()
 
-    // Daily Use Tools - Actions
-    .addItem('Apply Status Colors', 'applyStatusColorFormatting')
+    // Batch Actions
     .addItem('Populate OEM Links (All Rows)', 'populateAllMissingOemLinks')
 
     .addSeparator()
@@ -1136,6 +1193,7 @@ function onOpen() {
     // Admin functions in submenu
     .addSubMenu(ui.createMenu('Admin & Setup')
       .addItem('Setup Columns S & T (Run Once)', 'setupColumnsST')
+      .addItem('Apply Status Colors', 'applyStatusColorFormatting')
       .addItem('Hide Column T', 'hideFullScrubColumn')
       .addItem('Show Column T', 'showFullScrubColumn')
       .addSeparator()
