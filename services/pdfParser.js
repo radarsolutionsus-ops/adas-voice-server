@@ -299,10 +299,15 @@ function detectPDFType(filename, textContent) {
 
   // ========== STEP 3: Check for RevvADAS Reports ==========
   // These have "Estimated Price" but are NOT invoices - just calibration quotes
+  // VehID_XXXXXXXX.pdf is the standard RevvADAS filename format
   if (contentLower.includes('revv') ||
       (contentLower.includes('adas operations') && contentLower.includes('required')) ||
       contentLower.includes('required calibrations') ||
-      filenameLower.includes('revv')) {
+      contentLower.includes('millimeter wave radar sensor') ||
+      contentLower.includes('yaw rate and acceleration') ||
+      filenameLower.includes('revv') ||
+      filenameLower.startsWith('vehid') ||
+      filenameLower.match(/^vehid[_-]?\d/)) {
     console.log(`${LOG_TAG} Detected RevvADAS report (NOT billing - just calibration requirements)`);
     return PDF_TYPES.REVV_REPORT;
   }

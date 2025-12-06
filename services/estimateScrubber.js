@@ -61,6 +61,9 @@ import {
   formatVoiceSummary
 } from '../src/scrub/index.js';
 
+// Import calibration matching with OEM terminology aliases
+import { calibrationsMatch, normalizeCalibrationName } from '../src/scrub/revvReconciler.js';
+
 const LOG_TAG = '[ESTIMATE_SCRUB]';
 
 // Known shops to match against (from Shops tab)
@@ -1636,31 +1639,35 @@ function parseCalibrations(text) {
 }
 
 /**
- * Compare two calibration lists
+ * Compare two calibration lists using OEM terminology aliases
+ * Uses calibrationsMatch from revvReconciler.js which handles OEM naming variations:
+ * - "Front Radar" matches "Millimeter Wave Radar Sensor"
+ * - "Front Camera" matches "Forward Recognition Camera"
+ * - etc.
+ *
  * @param {Array} fromEstimate - Calibrations required by estimate
  * @param {Array} fromRevv - Calibrations from RevvADAS
  * @returns {Object} - { missing: [], extra: [] }
  */
 function compareCalibrations(fromEstimate, fromRevv) {
-  const normalize = (arr) => arr.map(c =>
-    c.toLowerCase()
-      .replace(/calibration/g, '')
-      .replace(/\(static\)/g, '')
-      .replace(/\(dynamic\)/g, '')
-      .replace(/\s+/g, ' ')
-      .trim()
+  // Find estimate calibrations not matched by any Revv calibration
+  const missing = fromEstimate.filter(estCal =>
+    !fromRevv.some(revvCal => calibrationsMatch(estCal, revvCal))
   );
 
-  const estNorm = normalize(fromEstimate);
-  const revvNorm = normalize(fromRevv);
-
-  const missing = fromEstimate.filter((_, i) =>
-    !revvNorm.some(r => r.includes(estNorm[i]) || estNorm[i].includes(r))
+  // Find Revv calibrations not matched by any estimate calibration
+  const extra = fromRevv.filter(revvCal =>
+    !fromEstimate.some(estCal => calibrationsMatch(revvCal, estCal))
   );
 
-  const extra = fromRevv.filter((_, i) =>
-    !estNorm.some(e => e.includes(revvNorm[i]) || revvNorm[i].includes(e))
-  );
+  // Log matching details for debugging
+  if (fromEstimate.length > 0 || fromRevv.length > 0) {
+    console.log(`${LOG_TAG} Calibration comparison:`);
+    console.log(`${LOG_TAG}   Estimate: [${fromEstimate.join(', ')}]`);
+    console.log(`${LOG_TAG}   Revv: [${fromRevv.join(', ')}]`);
+    console.log(`${LOG_TAG}   Missing from Revv: [${missing.join(', ')}]`);
+    console.log(`${LOG_TAG}   Extra in Revv: [${extra.join(', ')}]`);
+  }
 
   return { missing, extra };
 }
@@ -2086,18 +2093,6 @@ export function isEstimatePDF(text) {
 }
 
 /**
- * Safely convert calibration item to string
- * Handles both string and object calibrations
- */
-function calibrationToString(c) {
-  if (typeof c === 'string') return c;
-  if (typeof c === 'object' && c !== null) {
-    return c.system || c.calibration || c.name || c.type || JSON.stringify(c);
-  }
-  return String(c);
-}
-
-/**
  * Format scrub results as text for Notes field
  * @param {Object} scrubResult - Result from scrubEstimate
  * @returns {string}
@@ -2117,16 +2112,16 @@ export function formatScrubResultsAsNotes(scrubResult) {
     scrubResult.foundOperations.length > 10 ? `  ... and ${scrubResult.foundOperations.length - 10} more` : '',
     '',
     `Required from Estimate (${scrubResult.requiredFromEstimate.length}):`,
-    ...scrubResult.requiredFromEstimate.map(c => `  - ${calibrationToString(c)}`),
+    ...scrubResult.requiredFromEstimate.map(c => `  - ${c}`),
     '',
     `Required from RevvADAS (${scrubResult.requiredFromRevv.length}):`,
-    ...scrubResult.requiredFromRevv.map(c => `  - ${calibrationToString(c)}`),
+    ...scrubResult.requiredFromRevv.map(c => `  - ${c}`),
     ''
   ];
 
   if (scrubResult.missingCalibrations.length > 0) {
     lines.push(`MISSING CALIBRATIONS (${scrubResult.missingCalibrations.length}):`);
-    lines.push(...scrubResult.missingCalibrations.map(c => `  ! ${calibrationToString(c)}`));
+    lines.push(...scrubResult.missingCalibrations.map(c => `  ! ${c}`));
     lines.push('');
   }
 
@@ -2394,9 +2389,7 @@ export function formatFullScrub(scrubResult, actualRevvCount = null, rawRevvText
 
   lines.push(`Estimate Required Calibrations (${estCount}):`);
   if (scrubResult.requiredFromEstimate?.length > 0) {
-    scrubResult.requiredFromEstimate.forEach(c => {
-      lines.push(`  - ${calibrationToString(c)}`);
-    });
+    scrubResult.requiredFromEstimate.forEach(c => lines.push(`  - ${c}`));
   } else {
     lines.push('  None');
   }

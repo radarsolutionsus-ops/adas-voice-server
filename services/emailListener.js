@@ -350,15 +350,10 @@ function extractRoFromFilename(filename) {
   }
 
   // Pattern 2: RO/PO prefix in filename
-  const prefixMatch = name.match(/(?:RO|PO|WO)[\s_\-]*(\d{3,}(?:[-_][A-Za-z0-9]+)?)/i);
+  const prefixMatch = name.match(/(?:RO|PO|WO)[\s_\-]*(\d{3,})/i);
   if (prefixMatch) return prefixMatch[1];
 
-  // Pattern 3: Number with optional suffix at start of filename (e.g., "12313-1 CAMRY")
-  // This captures RO numbers like "12313-1", "12313-A", "12313_REV"
-  const roWithSuffix = name.match(/^(\d{4,6}[-_][A-Za-z0-9]+)/);
-  if (roWithSuffix) return roWithSuffix[1];
-
-  // Pattern 4: Number at start or end of filename (without suffix)
+  // Pattern 3: Number at start or end of filename
   const numberMatch = name.match(/(?:^|[\s_\-])(\d{4,6})(?:[\s_\-]|$)/);
   if (numberMatch) return numberMatch[1];
 
@@ -374,33 +369,25 @@ function extractRoFromFilename(filename) {
 function extractRoFromEstimate(estimateText) {
   if (!estimateText) return null;
 
-  // PRIORITY 1: Look specifically for "RO Number" pattern (CCC ONE format)
-  // This MUST be checked first before any other patterns
-  const roNumberMatch = estimateText.match(/RO\s*Number[\s:]+([A-Za-z0-9\-]+)/i);
-  if (roNumberMatch) {
-    const ro = roNumberMatch[1].trim();
-    console.log(`${LOG_TAG} Extracted RO from 'RO Number' field: ${ro}`);
-    return ro;
-  }
-
-  // PRIORITY 2: Other RO patterns (but NOT Claim # - those are different!)
+  // Common RO patterns in estimates (in priority order)
   const patterns = [
     // Explicit RO/PO patterns: "RO#12345", "RO: 12345", "R.O. 12345"
-    /(?:RO|R\.O\.|Repair\s*Order|Work\s*Order|WO)[\s#:\-]*(\d{4,10}(?:[-_][A-Za-z0-9]+)?)/i,
+    /(?:RO|R\.O\.|Repair\s*Order|Work\s*Order|WO)[\s#:\-]*(\d{4,10})/i,
     // PO patterns: "PO#12345", "PO: 12345"
-    /(?:PO|P\.O\.)[\s#:\-]*(\d{4,10}(?:[-_][A-Za-z0-9]+)?)/i,
+    /(?:PO|P\.O\.)[\s#:\-]*(\d{4,10})/i,
+    // Claim/File patterns: "Claim#12345", "File #12345"
+    /(?:Claim|File|Reference)[\s#:\-]*(\d{4,10})/i,
     // Order patterns: "Order #12345", "Order: 12345"
     /Order[\s#:\-]*(\d{4,10})/i,
     // Estimate number patterns: "Estimate #12345"
     /Estimate[\s#:\-]*(\d{4,10})/i
-    // NOTE: Claim # is intentionally NOT included - it's an insurance claim, not a shop RO
   ];
 
   for (const pattern of patterns) {
     const match = estimateText.match(pattern);
     if (match) {
       const ro = match[1].trim();
-      console.log(`${LOG_TAG} Extracted RO from estimate content: ${ro}`);
+      console.log(`${LOG_TAG} Extracted RO from estimate content: ${ro} (pattern: ${pattern.toString().substring(0, 30)}...)`);
       return ro;
     }
   }
@@ -1148,12 +1135,25 @@ async function processEmail(message) {
 
 /**
  * Simple PDF type detection from filename
+ * Enhanced to detect RevvADAS PDFs with various naming conventions:
+ * - VehID_XXXXXXXX.pdf (RevvADAS vehicle reports)
+ * - *revv* or *calibration* in filename
+ * - *adas* in filename (ADAS calibration reports)
  */
 function detectPDFType(filename) {
   const lower = filename.toLowerCase();
   if (lower.includes('invoice')) return 'invoice';
   if (lower.includes('scan') || lower.includes('autel')) return 'scan_report';
-  if (lower.includes('revv') || lower.includes('calibration')) return 'revv_report';
+  // RevvADAS detection - enhanced patterns
+  // VehID_XXXXXXXX.pdf is the standard RevvADAS filename format
+  if (lower.includes('revv') ||
+      lower.includes('calibration') ||
+      lower.startsWith('vehid') ||
+      lower.match(/^vehid[_-]?\d/i) ||
+      lower.includes('adas operations') ||
+      lower.includes('adas report')) {
+    return 'revv_report';
+  }
   if (lower.includes('estimate') || lower.includes('quote') || lower.includes('repair order')) return 'estimate';
   return 'document';
 }

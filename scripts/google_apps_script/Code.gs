@@ -190,32 +190,7 @@ function buildVehicleString(data) {
 }
 
 /**
- * Find row number by VIN (returns 0 if not found)
- * VIN is the most reliable identifier for matching rows
- * @param {Sheet} sheet - Google Sheet object
- * @param {string} vin - VIN to search for
- * @returns {number} - Row number (1-based) or 0 if not found
- */
-function findRowByVIN(sheet, vin) {
-  if (!vin || vin.length !== 17) return 0;
-
-  const data = sheet.getDataRange().getValues();
-  const vinUpper = vin.toUpperCase();
-
-  for (let i = 1; i < data.length; i++) {
-    const rowVin = String(data[i][COL.VIN] || '').trim().toUpperCase();
-    if (rowVin === vinUpper) {
-      Logger.log('VIN match found: "' + vin + '" at row ' + (i + 1));
-      return i + 1; // 1-based row number
-    }
-  }
-
-  return 0;
-}
-
-/**
  * Upsert (insert or update) a schedule row
- * Uses VIN-first matching for reliability, then falls back to RO matching
  */
 function upsertScheduleRow(data) {
   const ss = SpreadsheetApp.getActive();
@@ -230,26 +205,8 @@ function upsertScheduleRow(data) {
     return { success: false, error: 'RO/PO number required' };
   }
 
-  const vin = String(data.vin || '').trim();
-
-  // PRIORITY 1: Try VIN match first (most reliable identifier)
-  let existingRow = 0;
-  if (vin && vin.length === 17) {
-    existingRow = findRowByVIN(sheet, vin);
-    if (existingRow > 0) {
-      Logger.log('Found existing row by VIN: ' + vin + ' at row ' + existingRow);
-    }
-  }
-
-  // PRIORITY 2: Try RO match (exact then fuzzy)
-  if (existingRow === 0) {
-    existingRow = findRowByRO(sheet, roPo);
-    if (existingRow > 0) {
-      Logger.log('Found existing row by RO: ' + roPo + ' at row ' + existingRow);
-    }
-  }
-
-  // Update existing or create new
+  // Check if RO already exists
+  const existingRow = findRowByRO(sheet, roPo);
   if (existingRow > 0) {
     return updateExistingRow(sheet, existingRow, data);
   }
@@ -328,15 +285,7 @@ function createNewRow(sheet, data, roPo) {
   const fullScrubText = data.full_scrub_text || data.fullScrubText || '';
 
   // OEM Position Statement links (Column U)
-  // Auto-populate from vehicle make if not provided
-  let oemPosition = data.oem_position || data.oemPosition || data.oem_links || '';
-  if (!oemPosition && vehicle) {
-    const oemInfo = getOemPortalFromVehicle(vehicle);
-    if (oemInfo) {
-      oemPosition = oemInfo.url;
-      Logger.log('Auto-populated OEM link from vehicle: ' + oemPosition);
-    }
-  }
+  const oemPosition = data.oem_position || data.oemPosition || data.oem_links || '';
 
   // Build new row (A through U = 21 columns)
   const newRow = [
@@ -414,18 +363,10 @@ function updateExistingRow(sheet, rowNum, data) {
   }
 
   // Handle OEM Position - update if new data provided
-  // Auto-populate from vehicle if empty
   let oemPosition = curr[COL.OEM_POSITION] || '';
   const newOemPosition = data.oem_position || data.oemPosition || data.oem_links || '';
   if (newOemPosition && newOemPosition.trim().length > 0) {
     oemPosition = newOemPosition;
-  } else if (!oemPosition && vehicle) {
-    // Auto-populate OEM link from vehicle make if not already set
-    const oemInfo = getOemPortalFromVehicle(vehicle);
-    if (oemInfo) {
-      oemPosition = oemInfo.url;
-      Logger.log('Auto-populated OEM link during update: ' + oemPosition);
-    }
   }
 
   const updatedRow = [
@@ -1010,57 +951,58 @@ function escapeHtml(text) {
 
 /**
  * OEM Portal Links - lookup table for Position Statement access
- * Maps vehicle makes to their official technical information portals
+ * Uses OEM1Stop as central hub - provides direct links to all OEM position statements
+ * OEM1Stop is FREE and aggregates all manufacturer links in one place
  */
 const OEM_PORTAL_LINKS = {
-  // Japanese OEMs
-  'toyota': { name: 'Toyota', portal: 'techinfo.toyota.com', url: 'https://techinfo.toyota.com' },
-  'lexus': { name: 'Lexus', portal: 'techinfo.toyota.com', url: 'https://techinfo.toyota.com' },
-  'scion': { name: 'Scion', portal: 'techinfo.toyota.com', url: 'https://techinfo.toyota.com' },
-  'honda': { name: 'Honda', portal: 'techinfo.honda.com', url: 'https://techinfo.honda.com' },
-  'acura': { name: 'Acura', portal: 'techinfo.honda.com', url: 'https://techinfo.honda.com' },
-  'nissan': { name: 'Nissan', portal: 'nissan-techinfo.com', url: 'https://nissan-techinfo.com' },
-  'infiniti': { name: 'Infiniti', portal: 'nissan-techinfo.com', url: 'https://nissan-techinfo.com' },
-  'subaru': { name: 'Subaru', portal: 'techinfo.subaru.com', url: 'https://techinfo.subaru.com' },
-  'mazda': { name: 'Mazda', portal: 'mazdatechinfo.com', url: 'https://mazdatechinfo.com' },
-  'mitsubishi': { name: 'Mitsubishi', portal: 'mitsubishitechinfo.com', url: 'https://mitsubishitechinfo.com' },
+  // Japanese OEMs - via OEM1Stop
+  'toyota': { name: 'Toyota', portal: 'OEM1Stop', url: 'https://www.oem1stop.com/content/toyota' },
+  'lexus': { name: 'Lexus', portal: 'OEM1Stop', url: 'https://www.oem1stop.com/content/lexus' },
+  'scion': { name: 'Scion', portal: 'OEM1Stop', url: 'https://www.oem1stop.com/content/toyota' },
+  'honda': { name: 'Honda', portal: 'OEM1Stop', url: 'https://www.oem1stop.com/content/honda' },
+  'acura': { name: 'Acura', portal: 'OEM1Stop', url: 'https://www.oem1stop.com/content/acura' },
+  'nissan': { name: 'Nissan', portal: 'OEM1Stop', url: 'https://www.oem1stop.com/content/nissan' },
+  'infiniti': { name: 'Infiniti', portal: 'OEM1Stop', url: 'https://www.oem1stop.com/content/infiniti' },
+  'subaru': { name: 'Subaru', portal: 'OEM1Stop', url: 'https://www.oem1stop.com/content/subaru' },
+  'mazda': { name: 'Mazda', portal: 'OEM1Stop', url: 'https://www.oem1stop.com/content/mazda' },
+  'mitsubishi': { name: 'Mitsubishi', portal: 'OEM1Stop', url: 'https://www.oem1stop.com/content/mitsubishi' },
 
-  // Korean OEMs
-  'hyundai': { name: 'Hyundai', portal: 'hyundaitechinfo.com', url: 'https://hyundaitechinfo.com' },
-  'kia': { name: 'Kia', portal: 'kiatechinfo.com', url: 'https://kiatechinfo.com' },
-  'genesis': { name: 'Genesis', portal: 'genesistechinfo.com', url: 'https://genesistechinfo.com' },
+  // Korean OEMs - via OEM1Stop
+  'hyundai': { name: 'Hyundai', portal: 'OEM1Stop', url: 'https://www.oem1stop.com/content/hyundai' },
+  'kia': { name: 'Kia', portal: 'OEM1Stop', url: 'https://www.oem1stop.com/content/kia' },
+  'genesis': { name: 'Genesis', portal: 'OEM1Stop', url: 'https://www.oem1stop.com/content/genesis' },
 
-  // German OEMs
-  'bmw': { name: 'BMW', portal: 'bmwtechinfo.bmwgroup.com', url: 'https://bmwtechinfo.bmwgroup.com' },
-  'mini': { name: 'MINI', portal: 'minitechinfo.bmwgroup.com', url: 'https://minitechinfo.bmwgroup.com' },
-  'mercedes-benz': { name: 'Mercedes-Benz', portal: 'startekinfo.com', url: 'https://startekinfo.com' },
-  'mercedes': { name: 'Mercedes-Benz', portal: 'startekinfo.com', url: 'https://startekinfo.com' },
-  'audi': { name: 'Audi', portal: 'erwin.audi.com', url: 'https://erwin.audi.com' },
-  'volkswagen': { name: 'Volkswagen', portal: 'erwin.vw.com', url: 'https://erwin.vw.com' },
-  'vw': { name: 'Volkswagen', portal: 'erwin.vw.com', url: 'https://erwin.vw.com' },
-  'porsche': { name: 'Porsche', portal: 'porscheone.com', url: 'https://techinfo2.porsche.com' },
+  // German OEMs - via OEM1Stop
+  'bmw': { name: 'BMW', portal: 'OEM1Stop', url: 'https://www.oem1stop.com/content/bmw' },
+  'mini': { name: 'MINI', portal: 'OEM1Stop', url: 'https://www.oem1stop.com/content/mini' },
+  'mercedes-benz': { name: 'Mercedes-Benz', portal: 'OEM1Stop', url: 'https://www.oem1stop.com/content/mercedes-benz' },
+  'mercedes': { name: 'Mercedes-Benz', portal: 'OEM1Stop', url: 'https://www.oem1stop.com/content/mercedes-benz' },
+  'audi': { name: 'Audi', portal: 'OEM1Stop', url: 'https://www.oem1stop.com/content/audi' },
+  'volkswagen': { name: 'Volkswagen', portal: 'OEM1Stop', url: 'https://www.oem1stop.com/content/volkswagen' },
+  'vw': { name: 'Volkswagen', portal: 'OEM1Stop', url: 'https://www.oem1stop.com/content/volkswagen' },
+  'porsche': { name: 'Porsche', portal: 'OEM1Stop', url: 'https://www.oem1stop.com/content/porsche' },
 
-  // American OEMs
-  'ford': { name: 'Ford', portal: 'motorcraftservice.com', url: 'https://motorcraftservice.com' },
-  'lincoln': { name: 'Lincoln', portal: 'motorcraftservice.com', url: 'https://motorcraftservice.com' },
-  'chevrolet': { name: 'Chevrolet', portal: 'acdelcotds.com', url: 'https://acdelcotds.com' },
-  'chevy': { name: 'Chevrolet', portal: 'acdelcotds.com', url: 'https://acdelcotds.com' },
-  'gmc': { name: 'GMC', portal: 'acdelcotds.com', url: 'https://acdelcotds.com' },
-  'buick': { name: 'Buick', portal: 'acdelcotds.com', url: 'https://acdelcotds.com' },
-  'cadillac': { name: 'Cadillac', portal: 'acdelcotds.com', url: 'https://acdelcotds.com' },
-  'chrysler': { name: 'Chrysler', portal: 'techauthority.com', url: 'https://techauthority.com' },
-  'dodge': { name: 'Dodge', portal: 'techauthority.com', url: 'https://techauthority.com' },
-  'jeep': { name: 'Jeep', portal: 'techauthority.com', url: 'https://techauthority.com' },
-  'ram': { name: 'Ram', portal: 'techauthority.com', url: 'https://techauthority.com' },
-  'fiat': { name: 'Fiat', portal: 'techauthority.com', url: 'https://techauthority.com' },
-  'alfa romeo': { name: 'Alfa Romeo', portal: 'techauthority.com', url: 'https://techauthority.com' },
-  'tesla': { name: 'Tesla', portal: 'service.tesla.com', url: 'https://service.tesla.com', note: 'Limited access for third-party' },
+  // American OEMs - via OEM1Stop
+  'ford': { name: 'Ford', portal: 'OEM1Stop', url: 'https://www.oem1stop.com/content/ford' },
+  'lincoln': { name: 'Lincoln', portal: 'OEM1Stop', url: 'https://www.oem1stop.com/content/lincoln' },
+  'chevrolet': { name: 'Chevrolet', portal: 'OEM1Stop', url: 'https://www.oem1stop.com/content/chevrolet' },
+  'chevy': { name: 'Chevrolet', portal: 'OEM1Stop', url: 'https://www.oem1stop.com/content/chevrolet' },
+  'gmc': { name: 'GMC', portal: 'OEM1Stop', url: 'https://www.oem1stop.com/content/gmc' },
+  'buick': { name: 'Buick', portal: 'OEM1Stop', url: 'https://www.oem1stop.com/content/buick' },
+  'cadillac': { name: 'Cadillac', portal: 'OEM1Stop', url: 'https://www.oem1stop.com/content/cadillac' },
+  'chrysler': { name: 'Chrysler', portal: 'OEM1Stop', url: 'https://www.oem1stop.com/content/chrysler' },
+  'dodge': { name: 'Dodge', portal: 'OEM1Stop', url: 'https://www.oem1stop.com/content/dodge' },
+  'jeep': { name: 'Jeep', portal: 'OEM1Stop', url: 'https://www.oem1stop.com/content/jeep' },
+  'ram': { name: 'Ram', portal: 'OEM1Stop', url: 'https://www.oem1stop.com/content/ram' },
+  'fiat': { name: 'Fiat', portal: 'OEM1Stop', url: 'https://www.oem1stop.com/content/fiat' },
+  'alfa romeo': { name: 'Alfa Romeo', portal: 'OEM1Stop', url: 'https://www.oem1stop.com/content/alfa-romeo' },
+  'tesla': { name: 'Tesla', portal: 'OEM1Stop', url: 'https://www.oem1stop.com/content/tesla' },
 
-  // European OEMs
-  'volvo': { name: 'Volvo', portal: 'volvotechinfo.com', url: 'https://volvotechinfo.com/vida' },
-  'jaguar': { name: 'Jaguar', portal: 'topix.jaguar.jlrext.com', url: 'https://topix.jaguar.jlrext.com' },
-  'land rover': { name: 'Land Rover', portal: 'topix.landrover.jlrext.com', url: 'https://topix.landrover.jlrext.com' },
-  'range rover': { name: 'Land Rover', portal: 'topix.landrover.jlrext.com', url: 'https://topix.landrover.jlrext.com' }
+  // European OEMs - via OEM1Stop
+  'volvo': { name: 'Volvo', portal: 'OEM1Stop', url: 'https://www.oem1stop.com/content/volvo' },
+  'jaguar': { name: 'Jaguar', portal: 'OEM1Stop', url: 'https://www.oem1stop.com/content/jaguar' },
+  'land rover': { name: 'Land Rover', portal: 'OEM1Stop', url: 'https://www.oem1stop.com/content/land-rover' },
+  'range rover': { name: 'Land Rover', portal: 'OEM1Stop', url: 'https://www.oem1stop.com/content/land-rover' }
 };
 
 /**
@@ -1180,12 +1122,14 @@ function onOpen() {
   const ui = SpreadsheetApp.getUi();
 
   ui.createMenu('ADAS Tools')
-    // Main sidebar - shows everything: status, scrub details, manual overrides
-    .addItem('View Job Details', 'openApprovalSidebar')
+    // Daily Use Tools - View
+    .addItem('View Status & Override', 'openApprovalSidebar')
+    .addItem('View Full Scrub Details', 'openScrubSidebar')
 
     .addSeparator()
 
-    // Batch Actions
+    // Daily Use Tools - Actions
+    .addItem('Apply Status Colors', 'applyStatusColorFormatting')
     .addItem('Populate OEM Links (All Rows)', 'populateAllMissingOemLinks')
 
     .addSeparator()
@@ -1193,7 +1137,6 @@ function onOpen() {
     // Admin functions in submenu
     .addSubMenu(ui.createMenu('Admin & Setup')
       .addItem('Setup Columns S & T (Run Once)', 'setupColumnsST')
-      .addItem('Apply Status Colors', 'applyStatusColorFormatting')
       .addItem('Hide Column T', 'hideFullScrubColumn')
       .addItem('Show Column T', 'showFullScrubColumn')
       .addSeparator()
@@ -2833,12 +2776,12 @@ function openApprovalSidebar() {
 '    <p style="font-size:11px;color:#856404;margin-bottom:12px;">Use these only when automated workflow needs manual intervention.</p>' +
 '    <div class="section-title" style="font-size:12px;margin-top:8px;">Change Status:</div>' +
 '    <div class="btn-group">' +
-'      <button class="btn btn-success" onclick="changeStatus(\'Ready\')">Ready</button>' +
-'      <button class="btn btn-warning" onclick="changeStatus(\'Needs Attention\')">Needs Attention</button>' +
+'      <button class="btn btn-success" onclick="changeStatus(\\'Ready\\')">Ready</button>' +
+'      <button class="btn btn-warning" onclick="changeStatus(\\'Needs Attention\\')">Needs Attention</button>' +
 '    </div>' +
 '    <div class="btn-group">' +
-'      <button class="btn btn-primary" onclick="changeStatus(\'In Progress\')">In Progress</button>' +
-'      <button class="btn btn-secondary" onclick="changeStatus(\'Completed\')">Completed</button>' +
+'      <button class="btn btn-primary" onclick="changeStatus(\\'In Progress\\')">In Progress</button>' +
+'      <button class="btn btn-secondary" onclick="changeStatus(\\'Completed\\')">Completed</button>' +
 '    </div>' +
 '    <div class="section-title" style="font-size:12px;margin-top:12px;">Manual Actions:</div>' +
 '    <button class="btn btn-primary" id="btnSendIntake" onclick="manualSendIntake()">📧 Send Intake Email to Shop</button>' +
