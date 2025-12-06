@@ -1505,7 +1505,7 @@ function openUnifiedSidebar() {
       ${revvPdfUrl ? '<a href="' + escapeHtml(revvPdfUrl) + '" target="_blank" class="link">📄 Revv Report PDF</a>' : ''}
       ${postScanUrl ? '<a href="' + escapeHtml(postScanUrl) + '" target="_blank" class="link">📄 Post-Scan Report</a>' : ''}
       ${invoiceUrl ? '<a href="' + escapeHtml(invoiceUrl) + '" target="_blank" class="link">📄 Invoice PDF</a>' : ''}
-      ${oemPosition ? '<div class="field"><div class="field-label">OEM Position Statement</div><div class="field-value">' + escapeHtml(oemPosition).replace(/\\n/g, '<br>').replace(/(https?:\\/\\/[^\\s<]+)/g, '<a href="$1" target="_blank" class="link">$1</a>') + '</div></div>' : ''}
+      ${oemPosition ? '<div class="field"><div class="field-label">OEM Position Statement</div><div class="field-value"><a href="' + escapeHtml(oemPosition) + '" target="_blank" class="link">' + escapeHtml(oemPosition) + '</a></div></div>' : ''}
       ${!revvPdfUrl && !postScanUrl && !invoiceUrl && !oemPosition ? '<div class="empty">No documents attached</div>' : ''}
     </div>
   </div>
@@ -3009,12 +3009,12 @@ function openApprovalSidebar() {
 '    <div class="header-row"><span class="label">Shop Email:</span><span class="value">' + (shopEmail ? escapeHtml(shopEmail) : '<span style="color:#5f6368">Not configured</span>') + '</span></div>' +
 '    <div class="header-row"><span class="label">Vehicle:</span><span class="value">' + escapeHtml(vehicle) + '</span></div>' +
 '    <div class="header-row"><span class="label">VIN:</span><span class="value">' + escapeHtml(vin) + '</span></div>' +
-'    <div class="header-row"><span class="label">Status:</span><span class="status status-' + status.toLowerCase().replace(/\\s+/g, '-') + '">' + escapeHtml(status) + '</span></div>' +
+'    <div class="header-row"><span class="label">Status:</span><span class="status status-' + status.toLowerCase().replace(/\s+/g, '-') + '">' + escapeHtml(status) + '</span></div>' +
 '  </div>' +
 '  <div class="section">' +
 '    <div class="section-title">🎯 Required Calibrations (' + calibrationList.length + ')</div>' +
 (calibrationList.length > 0 ? calibrationList.map(function(cal) {
-  var parts = cal.match(/(.+?)\\s*\\((.+?)\\)/);
+  var parts = cal.match(/(.+?)\s*\((.+?)\)/);
   var name = parts ? parts[1] : cal;
   var type = parts ? parts[2] : '';
   return '<div class="calibration-item"><div class="calibration-name">' + escapeHtml(name) + '</div>' + (type ? '<div class="calibration-type">' + escapeHtml(type) + '</div>' : '') + '</div>';
