@@ -427,25 +427,41 @@ function extractRoFromFilename(filename) {
 function extractRoFromEstimate(estimateText) {
   if (!estimateText) return null;
 
-  // Common RO patterns in estimates (in priority order)
+  // RO patterns in PRIORITY ORDER - RO Number MUST come FIRST!
+  // NOTE: Claim/File/Reference patterns are EXCLUDED - these are insurance IDs, not RO numbers
   const patterns = [
-    // Explicit RO/PO patterns: "RO#12345", "RO: 12345", "R.O. 12345"
-    /(?:RO|R\.O\.|Repair\s*Order|Work\s*Order|WO)[\s#:\-]*(\d{4,10})/i,
+    // HIGHEST PRIORITY: "RO Number: 12313-1" (allows alphanumeric with hyphens)
+    /RO\s*Number[\s:]+([A-Za-z0-9]+-?[A-Za-z0-9]*)/i,
+    // "RO #12345" or "RO: 12345" format
+    /(?:^|\s)RO[\s#:\-]+([A-Za-z0-9]+-?[A-Za-z0-9]*)/i,
+    // "R.O. 12345" format
+    /R\.O\.[\s#:\-]*([A-Za-z0-9]+-?[A-Za-z0-9]*)/i,
+    // "Repair Order: 12345" format
+    /Repair\s*Order[\s#:\-]*([A-Za-z0-9]+-?[A-Za-z0-9]*)/i,
+    // "Work Order: 12345" format
+    /Work\s*Order[\s#:\-]*([A-Za-z0-9]+-?[A-Za-z0-9]*)/i,
+    // "WO: 12345" format
+    /(?:^|\s)WO[\s#:\-]+([A-Za-z0-9]+-?[A-Za-z0-9]*)/i,
     // PO patterns: "PO#12345", "PO: 12345"
-    /(?:PO|P\.O\.)[\s#:\-]*(\d{4,10})/i,
-    // Claim/File patterns: "Claim#12345", "File #12345"
-    /(?:Claim|File|Reference)[\s#:\-]*(\d{4,10})/i,
-    // Order patterns: "Order #12345", "Order: 12345"
+    /(?:^|\s)PO[\s#:\-]+([A-Za-z0-9]+-?[A-Za-z0-9]*)/i,
+    /P\.O\.[\s#:\-]*([A-Za-z0-9]+-?[A-Za-z0-9]*)/i,
+    // Order patterns: "Order #12345"
     /Order[\s#:\-]*(\d{4,10})/i,
     // Estimate number patterns: "Estimate #12345"
     /Estimate[\s#:\-]*(\d{4,10})/i
+    // NOTE: Claim/File/Reference patterns REMOVED - these are NOT RO numbers!
   ];
 
   for (const pattern of patterns) {
     const match = estimateText.match(pattern);
     if (match) {
       const ro = match[1].trim();
-      console.log(`${LOG_TAG} Extracted RO from estimate content: ${ro} (pattern: ${pattern.toString().substring(0, 30)}...)`);
+      // Skip if it looks like a claim number (too long or has multiple dashes like X-X-X)
+      if (ro.length > 15 || /^\d+-\d+-\d+/.test(ro) || /^\d{10,}$/.test(ro)) {
+        console.log(`${LOG_TAG} Skipping potential claim/insurance number: ${ro}`);
+        continue;
+      }
+      console.log(`${LOG_TAG} Extracted RO from estimate content: ${ro} (pattern: ${pattern.toString().substring(0, 40)}...)`);
       return ro;
     }
   }
