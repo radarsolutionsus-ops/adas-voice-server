@@ -191,6 +191,8 @@ function buildVehicleString(data) {
 
 /**
  * Upsert (insert or update) a schedule row
+ * PRIORITY: VIN match first, then RO match, then create new row
+ * This prevents duplicate rows for the same vehicle when RO numbers differ
  */
 function upsertScheduleRow(data) {
   const ss = SpreadsheetApp.getActive();
@@ -205,13 +207,52 @@ function upsertScheduleRow(data) {
     return { success: false, error: 'RO/PO number required' };
   }
 
-  // Check if RO already exists
+  const vin = String(data.vin || '').trim();
+
+  // PRIORITY 1: Check VIN first (prevents duplicate rows for same vehicle)
+  if (vin && vin.length >= 11) {
+    const vinRow = findRowByVIN(sheet, vin);
+    if (vinRow > 0) {
+      Logger.log('VIN match found: "' + vin + '" at row ' + vinRow + '. Updating existing row with RO: ' + roPo);
+      // Update the RO if incoming RO is better (not synthetic)
+      if (!roPo.toLowerCase().includes('synthetic') && !roPo.toLowerCase().includes('auto-')) {
+        data.roPo = roPo; // Use better RO
+      }
+      return updateExistingRow(sheet, vinRow, data);
+    }
+  }
+
+  // PRIORITY 2: Check if RO already exists
   const existingRow = findRowByRO(sheet, roPo);
   if (existingRow > 0) {
     return updateExistingRow(sheet, existingRow, data);
   }
 
+  // PRIORITY 3: Create new row
   return createNewRow(sheet, data, roPo);
+}
+
+/**
+ * Find row number by VIN (returns 0 if not found)
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet - The sheet to search
+ * @param {string} vin - The VIN to search for
+ * @returns {number} - Row number (1-based) or 0 if not found
+ */
+function findRowByVIN(sheet, vin) {
+  if (!vin || vin.length < 11) return 0;
+
+  const data = sheet.getDataRange().getValues();
+  const vinClean = String(vin).trim().toUpperCase();
+
+  for (let i = 1; i < data.length; i++) {
+    const rowVin = String(data[i][COL.VIN] || '').trim().toUpperCase();
+    if (rowVin && rowVin === vinClean) {
+      Logger.log('VIN match found: "' + vin + '" in row ' + (i + 1));
+      return i + 1; // 1-based row number
+    }
+  }
+
+  return 0;
 }
 
 /**
@@ -2776,12 +2817,12 @@ function openApprovalSidebar() {
 '    <p style="font-size:11px;color:#856404;margin-bottom:12px;">Use these only when automated workflow needs manual intervention.</p>' +
 '    <div class="section-title" style="font-size:12px;margin-top:8px;">Change Status:</div>' +
 '    <div class="btn-group">' +
-'      <button class="btn btn-success" onclick="changeStatus(\'Ready\')">Ready</button>' +
-'      <button class="btn btn-warning" onclick="changeStatus(\'Needs Attention\')">Needs Attention</button>' +
+'      <button class="btn btn-success" onclick="changeStatus(\\'Ready\\')">Ready</button>' +
+'      <button class="btn btn-warning" onclick="changeStatus(\\'Needs Attention\\')">Needs Attention</button>' +
 '    </div>' +
 '    <div class="btn-group">' +
-'      <button class="btn btn-primary" onclick="changeStatus(\'In Progress\')">In Progress</button>' +
-'      <button class="btn btn-secondary" onclick="changeStatus(\'Completed\')">Completed</button>' +
+'      <button class="btn btn-primary" onclick="changeStatus(\\'In Progress\\')">In Progress</button>' +
+'      <button class="btn btn-secondary" onclick="changeStatus(\\'Completed\\')">Completed</button>' +
 '    </div>' +
 '    <div class="section-title" style="font-size:12px;margin-top:12px;">Manual Actions:</div>' +
 '    <button class="btn btn-primary" id="btnSendIntake" onclick="manualSendIntake()">📧 Send Intake Email to Shop</button>' +

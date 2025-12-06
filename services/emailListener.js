@@ -33,6 +33,64 @@ import { getESTTimestamp, getESTISOTimestamp, formatToEST } from '../utils/timez
 const LOG_TAG = '[EMAIL_PIPELINE]';
 
 /**
+ * OEM1Stop Portal Links - central hub for all OEM position statements
+ * Used to populate Column U with clickable links
+ */
+const OEM1STOP_LINKS = {
+  'toyota': 'https://www.oem1stop.com/content/toyota',
+  'lexus': 'https://www.oem1stop.com/content/lexus',
+  'scion': 'https://www.oem1stop.com/content/toyota',
+  'honda': 'https://www.oem1stop.com/content/honda',
+  'acura': 'https://www.oem1stop.com/content/acura',
+  'nissan': 'https://www.oem1stop.com/content/nissan',
+  'infiniti': 'https://www.oem1stop.com/content/infiniti',
+  'subaru': 'https://www.oem1stop.com/content/subaru',
+  'mazda': 'https://www.oem1stop.com/content/mazda',
+  'mitsubishi': 'https://www.oem1stop.com/content/mitsubishi',
+  'hyundai': 'https://www.oem1stop.com/content/hyundai',
+  'kia': 'https://www.oem1stop.com/content/kia',
+  'genesis': 'https://www.oem1stop.com/content/genesis',
+  'bmw': 'https://www.oem1stop.com/content/bmw',
+  'mini': 'https://www.oem1stop.com/content/mini',
+  'mercedes-benz': 'https://www.oem1stop.com/content/mercedes-benz',
+  'mercedes': 'https://www.oem1stop.com/content/mercedes-benz',
+  'audi': 'https://www.oem1stop.com/content/audi',
+  'volkswagen': 'https://www.oem1stop.com/content/volkswagen',
+  'vw': 'https://www.oem1stop.com/content/volkswagen',
+  'porsche': 'https://www.oem1stop.com/content/porsche',
+  'ford': 'https://www.oem1stop.com/content/ford',
+  'lincoln': 'https://www.oem1stop.com/content/lincoln',
+  'chevrolet': 'https://www.oem1stop.com/content/gm',
+  'chevy': 'https://www.oem1stop.com/content/gm',
+  'gmc': 'https://www.oem1stop.com/content/gm',
+  'cadillac': 'https://www.oem1stop.com/content/gm',
+  'buick': 'https://www.oem1stop.com/content/gm',
+  'gm': 'https://www.oem1stop.com/content/gm',
+  'chrysler': 'https://www.oem1stop.com/content/fca',
+  'dodge': 'https://www.oem1stop.com/content/fca',
+  'jeep': 'https://www.oem1stop.com/content/fca',
+  'ram': 'https://www.oem1stop.com/content/fca',
+  'fiat': 'https://www.oem1stop.com/content/fca',
+  'alfa romeo': 'https://www.oem1stop.com/content/fca',
+  'tesla': 'https://www.oem1stop.com/content/tesla',
+  'volvo': 'https://www.oem1stop.com/content/volvo',
+  'jaguar': 'https://www.oem1stop.com/content/jaguar',
+  'land rover': 'https://www.oem1stop.com/content/land-rover',
+  'range rover': 'https://www.oem1stop.com/content/land-rover'
+};
+
+/**
+ * Get OEM1Stop portal link for a vehicle brand
+ * @param {string} brand - Vehicle brand name
+ * @returns {string|null} - OEM1Stop URL or null if not found
+ */
+function getOEM1StopLink(brand) {
+  if (!brand) return null;
+  const normalized = brand.toLowerCase().trim();
+  return OEM1STOP_LINKS[normalized] || null;
+}
+
+/**
  * Format timestamp to MM/DD/YY h:mm AM/PM in EST
  * Example: "12/03/25 10:54 PM EST"
  * @param {string|Date} timestamp - ISO string or Date object
@@ -816,13 +874,32 @@ async function processEmail(message) {
       mergedData.fullScrubText = fullNotes;
 
       // Extract OEM Position Statement links (Column U)
-      // Format: "Brand: fileName" for each job aid found
+      // PRIORITY 1: OEM1Stop portal link for the vehicle brand
+      // PRIORITY 2: Job aid file names if available
+      const oemLinkParts = [];
+
+      // Add OEM1Stop portal link if we know the brand
+      const vehicleBrand = scrubResult.vehicleBrand || mergedData.vehicleMake;
+      if (vehicleBrand) {
+        const oemPortalUrl = getOEM1StopLink(vehicleBrand);
+        if (oemPortalUrl) {
+          oemLinkParts.push(`${vehicleBrand} Position Statements: ${oemPortalUrl}`);
+          console.log(`${LOG_TAG} OEM1Stop link added for ${vehicleBrand}: ${oemPortalUrl}`);
+        }
+      }
+
+      // Add job aid file names if available
       if (scrubResult.oemJobAids && scrubResult.oemJobAids.length > 0) {
-        const oemLinks = scrubResult.oemJobAids.map(aid => {
-          return `${aid.brand || 'OEM'}: ${aid.fileName}`;
-        }).join('\n');
-        mergedData.oemPosition = oemLinks;
-        console.log(`${LOG_TAG} OEM Position links populated: ${scrubResult.oemJobAids.length} job aid(s)`);
+        scrubResult.oemJobAids.forEach(aid => {
+          oemLinkParts.push(`${aid.brand || 'OEM'}: ${aid.fileName}`);
+        });
+        console.log(`${LOG_TAG} OEM Job aids added: ${scrubResult.oemJobAids.length} document(s)`);
+      }
+
+      // Set OEM position if we have any links
+      if (oemLinkParts.length > 0) {
+        mergedData.oemPosition = oemLinkParts.join('\n');
+        console.log(`${LOG_TAG} OEM Position links populated: ${oemLinkParts.length} item(s)`);
       }
 
       // Log attention status
@@ -1146,12 +1223,18 @@ function detectPDFType(filename) {
   if (lower.includes('scan') || lower.includes('autel')) return 'scan_report';
   // RevvADAS detection - enhanced patterns
   // VehID_XXXXXXXX.pdf is the standard RevvADAS filename format
+  // Also check for other common RevvADAS patterns
   if (lower.includes('revv') ||
       lower.includes('calibration') ||
       lower.startsWith('vehid') ||
-      lower.match(/^vehid[_-]?\d/i) ||
+      /^vehid[_-]?\w/i.test(lower) ||    // VehID_ followed by any word char
+      /^veh[_-]?\d+/i.test(lower) ||     // Veh123 or Veh_123 patterns
       lower.includes('adas operations') ||
-      lower.includes('adas report')) {
+      lower.includes('adas report') ||
+      lower.includes('adas_') ||         // adas_something.pdf
+      lower.includes('_adas') ||         // something_adas.pdf
+      /\d{17}.*\.pdf$/i.test(lower)) {   // Contains VIN (17 digits) in filename
+    console.log(`${LOG_TAG} Detected RevvADAS PDF: ${filename}`);
     return 'revv_report';
   }
   if (lower.includes('estimate') || lower.includes('quote') || lower.includes('repair order')) return 'estimate';
