@@ -113,8 +113,8 @@ const SCHEDULE_COLUMNS = {
   INVOICE_NUMBER: 15,      // P
   INVOICE_AMOUNT: 16,      // Q
   INVOICE_DATE: 17,        // R
-  NOTES: 18,               // S - Short summary notes (2-3 lines max)
-  FULL_SCRUB_TEXT: 19,     // T - Hidden column for full scrub text (sidebar)
+  NOTES: 18,               // S - Full notes summary (entire RO journey)
+  FLOW_HISTORY: 19,        // T - Hidden column for flow history (sidebar)
   OEM_POSITION: 20         // U - OEM Position Statement links
 };
 
@@ -644,6 +644,124 @@ export async function updateScheduleRow(roPo, updates) {
   );
 
   const result = await makeGASRequest('tech_update', cleanedData);
+
+  return result;
+}
+
+/**
+ * Build a full notes summary from flow history
+ * Creates a formatted summary showing the entire RO journey
+ * @param {Object} data - RO data
+ * @returns {string} - Formatted notes summary
+ */
+function buildFullNotesSummary({ roPo, shopName, vehicle, technician, requiredCals, flowHistory }) {
+  const divider = '━'.repeat(38);
+  const lines = [];
+
+  // Header
+  lines.push(`RO ${roPo || '?'} | ${shopName || 'Unknown Shop'} | ${vehicle || 'Vehicle TBD'}`);
+  lines.push(divider);
+
+  // Flow history entries
+  if (flowHistory) {
+    flowHistory.split('\n').forEach(entry => {
+      if (entry.trim()) lines.push(entry);
+    });
+  }
+
+  lines.push(divider);
+
+  // Footer
+  if (requiredCals) {
+    lines.push(`Calibrations: ${requiredCals}`);
+  }
+  if (technician || shopName) {
+    const parts = [];
+    if (technician) parts.push(`Tech: ${technician}`);
+    if (shopName) parts.push(`Shop: ${shopName}`);
+    lines.push(parts.join(' | '));
+  }
+
+  return lines.join('\n');
+}
+
+/**
+ * Update schedule row and rewrite full notes summary
+ * Called on EVERY status change - rebuilds the entire notes field
+ * @param {string} roPo - The RO or PO number
+ * @param {Object} updates - Object with fields to update
+ * @param {string} updates.status - New status
+ * @param {string} updates.statusChangeNote - Description of the change (e.g., "Estimate received")
+ * @param {string} [updates.scheduledDate] - Optional new scheduled date
+ * @param {string} [updates.scheduledTime] - Optional new scheduled time
+ * @returns {Promise<{success: boolean, error?: string}>}
+ */
+export async function updateScheduleRowWithFullNotes(roPo, updates) {
+  console.log(`${LOG_TAG} Updating schedule row with full notes for RO: ${roPo}`);
+
+  // Build timestamp in format: MM/DD H:MMp
+  const timestamp = new Date().toLocaleString('en-US', {
+    timeZone: 'America/New_York',
+    month: '2-digit',
+    day: '2-digit',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  }).replace(',', '').replace(' AM', 'a').replace(' PM', 'p').toLowerCase();
+
+  // Get existing row data
+  const existing = await getScheduleRowByRO(roPo);
+  if (!existing) {
+    return { success: false, error: 'RO not found' };
+  }
+
+  // Build history entry: "12/06 2:52p  NEW         Estimate received"
+  const statusPadded = (updates.status || 'UNKNOWN').toUpperCase().padEnd(11);
+  const historyEntry = `${timestamp}  ${statusPadded} ${updates.statusChangeNote || ''}`;
+
+  // Append to existing flow history
+  const existingHistory = existing.flow_history || existing.flowHistory || '';
+  const flowHistory = existingHistory
+    ? existingHistory + '\n' + historyEntry
+    : historyEntry;
+
+  // Build full notes summary
+  const fullNotes = buildFullNotesSummary({
+    roPo,
+    shopName: existing.shop_name || existing.shopName,
+    vehicle: existing.vehicle,
+    technician: updates.technician || existing.technician_assigned || existing.technician,
+    requiredCals: existing.required_calibrations || existing.requiredCalibrations,
+    flowHistory: flowHistory
+  });
+
+  // Prepare update data
+  const updateData = {
+    roPo: roPo,
+    status_from_tech: updates.status || '',
+    tech_notes: fullNotes,
+    flowHistory: flowHistory
+  };
+
+  // Add optional schedule fields if provided
+  if (updates.scheduledDate) {
+    updateData.scheduledDate = updates.scheduledDate;
+  }
+  if (updates.scheduledTime) {
+    updateData.scheduledTime = updates.scheduledTime;
+  }
+  if (updates.technician) {
+    updateData.technician = updates.technician;
+  }
+
+  // Use tech_update action which supports status, notes, and flowHistory
+  const result = await makeGASRequest('tech_update', updateData);
+
+  if (result.success) {
+    console.log(`${LOG_TAG} Full notes updated for RO ${roPo}: ${updates.status} - ${updates.statusChangeNote}`);
+  } else {
+    console.error(`${LOG_TAG} Failed to update notes for RO ${roPo}:`, result.error);
+  }
 
   return result;
 }
@@ -1351,6 +1469,7 @@ export default {
   getScheduleRowByRO,
   upsertScheduleRowByRO,
   updateScheduleRow,
+  updateScheduleRowWithFullNotes,  // Full notes rewrite on status change
   setSchedule,  // PATCH C: New function for setting schedule date/time
   appendBillingRow,
   getBillingRowsByRO,

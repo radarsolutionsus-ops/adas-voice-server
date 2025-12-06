@@ -24,8 +24,9 @@ import driveUpload from './driveUpload.js';
 import pdfParser from './pdfParser.js';
 import sheetWriter, { getGmailTokenFromSheets, saveGmailTokenToSheets, getShopEmailByName } from './sheetWriter.js';
 import billingMailer from './billingMailer.js';
-import { formatScrubResultsAsNotes, getScrubSummary, formatPreviewNotes, formatFullScrub, analyzeEstimateWithLLM } from './estimateScrubber.js';
-import { reconcileCalibrations, normalizeToSystem, parseRevvCalibrations } from '../src/scrub/revvReconciler.js';
+// DEPRECATED: AI scrubbing removed - all estimate analysis done manually in RevvADAS
+// import { formatScrubResultsAsNotes, getScrubSummary, formatPreviewNotes, formatFullScrub, analyzeEstimateWithLLM } from './estimateScrubber.js';
+// import { reconcileCalibrations, normalizeToSystem, parseRevvCalibrations } from '../src/scrub/revvReconciler.js';
 import jobState from '../data/jobState.js';
 import shopNotifier from './shopNotifier.js';
 import emailResponder from './emailResponder.js';
@@ -901,135 +902,35 @@ async function processEmail(message) {
       console.log(`${LOG_TAG} Could not fetch existing sheet data: ${sheetErr.message}`);
     }
 
-    // Step 2b: Handle estimate scrub results if present
-    // IMPORTANT: Notes are set ONCE here and nowhere else to prevent duplication
-    // Column S = preview_notes (short, clean, single line)
-    // Column T = full_notes (full structured scrub text for sidebar)
+    // Step 2b: Build simple notes (NO SCRUBBING)
+    // All calibration analysis is done manually in RevvADAS
+    // Notes are simple: vehicle info + document type received
     let previewNotes = '';
-    let fullNotes = '';
 
-    if (mergedData.hasEstimate && mergedData.estimateScrubResult) {
-      console.log(`${LOG_TAG} Estimate detected for RO ${roPo}, scrub complete`);
-      const scrubResult = mergedData.estimateScrubResult;
+    // Build vehicle string for notes
+    const vehicleString = mergedData.vehicle ||
+      `${mergedData.vehicleYear || ''} ${mergedData.vehicleMake || ''} ${mergedData.vehicleModel || ''}`.trim();
 
-      // CRITICAL: Inject vehicle/VIN from mergedData into scrubResult
-      // This ensures formatFullScrub has the correct vehicle info
-      const vehicleString = mergedData.vehicle ||
-        `${mergedData.vehicleYear || ''} ${mergedData.vehicleMake || ''} ${mergedData.vehicleModel || ''}`.trim();
-      if (vehicleString && !scrubResult.vehicle) {
-        scrubResult.vehicle = vehicleString;
-        console.log(`${LOG_TAG} Injected vehicle into scrubResult: ${vehicleString}`);
+    // Build simple notes based on what documents we received
+    const docTypes = [];
+    if (mergedData.hasEstimate) docTypes.push('Estimate');
+    if (mergedData.revvReportPdf || uploadResults.uploads.some(u => u.type === 'revv_report')) docTypes.push('Revv Report');
+    if (mergedData.postScanPdf) docTypes.push('Post-Scan');
+    if (mergedData.invoiceNumber) docTypes.push('Invoice');
+
+    if (docTypes.length > 0) {
+      previewNotes = `Received: ${docTypes.join(', ')}`;
+      if (vehicleString) {
+        previewNotes += ` | ${vehicleString}`;
       }
-      if (mergedData.vin && !scrubResult.vin) {
-        scrubResult.vin = mergedData.vin;
-        console.log(`${LOG_TAG} Injected VIN into scrubResult: ${mergedData.vin}`);
-      }
+    }
 
-      // Get the raw Required Calibrations text from Column J (from RevvADAS)
-      // This ensures we use the actual Revv data for the count
-      const rawRevvText = mergedData.requiredCalibrationsText || '';
-      const revvItems = rawRevvText.split(/[;,]/).filter(s => s.trim().length > 0);
-      const actualRevvCount = revvItems.length > 0 ? revvItems.length : (scrubResult.requiredFromRevv?.length || 0);
-
-      console.log(`${LOG_TAG} Actual Revv count from Column J: ${actualRevvCount}`);
-
-      // CRITICAL: Re-run reconciliation with the fetched RevvADAS data
-      // This fixes the issue where estimate scrub runs before RevvADAS data is available
-      if (rawRevvText && scrubResult.requiredFromEstimate?.length > 0) {
-        console.log(`${LOG_TAG} Re-running reconciliation with fetched RevvADAS data...`);
-        console.log(`${LOG_TAG} Estimate calibrations: ${JSON.stringify(scrubResult.requiredFromEstimate)}`);
-        console.log(`${LOG_TAG} RevvADAS calibrations: ${rawRevvText}`);
-
-        // Parse RevvADAS text into structured array
-        const parsedRevvCals = parseRevvCalibrations(rawRevvText);
-
-        // Map estimate calibrations to reconciler format
-        const estCalsForReconciler = scrubResult.requiredFromEstimate.map(cal => {
-          const name = typeof cal === 'object' ? (cal.calibration || cal.name || cal.system) : cal;
-          return { system: name, name: name };
-        });
-
-        // Run reconciliation
-        const reconciliation = reconcileCalibrations(estCalsForReconciler, parsedRevvCals);
-
-        // Update scrub result with reconciliation
-        scrubResult.reconciliation = reconciliation;
-        scrubResult.requiredFromRevv = revvItems;
-
-        // Determine match status
-        // LOGIC: RevvADAS is the SOURCE OF TRUTH
-        // - scrubOnly = estimate detected something RevvADAS didn't → POTENTIAL FALSE POSITIVE (needs review)
-        // - revvOnly = RevvADAS recommends something estimate didn't trigger → VALID EXTRA CALIBRATIONS (OK)
-        // Status is OK if all ESTIMATE items are covered by RevvADAS
-        if (reconciliation.scrubOnly.length === 0) {
-          // All estimate items are validated by RevvADAS
-          scrubResult.status = 'MATCH';
-          scrubResult.needsAttention = false;
-          console.log(`${LOG_TAG} Reconciliation result: MATCH (all estimate calibrations verified by RevvADAS)`);
-          if (reconciliation.revvOnly.length > 0) {
-            console.log(`${LOG_TAG} RevvADAS also recommends: ${reconciliation.revvOnly.map(r => r.rawText || r.system).join(', ')}`);
-          }
-        } else {
-          // Estimate has items NOT in RevvADAS - potential false positives
-          scrubResult.status = 'NEEDS_REVIEW';
-          scrubResult.needsAttention = true;
-          console.log(`${LOG_TAG} Reconciliation result: NEEDS_REVIEW`);
-          console.log(`${LOG_TAG} Matched: ${reconciliation.matched.length}`);
-          console.log(`${LOG_TAG} Estimate-only (verify before billing): ${reconciliation.scrubOnly.map(s => s.system).join(', ')}`);
-          if (reconciliation.revvOnly.length > 0) {
-            console.log(`${LOG_TAG} RevvADAS-only (valid, include): ${reconciliation.revvOnly.map(r => r.rawText || r.system).join(', ')}`);
-          }
-        }
-
-        // "Missing" = items in ESTIMATE that RevvADAS doesn't validate (potential false positives)
-        // These need human review before billing
-        scrubResult.unverifiedFromEstimate = reconciliation.scrubOnly.map(s => s.system);
-
-        // Extra from RevvADAS = valid calibrations that should be included
-        scrubResult.extraFromRevv = reconciliation.revvOnly.map(r => r.rawText || r.system);
-      }
-
-      // Use NEW formatting functions:
-      // formatPreviewNotes - SHORT clean preview for Column S
-      // formatFullScrub - FULL structured text for Column T (sidebar view)
-      previewNotes = formatPreviewNotes(scrubResult, actualRevvCount);
-      fullNotes = formatFullScrub(scrubResult, actualRevvCount, rawRevvText);
-
-      // Store full scrub text separately for sidebar (Column T - hidden)
-      mergedData.fullScrubText = fullNotes;
-
-      // Extract OEM Position Statement links (Column U)
-      // PRIORITY 1: OEM1Stop portal link for the vehicle brand
-      // PRIORITY 2: Job aid file names if available
-      const oemLinkParts = [];
-
-      // Add OEM1Stop portal link if we know the brand
-      const vehicleBrand = scrubResult.vehicleBrand || mergedData.vehicleMake;
-      if (vehicleBrand) {
-        const oemPortalUrl = getOEM1StopLink(vehicleBrand);
-        if (oemPortalUrl) {
-          oemLinkParts.push(`${vehicleBrand} Position Statements: ${oemPortalUrl}`);
-          console.log(`${LOG_TAG} OEM1Stop link added for ${vehicleBrand}: ${oemPortalUrl}`);
-        }
-      }
-
-      // Add job aid file names if available
-      if (scrubResult.oemJobAids && scrubResult.oemJobAids.length > 0) {
-        scrubResult.oemJobAids.forEach(aid => {
-          oemLinkParts.push(`${aid.brand || 'OEM'}: ${aid.fileName}`);
-        });
-        console.log(`${LOG_TAG} OEM Job aids added: ${scrubResult.oemJobAids.length} document(s)`);
-      }
-
-      // Set OEM position if we have any links
-      if (oemLinkParts.length > 0) {
-        mergedData.oemPosition = oemLinkParts.join('\n');
-        console.log(`${LOG_TAG} OEM Position links populated: ${oemLinkParts.length} item(s)`);
-      }
-
-      // Log attention status
-      if (scrubResult.needsAttention) {
-        console.log(`${LOG_TAG} ATTENTION REQUIRED: ${getScrubSummary(scrubResult)}`);
+    // Add OEM Position Statement links (Column U) based on vehicle brand
+    if (mergedData.vehicleMake) {
+      const oemPortalUrl = getOEM1StopLink(mergedData.vehicleMake);
+      if (oemPortalUrl) {
+        mergedData.oemPosition = `${mergedData.vehicleMake} Position Statements: ${oemPortalUrl}`;
+        console.log(`${LOG_TAG} OEM1Stop link added for ${mergedData.vehicleMake}: ${oemPortalUrl}`);
       }
     }
 
@@ -1106,38 +1007,60 @@ async function processEmail(message) {
 
     // Step 3: Update Google Sheets
     // Determine appropriate status based on document types received
-    // - revv_report or shop_estimate = vehicle is ready FOR calibration, not completed
-    // - Only postscan_report with 0 DTCs + calibrations done = "Completed"
-    // - adas_invoice = "Completed"
-    let status = 'Ready';  // Default for revv_report + shop_estimate
+    // SIMPLIFIED STATUS LOGIC (6 statuses only):
+    // - shop_estimate only = "New" (waiting for tech to review in RevvADAS)
+    // - revv_report = "Ready" (tech has reviewed, ready for calibration)
+    // - adas_invoice = "Completed" (job is billed)
 
     // Check what document types we have
+    const hasRevvReport = mergedData.revvReportPdf || uploadResults.uploads.some(u => u.type === 'revv_report');
+    const hasEstimateOnly = (mergedData.estimatePdf || uploadResults.uploads.some(u =>
+      u.type === 'shop_estimate' || u.type === 'estimate'
+    )) && !hasRevvReport;
     const hasAdasInvoice = mergedData.invoiceNumber && mergedData.invoiceAmount;
     const hasPostScan = mergedData.postScanPdf || uploadResults.uploads.some(u =>
       u.type === 'scan_report' && (u.filename?.toLowerCase().includes('post') || u.filename?.toLowerCase().includes('final'))
     );
-    const hasCompletedCalibrations = mergedData.completedCalibrationsText && mergedData.completedCalibrationsText.length > 0;
 
-    // Only set to Completed if we have invoice OR (postscan + completed calibrations)
+    // Determine status and statusChangeNote based on document type hierarchy
+    let status = 'New';  // Default for new estimates
+    let statusChangeNote = 'Document received';
+
     if (hasAdasInvoice) {
-      status = 'Completed';  // Invoice received means job is billed
-    } else if (hasPostScan && hasCompletedCalibrations) {
-      status = 'Completed';  // Post-scan with completed calibrations
+      status = 'Completed';  // Invoice received means job is billed and complete
+      statusChangeNote = 'Invoice received';
+    } else if (hasRevvReport) {
+      status = 'Ready';  // Revv Report means tech has reviewed, ready for calibration
+      const calCount = mergedData.requiredCalibrationsText ?
+        mergedData.requiredCalibrationsText.split(/[,;]/).filter(c => c.trim()).length : 0;
+      statusChangeNote = `Revv Report received (${calCount} calibrations)`;
+    } else if (hasEstimateOnly) {
+      status = 'New';  // Estimate only - waiting for tech review in RevvADAS
+      statusChangeNote = 'Estimate received';
     }
 
-    // Override for attention-needed cases
+    // Note: "Needs Attention" and "Needs Review" are deprecated
+    // Synthetic ROs still need manual handling but stay as "New"
     if (isSyntheticRo) {
-      status = 'Needs Attention'; // Synthetic RO needs manual review
-    } else if (mergedData.estimateScrubResult?.needsAttention) {
-      status = 'Needs Review'; // Estimate scrub flagged issues (use "Needs Review" not "Needs Attention")
+      console.log(`${LOG_TAG} Synthetic RO detected - leaving as "New" for manual review`);
+      statusChangeNote += ' (synthetic RO)';
     }
 
+    // First upsert the row with all data (creates row if not exists)
     const scheduleResult = await sheetWriter.upsertScheduleRowByRO(roPo, {
       ...mergedData,
       status,
       // Format timestamp to MM/DD/YYYY HH:mm
       timestampCreated: formatTimestamp(new Date())
     });
+
+    // Then update with full notes summary to track flow history
+    if (scheduleResult.success) {
+      await sheetWriter.updateScheduleRowWithFullNotes(roPo, {
+        status,
+        statusChangeNote
+      });
+    }
 
     if (!scheduleResult.success) {
       console.error(`${LOG_TAG} Failed to update schedule:`, scheduleResult.error);
@@ -1176,11 +1099,11 @@ async function processEmail(message) {
     // Step 6: Check if we should send initial notice (calibration required / not required)
     const docStatus = jobState.getDocumentStatus(roPo);
 
-    // Determine if calibration is needed based on Revv report or estimate scrub
+    // Determine if calibration is needed based on Revv report
+    // (No AI scrubbing - calibration requirements come from RevvADAS only)
     const hasRevvCalibrations = mergedData.requiredCalibrationsText &&
                                  mergedData.requiredCalibrationsText.trim().length > 0;
-    const needsCalibration = hasRevvCalibrations ||
-                              (mergedData.estimateScrubResult?.requiredFromEstimate?.length > 0);
+    const needsCalibration = hasRevvCalibrations;
 
     // Find PDF buffers from original attachments (for email attachments)
     let revvPdfBuffer = null;
@@ -1208,21 +1131,19 @@ async function processEmail(message) {
       }
     }
 
-    // === AUTOMATED EMAIL WORKFLOW WITH FEEDBACK LOOP ===
+    // === AUTOMATED EMAIL WORKFLOW (SIMPLIFIED - NO AI SCRUBBING) ===
     //
     // WORKFLOW:
-    // 1. Tech emails: estimate + RevvADAS PDF
-    // 2. Assistant scrubs estimate, compares to RevvADAS
-    // 3. Sources match? → YES: Auto-send confirmation to SHOP (Ready)
-    //                   → NO: Auto-send review request to TECH (Needs Attention)
-    // 4. Tech fixes RevvADAS, re-sends → Re-scrub → Loop back to step 3
+    // 1. Shop sends estimate → Status: "New" (waiting for tech to review in RevvADAS)
+    // 2. Tech completes Revv Report → Status: "Ready" (ready for calibration)
+    // 3. Tech sends post-scan + invoice → Status: "Completed"
     //
     // TWO EMAIL TYPES:
     // - COMPLETION: Has post-scan + invoice → Send job completion to SHOP
-    // - INITIAL: Has estimate + RevvADAS → Route based on verification status
+    // - INITIAL: Has RevvADAS report → Send confirmation to SHOP (Ready status)
 
     const hasCompletionDocs = postScanPdfBuffer && invoicePdfBuffer;
-    const hasInitialDocs = docStatus.hasEstimate && revvPdfBuffer;
+    const hasRevvReportForNotification = revvPdfBuffer && mergedData.shopName;
 
     // Step 6a: COMPLETION EMAIL - Send when technician provides final docs
     // (Completion emails always go to shop - no verification needed)
@@ -1253,71 +1174,42 @@ async function processEmail(message) {
         console.log(`${LOG_TAG} Completion email not sent: ${completionResult.error}`);
       }
     }
-    // Step 6b: INITIAL EMAIL - Use automated routing based on scrub verification
-    else if (hasInitialDocs && !isSyntheticRo) {
-      console.log(`${LOG_TAG} Processing initial docs for RO: ${roPo} - automated routing enabled`);
+    // Step 6b: INITIAL EMAIL - Send "Ready" notification when Revv Report is received
+    // (No scrub verification - just notify shop that the job is ready)
+    else if (hasRevvReportForNotification && !isSyntheticRo) {
+      console.log(`${LOG_TAG} Revv Report received for RO: ${roPo} - sending Ready notification`);
 
-      // Build scrub result object for handleScrubResult
-      const scrubResult = {
-        roPo,
-        shopName: mergedData.shopName,
-        vehicle: mergedData.vehicle || `${mergedData.vehicleYear || ''} ${mergedData.vehicleMake || ''} ${mergedData.vehicleModel || ''}`.trim(),
-        vin: mergedData.vin,
-        // From estimate scrub
-        requiredFromEstimate: mergedData.estimateScrubResult?.requiredFromEstimate || [],
-        foundOperations: mergedData.estimateScrubResult?.foundOperations || [],
-        status: mergedData.estimateScrubResult?.status || '',
-        statusMessage: mergedData.estimateScrubResult?.statusMessage || '',
-        needsAttention: mergedData.estimateScrubResult?.needsAttention || false,
-        // From RevvADAS (Column J)
-        requiredFromRevv: mergedData.estimateScrubResult?.requiredFromRevv || [],
-        rawRevvText: mergedData.requiredCalibrationsText || '',
-        actualRevvCount: mergedData.estimateScrubResult?.actualRevvCount || 0,
-        // Comparison results
-        missingCalibrations: mergedData.estimateScrubResult?.missingCalibrations || []
-      };
+      // Build info for shop notification
+      const vehicleStr = mergedData.vehicle ||
+        `${mergedData.vehicleYear || ''} ${mergedData.vehicleMake || ''} ${mergedData.vehicleModel || ''}`.trim();
 
-      // Extract sender email from "from" header (format: "Name <email@domain.com>")
-      let senderEmail = from;
-      const emailMatch = from.match(/<([^>]+)>/);
-      if (emailMatch) {
-        senderEmail = emailMatch[1];
-      }
+      // Parse calibrations from Revv Report text into array format for email
+      const calibrationsText = mergedData.requiredCalibrationsText || '';
+      const calibrationsList = calibrationsText
+        .split(/[;,]/)
+        .filter(s => s.trim().length > 0)
+        .map(cal => ({ name: cal.trim(), type: 'Static' }));
 
-      // Original email info for reply threading
-      const originalEmail = {
-        from: senderEmail,
-        messageId: message?.id,
-        subject: subject
-      };
+      // Try to send shop notification that job is ready
+      const shopEmail = await getShopEmailByName(mergedData.shopName);
+      if (shopEmail) {
+        const notifyResult = await emailResponder.sendCalibrationConfirmation({
+          shopName: mergedData.shopName,
+          shopEmail,
+          roPo,
+          vehicle: vehicleStr,
+          vin: mergedData.vin,
+          calibrations: calibrationsList,
+          revvPdfBuffer
+        });
 
-      // Use handleScrubResult for automated routing
-      // - Sources agree → Send to SHOP → Status: Ready
-      // - Sources disagree → Send to TECH → Status: Needs Attention
-      const routingResult = await emailResponder.handleScrubResult(
-        scrubResult,
-        originalEmail,
-        roPo,
-        {
-          revvPdfBuffer,
-          sheetWriter
+        if (notifyResult?.sent) {
+          console.log(`${LOG_TAG} ✅ RO ${roPo}: Ready notification sent to ${shopEmail}`);
+          const emailSentNote = `Ready notification sent to ${shopEmail} on ${new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })}`;
+          mergedData.notes = mergedData.notes ? `${mergedData.notes} | ${emailSentNote}` : emailSentNote;
         }
-      );
-
-      // Log the routing decision
-      if (routingResult.action === 'SENT_TO_SHOP') {
-        console.log(`${LOG_TAG} ✅ RO ${roPo}: Verified - confirmation sent to shop ${routingResult.recipient}`);
-        const emailSentNote = `✅ Confirmation sent to ${routingResult.recipient} on ${new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })}`;
-        mergedData.notes = mergedData.notes ? `${mergedData.notes} | ${emailSentNote}` : emailSentNote;
-      } else if (routingResult.action === 'SENT_TO_TECH') {
-        console.log(`${LOG_TAG} ⚠️ RO ${roPo}: Discrepancy - review request sent to tech ${routingResult.recipient}`);
-        const emailSentNote = `⚠️ Review request sent to ${routingResult.recipient} on ${new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })}`;
-        mergedData.notes = mergedData.notes ? `${mergedData.notes} | ${emailSentNote}` : emailSentNote;
-      } else if (routingResult.action === 'MANUAL_REQUIRED') {
-        console.log(`${LOG_TAG} ⚠️ RO ${roPo}: Manual action required - ${routingResult.error}`);
-        mergedData.notes = mergedData.notes
-          ? `${mergedData.notes} | Manual action required: ${routingResult.error}`
-          : `Manual action required: ${routingResult.error}`;
+      } else {
+        console.log(`${LOG_TAG} No email found for shop: ${mergedData.shopName} - skipping notification`);
       }
     }
 

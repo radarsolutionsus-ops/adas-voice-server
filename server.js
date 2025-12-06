@@ -143,12 +143,12 @@ const OPS_TOOLS = [
   {
     type: "function",
     name: "update_ro_status",
-    description: "Update the status of an existing RO.",
+    description: "Update the status of an existing RO. For cancellations use cancel_ro, for rescheduling use reschedule_ro.",
     parameters: {
       type: "object",
       properties: {
         roPo: { type: "string", description: "RO or PO number" },
-        status: { type: "string", enum: ["New", "Scheduled", "Ready", "In Progress", "Completed", "Cancelled"], description: "New status for the RO" },
+        status: { type: "string", enum: ["New", "Ready", "Scheduled", "Rescheduled", "Completed"], description: "New status (use cancel_ro or reschedule_ro for those actions)" },
         notes: { type: "string", description: "Additional notes to append" }
       },
       required: ["roPo", "status"]
@@ -208,6 +208,34 @@ const OPS_TOOLS = [
   },
   {
     type: "function",
+    name: "reschedule_ro",
+    description: "Reschedule an existing appointment to a new date/time. Use when shop or tech wants to change the appointment. Status becomes 'Rescheduled'.",
+    parameters: {
+      type: "object",
+      properties: {
+        roPo: { type: "string", description: "RO or PO number" },
+        newDate: { type: "string", description: "New date in YYYY-MM-DD format" },
+        newTime: { type: "string", description: "New time (e.g., '10:00 AM' or 'afternoon')" },
+        reason: { type: "string", description: "Reason for rescheduling" }
+      },
+      required: ["roPo", "newDate", "reason"]
+    }
+  },
+  {
+    type: "function",
+    name: "cancel_ro",
+    description: "Cancel a job. Requires a reason. Can be called by shop (via OPS) or tech. Always offer to reschedule first before cancelling.",
+    parameters: {
+      type: "object",
+      properties: {
+        roPo: { type: "string", description: "RO or PO number" },
+        reason: { type: "string", description: "Reason for cancellation (required)" }
+      },
+      required: ["roPo", "reason"]
+    }
+  },
+  {
+    type: "function",
     name: "oem_lookup",
     description: "Look up OEM ADAS calibration requirements, prerequisites, quirks, target specs, and programming requirements. Use to answer questions about specific brand calibration procedures, what tools are needed, what prerequisites apply, and any known issues.",
     parameters: {
@@ -222,20 +250,16 @@ const OPS_TOOLS = [
   }
 ];
 
-// TECH Assistant Tools
+// TECH Assistant Tools - 6 STATUS WORKFLOW
 const TECH_TOOLS = [
   {
     type: "function",
-    name: "tech_log_arrival",
-    description: "Log that a technician has arrived at a vehicle. Sets status to In Progress.",
+    name: "tech_get_ro",
+    description: "Look up RO details. Returns vehicle info, shop, status, required calibrations, and notes.",
     parameters: {
       type: "object",
       properties: {
-        roPo: { type: "string", description: "RO or PO number" },
-        vin: { type: "string", description: "VIN or partial VIN" },
-        odometer: { type: "string", description: "Current odometer reading" },
-        shopName: { type: "string", description: "Shop name" },
-        notes: { type: "string", description: "Initial notes" }
+        roPo: { type: "string", description: "RO or PO number to look up" }
       },
       required: ["roPo"]
     }
@@ -243,7 +267,7 @@ const TECH_TOOLS = [
   {
     type: "function",
     name: "tech_update_notes",
-    description: "Add notes to an RO during calibration work. Appends to existing notes.",
+    description: "Add notes to an RO. Appends to existing notes with timestamp.",
     parameters: {
       type: "object",
       properties: {
@@ -255,30 +279,17 @@ const TECH_TOOLS = [
   },
   {
     type: "function",
-    name: "tech_mark_completed",
-    description: "Mark an RO as completed after calibration is done.",
+    name: "cancel_ro",
+    description: "Cancel a job. A reason is required. The reason is logged in the flow history.",
     parameters: {
       type: "object",
       properties: {
         roPo: { type: "string", description: "RO or PO number" },
-        notes: { type: "string", description: "Completion summary (what was calibrated, pass/fail, issues)" }
+        reason: { type: "string", description: "Reason for cancellation (required)" }
       },
-      required: ["roPo"]
+      required: ["roPo", "reason"]
     }
   },
-  {
-    type: "function",
-    name: "tech_get_ro",
-    description: "Look up RO details. Returns vehicle info, shop, status, and existing notes.",
-    parameters: {
-      type: "object",
-      properties: {
-        roPo: { type: "string", description: "RO or PO number to look up" }
-      },
-      required: ["roPo"]
-    }
-  },
-  // REMOVED: tech_scrub_estimate - All estimate analysis now done manually via RevvADAS
   {
     type: "function",
     name: "oem_lookup",
@@ -291,20 +302,6 @@ const TECH_TOOLS = [
         query: { type: "string", description: "Optional: Free-text search query to search across all OEM data" }
       },
       required: []
-    }
-  },
-  {
-    type: "function",
-    name: "tech_set_status",
-    description: "Manually set the status of an RO.",
-    parameters: {
-      type: "object",
-      properties: {
-        roPo: { type: "string", description: "RO or PO number" },
-        status: { type: "string", enum: ["New", "Scheduled", "Ready", "In Progress", "Completed", "Cancelled"], description: "New status to set" },
-        reason: { type: "string", description: "Optional: Reason for the status change" }
-      },
-      required: ["roPo", "status"]
     }
   }
 ];
@@ -509,6 +506,48 @@ async function handleOpsToolCall(toolName, args) {
         };
       }
 
+      case "reschedule_ro": {
+        const { roPo, newDate, newTime, reason } = args;
+
+        // Get current appointment info
+        const current = await sheetWriter.getScheduleRowByRO(roPo);
+        if (!current) {
+          return { success: false, error: `RO ${roPo} not found` };
+        }
+
+        const oldDate = current.scheduledDate || current.scheduled_date || 'unscheduled';
+        const oldTime = current.scheduledTime || current.scheduled_time || '';
+
+        const statusChangeNote = `Rescheduled from ${oldDate} ${oldTime} to ${newDate} ${newTime || ''}: ${reason}`;
+
+        const result = await sheetWriter.updateScheduleRowWithFullNotes(roPo, {
+          status: "Rescheduled",
+          scheduledDate: newDate,
+          scheduledTime: newTime || '',
+          statusChangeNote: statusChangeNote
+        });
+
+        return result.success
+          ? { success: true, message: `Rescheduled to ${newDate} ${newTime || ''}. Previous: ${oldDate} ${oldTime}` }
+          : { success: false, error: result.error };
+      }
+
+      case "cancel_ro": {
+        const { roPo, reason } = args;
+        if (!reason || reason.trim() === '') {
+          return { success: false, error: "Cancellation reason is required" };
+        }
+
+        const result = await sheetWriter.updateScheduleRowWithFullNotes(roPo, {
+          status: "Cancelled",
+          statusChangeNote: `Cancelled: ${reason}`
+        });
+
+        return result.success
+          ? { success: true, message: `Job cancelled. Reason: ${reason}` }
+          : { success: false, error: result.error };
+      }
+
       case "oem_lookup": {
         // OEM Knowledge lookup - shared between OPS and TECH
         return handleOEMLookup(args);
@@ -559,64 +598,6 @@ async function handleTechToolCall(toolName, args) {
     }
 
     switch (toolName) {
-      case "tech_log_arrival": {
-        // FIXED: tech_log_arrival should ONLY update allowed tech fields
-        // NEVER overwrite: Shop Name, VIN, Vehicle, Required Calibrations
-        // CAN update: Status, Technician, DTCs, Notes (append only)
-        // NOTE: RO validation happens at the top of handleTechToolCall
-
-        // First, get existing row to preserve protected fields
-        const existingRow = await sheetWriter.getScheduleRowByRO(args.roPo);
-        if (!existingRow) {
-          return { success: false, error: `RO ${args.roPo} not found. Vehicle must be registered by OPS first.` };
-        }
-
-        // Build notes to append (not overwrite)
-        const existingNotes = existingRow.notes || '';
-        const arrivalNote = args.odometer
-          ? `[ARRIVED] Odometer: ${args.odometer}. ${args.notes || ''}`
-          : `[ARRIVED] ${args.notes || 'Tech on site'}`;
-        const newNotes = existingNotes
-          ? `${existingNotes} | ${arrivalNote}`
-          : arrivalNote;
-
-        // ONLY update allowed tech columns
-        const result = await sheetWriter.updateScheduleRow(args.roPo, {
-          status: "In Progress",
-          technician: args.techName || existingRow.technician_assigned || existingRow.technician,
-          notes: newNotes
-          // DO NOT include: vin, shopName, vehicle, requiredCalibrations
-        });
-
-        return result.success
-          ? { success: true, message: `Arrival logged for RO ${args.roPo}` }
-          : { success: false, error: result.error };
-      }
-
-      case "tech_update_notes": {
-        const row = await sheetWriter.getScheduleRowByRO(args.roPo);
-        const existingNotes = row?.notes || "";
-        const newNotes = existingNotes
-          ? `${existingNotes} ${args.notes}`
-          : args.notes;
-
-        const result = await sheetWriter.updateScheduleRow(args.roPo, { notes: newNotes });
-        return result.success
-          ? { success: true, message: "Notes updated" }
-          : { success: false, error: result.error };
-      }
-
-      case "tech_mark_completed": {
-        const result = await sheetWriter.updateScheduleRow(args.roPo, {
-          status: "Completed",
-          notes: args.notes,
-          completionTime: getESTISOTimestamp()
-        });
-        return result.success
-          ? { success: true, message: `RO ${args.roPo} marked as completed` }
-          : { success: false, error: result.error };
-      }
-
       case "tech_get_ro": {
         const row = await sheetWriter.getScheduleRowByRO(args.roPo);
         if (row) {
@@ -631,45 +612,47 @@ async function handleTechToolCall(toolName, args) {
             scheduledDate: row.scheduled_date,
             scheduledTime: row.scheduled_time,
             requiredCalibrations: row.required_calibrations,
-            notes: row.notes
+            notes: row.notes,
+            flowHistory: row.flow_history || row.flowHistory || ''
           };
         }
         return { found: false, message: `RO ${args.roPo} not found` };
       }
 
-      // REMOVED: tech_scrub_estimate case - All estimate analysis now done manually via RevvADAS
+      case "tech_update_notes": {
+        const row = await sheetWriter.getScheduleRowByRO(args.roPo);
+        const existingNotes = row?.notes || "";
+        const timestamp = getESTTimestamp();
+        const timestampedNote = `[${timestamp}] ${args.notes}`;
+        const newNotes = existingNotes
+          ? `${existingNotes} | ${timestampedNote}`
+          : timestampedNote;
+
+        const result = await sheetWriter.updateScheduleRow(args.roPo, { notes: newNotes });
+        return result.success
+          ? { success: true, message: "Notes updated" }
+          : { success: false, error: result.error };
+      }
+
+      case "cancel_ro": {
+        // Cancel job - requires a reason (same handler as OPS)
+        if (!args.reason || args.reason.trim() === '') {
+          return { success: false, error: "Cancellation reason is required" };
+        }
+
+        const result = await sheetWriter.updateScheduleRowWithFullNotes(args.roPo, {
+          status: "Cancelled",
+          statusChangeNote: `Cancelled: ${args.reason}`
+        });
+
+        return result.success
+          ? { success: true, message: `Job ${args.roPo} cancelled. Reason: ${args.reason}` }
+          : { success: false, error: result.error };
+      }
 
       case "oem_lookup": {
         // OEM Knowledge lookup - shared between OPS and TECH
         return handleOEMLookup(args);
-      }
-
-      case "tech_set_status": {
-        // Manual status override by technician
-        console.log(`[TECH_TOOL] Tech requesting status change for RO ${args.roPo}: ${args.status}`);
-
-        // Build override note
-        const timestamp = getESTTimestamp();
-        let note = `Status manually set to "${args.status}" by tech on ${timestamp}`;
-        if (args.reason) {
-          note += `. Reason: ${args.reason}`;
-        }
-
-        const result = await sheetWriter.updateScheduleRow(args.roPo, {
-          status: args.status,
-          notes: note
-        });
-
-        if (result.success) {
-          return {
-            success: true,
-            message: `Status updated to "${args.status}" for RO ${args.roPo}`,
-            roPo: args.roPo,
-            status: args.status
-          };
-        }
-
-        return { success: false, error: result.error || `Failed to update status for RO ${args.roPo}` };
       }
 
       default:

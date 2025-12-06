@@ -1,9 +1,9 @@
 /**
  * ADAS F1RST Operations - Google Apps Script
- * Web App for Node.js server communication
+ * 5-STATUS WORKFLOW + AUTO-REFRESH SIDEBAR + VIEW-ONLY + FLOW HISTORY
  *
  * Sheet: ADAS_FIRST_Operations
- * Main tab: ADAS_Schedule (Columns A-T)
+ * Main tab: ADAS_Schedule (Columns A-U)
  *
  * Column Mapping:
  * A: Timestamp Created (MM/dd/yyyy HH:mm)
@@ -11,11 +11,11 @@
  * C: RO/PO
  * D: VIN
  * E: Vehicle (Year Make Model)
- * F: Status
+ * F: Status (5 values: New, Ready, Scheduled, Completed, Cancelled)
  * G: Scheduled Date
  * H: Scheduled Time
  * I: Technician Assigned
- * J: Required Calibrations
+ * J: Required Calibrations (from Revv Report)
  * K: Completed Calibrations
  * L: DTCs
  * M: Revv Report PDF
@@ -24,8 +24,8 @@
  * P: Invoice Number
  * Q: Invoice Amount
  * R: Invoice Date
- * S: Notes (Short Preview - single line)
- * T: Full Scrub Text (hidden, for sidebar)
+ * S: Notes (Short Preview)
+ * T: Flow History (timestamped status changes - hidden)
  * U: OEM Position Statement links
  */
 
@@ -56,18 +56,19 @@ const COL = {
   INVOICE_AMOUNT: 16, // Q
   INVOICE_DATE: 17,   // R
   NOTES: 18,          // S
-  FULL_SCRUB: 19,     // T
+  FLOW_HISTORY: 19,   // T - Flow History (timestamped status changes)
   OEM_POSITION: 20    // U - OEM Position Statement links
 };
 
 /**
- * FINALIZED STATUS VALUES
+ * FINALIZED STATUS VALUES - 6 STATUSES
+ * Added "Rescheduled" for when appointments are changed
  */
 const VALID_STATUSES = [
   'New',
-  'Scheduled',
   'Ready',
-  'In Progress',
+  'Scheduled',
+  'Rescheduled',
   'Completed',
   'Cancelled'
 ];
@@ -76,17 +77,18 @@ const STATUS_MIGRATION = {
   'Not Ready': 'New',
   'Needs Attention': 'New',
   'Needs Review': 'New',
+  'In Progress': 'Scheduled',
   'Blocked': 'Cancelled'
 };
 
 // Status colors and icons (used in dropdown and sidebar)
 const STATUS_CONFIG = {
   'New':         { background: '#e8f0fe', fontColor: '#1a73e8', icon: 'fiber_new', btnClass: 'btn-new' },
-  'Scheduled':   { background: '#f3e8fd', fontColor: '#7c3aed', icon: 'event', btnClass: 'btn-scheduled' },
   'Ready':       { background: '#e6f4ea', fontColor: '#137333', icon: 'check_circle', btnClass: 'btn-ready' },
-  'In Progress': { background: '#fef7e0', fontColor: '#ea8600', icon: 'autorenew', btnClass: 'btn-progress' },
+  'Scheduled':   { background: '#f3e8fd', fontColor: '#7c3aed', icon: 'event', btnClass: 'btn-scheduled' },
+  'Rescheduled': { background: '#fff3e0', fontColor: '#e65100', icon: 'update', btnClass: 'btn-rescheduled' },
   'Completed':   { background: '#d2e3fc', fontColor: '#1967d2', icon: 'done_all', btnClass: 'btn-complete' },
-  'Cancelled':   { background: '#f1f3f4', fontColor: '#5f6368', icon: 'cancel', btnClass: 'btn-cancel' }
+  'Cancelled':   { background: '#fce8e6', fontColor: '#c5221f', icon: 'cancel', btnClass: 'btn-cancel' }
 };
 
 /**
@@ -1041,7 +1043,8 @@ function setScheduleDateTime(data) {
 
 /**
  * Update RO status - used by OPS/TECH assistants for status changes
- * Supports: New, Ready, Not Ready, In Progress, Completed, Needs Attention
+ * Supports: New, Ready, Scheduled, Completed, Cancelled (5 statuses only)
+ * Note: Cancelled can only be set via tech_cancel_job with reason
  * @param {Object} data - { roPo, status, notes }
  * @returns {Object} - { success: boolean, message?: string, error?: string }
  */
@@ -1320,15 +1323,94 @@ function onOpen() {
     .addSeparator()
 
     .addSubMenu(ui.createMenu('Admin & Setup')
-      .addItem('Setup Status Column (Run Once)', 'setupStatusColumn')
+      .addItem('Setup Status Column (5 Statuses)', 'setupStatusColumn')
       .addItem('Apply Status Colors', 'applyStatusColorFormatting')
+      .addItem('Install Auto-Refresh Trigger', 'installSelectionTrigger')
       .addItem('Populate OEM Links (All Rows)', 'populateAllMissingOemLinks')
       .addSeparator()
-      .addItem('Hide Column T', 'hideColumnT')
+      .addItem('Hide Column T (Flow History)', 'hideColumnT')
       .addItem('Refresh Row Heights', 'reduceRowHeights')
     )
 
     .addToUi();
+}
+
+/**
+ * Trigger that fires when selection changes
+ * Updates the sidebar if it's open
+ */
+function onSelectionChange(e) {
+  const range = e.range;
+  const sheet = range.getSheet();
+
+  // Only trigger for ADAS_Schedule sheet
+  if (sheet.getName() !== SCHEDULE_SHEET) return;
+
+  // Only trigger for data rows (not header)
+  const row = range.getRow();
+  if (row === 1) return;
+
+  // Store selected row for sidebar polling
+  PropertiesService.getScriptProperties().setProperty('SELECTED_ROW', row.toString());
+}
+
+/**
+ * Install the onSelectionChange trigger (run once)
+ */
+function installSelectionTrigger() {
+  // Remove existing triggers
+  const triggers = ScriptApp.getProjectTriggers();
+  triggers.forEach(function(trigger) {
+    if (trigger.getHandlerFunction() === 'onSelectionChange') {
+      ScriptApp.deleteTrigger(trigger);
+    }
+  });
+
+  // Create new trigger
+  ScriptApp.newTrigger('onSelectionChange')
+    .forSpreadsheet(SpreadsheetApp.getActive())
+    .onSelectionChange()
+    .create();
+
+  SpreadsheetApp.getUi().alert('Auto-refresh trigger installed! The sidebar will now update when you select different rows.');
+}
+
+/**
+ * Get currently selected row (for sidebar polling)
+ */
+function getSelectedRow() {
+  const stored = PropertiesService.getScriptProperties().getProperty('SELECTED_ROW');
+  if (stored) {
+    return parseInt(stored, 10);
+  }
+  const sheet = SpreadsheetApp.getActive().getSheetByName(SCHEDULE_SHEET);
+  if (sheet) {
+    return sheet.getActiveCell().getRow();
+  }
+  return null;
+}
+
+/**
+ * Check if current user can edit (owner or editor)
+ */
+function canUserEdit() {
+  try {
+    const ss = SpreadsheetApp.getActive();
+    const email = Session.getActiveUser().getEmail();
+    if (!email) return false;
+
+    // Owner can always edit
+    if (ss.getOwner() && ss.getOwner().getEmail() === email) {
+      return true;
+    }
+
+    // Check if user has edit access
+    const editors = ss.getEditors().map(function(e) { return e.getEmail(); });
+    return editors.includes(email);
+  } catch (e) {
+    // If we can't determine, default to view-only
+    return false;
+  }
 }
 
 /**
@@ -1346,11 +1428,11 @@ function setupStatusColumn() {
 
   const statusRange = sheet.getRange('F2:F1000');
 
-  // 1. DATA VALIDATION (DROPDOWN)
+  // 1. DATA VALIDATION (DROPDOWN) - 6 STATUSES
   const validationRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(VALID_STATUSES, true)
     .setAllowInvalid(false)
-    .setHelpText('Select: New, Scheduled, Ready, In Progress, Completed, Cancelled')
+    .setHelpText('Select: New, Ready, Scheduled, Rescheduled, Completed, Cancelled')
     .build();
 
   statusRange.setDataValidation(validationRule);
@@ -1385,26 +1467,28 @@ function setupStatusColumn() {
   SpreadsheetApp.getUi().alert(
     'Status Column Configured!',
     'Column F now has:\n\n' +
-    '✓ Dropdown with valid statuses only\n' +
+    '✓ Dropdown with 6 valid statuses\n' +
     '✓ Color coding applied\n\n' +
-    'Statuses: New, Scheduled, Ready, In Progress, Completed, Cancelled',
+    'Statuses: New, Ready, Scheduled, Rescheduled, Completed, Cancelled\n\n' +
+    'Note: Cancellation requires calling assistant with a reason.',
     SpreadsheetApp.getUi().ButtonSet.OK
   );
 }
 
 /**
- * Hide Column T (Reserved/deprecated scrub column)
+ * Hide Column T (Flow History - visible in sidebar only)
  */
 function hideColumnT() {
   const sheet = SpreadsheetApp.getActive().getSheetByName(SCHEDULE_SHEET);
   if (sheet) {
     sheet.hideColumns(20);  // Column T = 20
-    SpreadsheetApp.getUi().alert('Column T hidden.');
+    SpreadsheetApp.getUi().alert('Column T (Flow History) hidden. View flow history in the sidebar.');
   }
 }
 
 /**
  * Open Material UI Job Details Sidebar with status controls
+ * 5-STATUS WORKFLOW + AUTO-REFRESH + VIEW-ONLY + FLOW HISTORY
  */
 function openJobDetailsSidebar() {
   const ss = SpreadsheetApp.getActive();
@@ -1420,6 +1504,24 @@ function openJobDetailsSidebar() {
     SpreadsheetApp.getUi().alert('Please select a data row (not the header).');
     return;
   }
+
+  // Store selected row for auto-refresh
+  PropertiesService.getScriptProperties().setProperty('SELECTED_ROW', row.toString());
+
+  const html = buildSidebarHtml(row);
+  const htmlOutput = HtmlService.createHtmlOutput(html)
+    .setTitle('Job Details')
+    .setWidth(380);
+
+  SpreadsheetApp.getUi().showSidebar(htmlOutput);
+}
+
+/**
+ * Build sidebar HTML for a specific row
+ */
+function buildSidebarHtml(row) {
+  const sheet = SpreadsheetApp.getActive().getSheetByName(SCHEDULE_SHEET);
+  if (!sheet || row === 1) return '<html><body>Select a data row.</body></html>';
 
   const rowData = sheet.getRange(row, 1, 1, TOTAL_COLUMNS).getValues()[0];
 
@@ -1438,7 +1540,7 @@ function openJobDetailsSidebar() {
   const revvPdfUrl = rowData[COL.REVV_PDF] || '';
   const postScanUrl = rowData[COL.POSTSCAN_PDF] || '';
   const invoiceUrl = rowData[COL.INVOICE_PDF] || '';
-  const oemPosition = rowData[COL.OEM_POSITION] || '';
+  const flowHistory = rowData[COL.FLOW_HISTORY] || '';
 
   // Parse calibrations
   const calibrationList = requiredCals
@@ -1449,63 +1551,57 @@ function openJobDetailsSidebar() {
   const hasRevv = !!revvPdfUrl;
   const hasPostScan = !!postScanUrl;
   const hasInvoice = !!invoiceUrl;
-  const canComplete = hasRevv && hasPostScan && hasInvoice;
+  const canComplete = hasRevv && hasInvoice;  // Only Revv + Invoice required for completion
+  const userCanEdit = canUserEdit();
 
-  const statusColor = getStatusColor(status);
-  const statusIcon = getStatusIcon(status);
+  const cfg = STATUS_CONFIG[status] || STATUS_CONFIG['New'];
+  const statusColor = cfg.fontColor;
+  const statusIcon = cfg.icon;
+
+  // Flow history entries
+  const historyEntries = flowHistory
+    ? flowHistory.split('\\n').filter(function(e) { return e.trim().length > 0; })
+    : [];
 
   // Build HTML
-  const html = '<!DOCTYPE html>' +
+  var html = '<!DOCTYPE html>' +
 '<html>' +
 '<head>' +
 '  <base target="_top">' +
-'  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600&display=swap" rel="stylesheet">' +
 '  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">' +
 '  <style>' +
 '    * { box-sizing: border-box; }' +
-'    body { font-family: "Google Sans", "Roboto", Arial, sans-serif; padding: 0; margin: 0; background: #f8f9fa; color: #202124; }' +
+'    body { font-family: "Google Sans", Arial, sans-serif; padding: 0; margin: 0; background: #f8f9fa; color: #202124; }' +
 '    .header { background: linear-gradient(135deg, #1a73e8 0%, #4285f4 100%); color: white; padding: 24px 20px; }' +
-'    .header h2 { margin: 0 0 8px 0; font-size: 22px; font-weight: 500; }' +
+'    .header h2 { margin: 0 0 8px 0; font-size: 20px; font-weight: 500; }' +
 '    .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 500; background: ' + statusColor + '; color: white; }' +
 '    .content { padding: 16px 20px; }' +
 '    .section { background: white; border-radius: 12px; padding: 16px 20px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(60,64,67,0.1); }' +
-'    .section-title { font-weight: 500; color: #202124; margin-bottom: 14px; font-size: 14px; display: flex; align-items: center; gap: 10px; text-transform: uppercase; letter-spacing: 0.5px; }' +
+'    .section-title { font-weight: 500; color: #202124; margin-bottom: 14px; font-size: 13px; display: flex; align-items: center; gap: 10px; text-transform: uppercase; letter-spacing: 0.5px; }' +
 '    .section-title .material-icons { font-size: 20px; color: #5f6368; }' +
-'    .field { margin-bottom: 12px; }' +
-'    .field:last-child { margin-bottom: 0; }' +
-'    .field-label { font-size: 11px; color: #5f6368; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; font-weight: 500; }' +
-'    .field-value { font-size: 14px; color: #202124; word-break: break-word; }' +
-'    .cal-list { list-style: none; padding: 0; margin: 0; }' +
-'    .cal-list li { padding: 10px 14px; background: #e8f0fe; border-radius: 8px; margin-bottom: 8px; font-size: 13px; color: #1967d2; display: flex; align-items: center; gap: 8px; }' +
-'    .cal-list li .material-icons { font-size: 18px; }' +
-'    .doc-status { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: #f1f3f4; border-radius: 8px; margin-bottom: 8px; font-size: 13px; }' +
+'    .field { margin-bottom: 10px; }' +
+'    .field-label { font-size: 11px; color: #5f6368; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }' +
+'    .field-value { font-size: 14px; color: #202124; }' +
+'    .cal-item { padding: 8px 12px; background: #e8f0fe; border-radius: 6px; margin-bottom: 6px; font-size: 13px; color: #1967d2; }' +
+'    .doc-status { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 8px; margin-bottom: 8px; font-size: 13px; }' +
 '    .doc-status.present { background: #e6f4ea; color: #137333; }' +
 '    .doc-status.missing { background: #fce8e6; color: #c5221f; }' +
-'    .doc-status .material-icons { font-size: 18px; }' +
 '    .doc-status a { color: inherit; text-decoration: none; }' +
-'    .doc-status a:hover { text-decoration: underline; }' +
 '    .btn-group { display: flex; flex-direction: column; gap: 8px; }' +
-'    .btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 12px 16px; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s; font-family: inherit; }' +
-'    .btn .material-icons { font-size: 18px; }' +
+'    .btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit; }' +
 '    .btn-new { background: #e8f0fe; color: #1a73e8; }' +
-'    .btn-new:hover { background: #d2e3fc; }' +
-'    .btn-scheduled { background: #f3e8fd; color: #7c3aed; }' +
-'    .btn-scheduled:hover { background: #ede7f6; }' +
 '    .btn-ready { background: #e6f4ea; color: #137333; }' +
-'    .btn-ready:hover { background: #ceead6; }' +
-'    .btn-progress { background: #fef7e0; color: #ea8600; }' +
-'    .btn-progress:hover { background: #feefc3; }' +
+'    .btn-scheduled { background: #f3e8fd; color: #7c3aed; }' +
+'    .btn-rescheduled { background: #fff3e0; color: #e65100; }' +
 '    .btn-complete { background: #1a73e8; color: white; }' +
-'    .btn-complete:hover { background: #1557b0; }' +
 '    .btn-complete:disabled { background: #dadce0; color: #9aa0a6; cursor: not-allowed; }' +
-'    .btn-cancel { background: #f1f3f4; color: #5f6368; }' +
-'    .btn-cancel:hover { background: #e8eaed; }' +
-'    .completion-notice { background: #fef7e0; border-radius: 8px; padding: 12px 14px; font-size: 12px; color: #ea8600; margin-bottom: 12px; display: flex; align-items: flex-start; gap: 10px; }' +
-'    .completion-notice .material-icons { font-size: 18px; margin-top: 1px; }' +
 '    .empty { color: #9aa0a6; font-style: italic; font-size: 13px; }' +
-'    .notes-box { background: #f8f9fa; border-radius: 8px; padding: 12px; font-size: 13px; color: #3c4043; white-space: pre-wrap; }' +
-'    .current-status { border: 2px solid ' + statusColor + '; position: relative; }' +
-'    .current-status::after { content: "CURRENT"; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 9px; font-weight: 600; color: ' + statusColor + '; }' +
+'    .flow-history { max-height: 150px; overflow-y: auto; background: #f8f9fa; border-radius: 8px; padding: 10px; font-family: monospace; font-size: 11px; }' +
+'    .flow-entry { padding: 6px 0; border-bottom: 1px solid #e8eaed; color: #3c4043; }' +
+'    .flow-entry:last-child { border-bottom: none; }' +
+'    .view-only-notice { background: #fef7e0; border-radius: 8px; padding: 12px; font-size: 12px; color: #ea8600; }' +
+'    .cancel-notice { font-size: 11px; color: #5f6368; margin-top: 12px; padding: 10px; background: #f1f3f4; border-radius: 8px; }' +
+'    .current-status { border: 2px solid ' + statusColor + '; }' +
 '  </style>' +
 '</head>' +
 '<body>' +
@@ -1515,72 +1611,81 @@ function openJobDetailsSidebar() {
 '  </div>' +
 '  <div class="content">' +
 '    <div class="section">' +
-'      <div class="section-title"><span class="material-icons">directions_car</span>Vehicle Info</div>' +
-'      <div class="field"><div class="field-label">Vehicle</div><div class="field-value">' + (vehicle ? escapeHtml(vehicle) : '<span class="empty">Not specified</span>') + '</div></div>' +
-'      <div class="field"><div class="field-label">VIN</div><div class="field-value">' + (vin ? escapeHtml(vin) : '<span class="empty">Not specified</span>') + '</div></div>' +
-'      <div class="field"><div class="field-label">Shop</div><div class="field-value">' + (shopName ? escapeHtml(shopName) : '<span class="empty">Not specified</span>') + '</div></div>' +
-'      <div class="field"><div class="field-label">Technician</div><div class="field-value">' + (technician ? escapeHtml(technician) : '<span class="empty">Not assigned</span>') + '</div></div>' +
+'      <div class="section-title"><span class="material-icons">directions_car</span>Vehicle</div>' +
+'      <div class="field"><div class="field-label">Vehicle</div><div class="field-value">' + (vehicle || '<span class="empty">Not specified</span>') + '</div></div>' +
+'      <div class="field"><div class="field-label">VIN</div><div class="field-value">' + (vin || '<span class="empty">Not specified</span>') + '</div></div>' +
+'      <div class="field"><div class="field-label">Shop</div><div class="field-value">' + (shopName || '<span class="empty">Not specified</span>') + '</div></div>' +
+'      <div class="field"><div class="field-label">Technician</div><div class="field-value">' + (technician || '<span class="empty">Not assigned</span>') + '</div></div>' +
 '      <div class="field"><div class="field-label">Scheduled</div><div class="field-value">' + (scheduledDate ? escapeHtml(scheduledDate) + (scheduledTime ? ' at ' + escapeHtml(scheduledTime) : '') : '<span class="empty">Not scheduled</span>') + '</div></div>' +
 '    </div>' +
 '    <div class="section">' +
-'      <div class="section-title"><span class="material-icons">build</span>Required Calibrations (' + calibrationList.length + ')</div>' +
+'      <div class="section-title"><span class="material-icons">build</span>Calibrations (' + calibrationList.length + ')</div>' +
        (calibrationList.length > 0
-         ? '<ul class="cal-list">' + calibrationList.map(function(c) { return '<li><span class="material-icons">check_circle</span>' + escapeHtml(c) + '</li>'; }).join('') + '</ul>'
-         : '<div class="empty">No calibrations listed - awaiting Revv Report</div>') +
-       (completedCals ? '<div class="field" style="margin-top:12px;"><div class="field-label">Completed</div><div class="field-value">' + escapeHtml(completedCals) + '</div></div>' : '') +
+         ? calibrationList.map(function(c) { return '<div class="cal-item">' + escapeHtml(c) + '</div>'; }).join('')
+         : '<div class="empty">Awaiting Revv Report</div>') +
 '    </div>' +
 '    <div class="section">' +
 '      <div class="section-title"><span class="material-icons">folder</span>Documents</div>' +
-'      <div class="doc-status ' + (hasRevv ? 'present' : 'missing') + '">' +
-'        <span class="material-icons">' + (hasRevv ? 'check_circle' : 'cancel') + '</span>' +
-         (hasRevv ? '<a href="' + escapeHtml(revvPdfUrl) + '" target="_blank">Revv Report ✓</a>' : 'Revv Report - Missing') +
-'      </div>' +
-'      <div class="doc-status ' + (hasPostScan ? 'present' : 'missing') + '">' +
-'        <span class="material-icons">' + (hasPostScan ? 'check_circle' : 'cancel') + '</span>' +
-         (hasPostScan ? '<a href="' + escapeHtml(postScanUrl) + '" target="_blank">Post Scan ✓</a>' : 'Post Scan - Missing') +
-'      </div>' +
-'      <div class="doc-status ' + (hasInvoice ? 'present' : 'missing') + '">' +
-'        <span class="material-icons">' + (hasInvoice ? 'check_circle' : 'cancel') + '</span>' +
-         (hasInvoice ? '<a href="' + escapeHtml(invoiceUrl) + '" target="_blank">Invoice ✓</a>' : 'Invoice - Missing (required for completion)') +
-'      </div>' +
-       (oemPosition ? '<div class="field" style="margin-top:12px;"><div class="field-label">OEM Position Statement</div><div class="field-value"><a href="' + escapeHtml(oemPosition) + '" target="_blank" style="color:#1a73e8;">' + escapeHtml(oemPosition) + '</a></div></div>' : '') +
+'      <div class="doc-status ' + (hasRevv ? 'present' : 'missing') + '"><span class="material-icons">' + (hasRevv ? 'check_circle' : 'cancel') + '</span>' + (hasRevv ? '<a href="' + escapeHtml(revvPdfUrl) + '" target="_blank">Revv Report ✓</a>' : 'Revv Report - Missing') + '</div>' +
+'      <div class="doc-status ' + (hasPostScan ? 'present' : 'missing') + '"><span class="material-icons">' + (hasPostScan ? 'check_circle' : 'cancel') + '</span>' + (hasPostScan ? '<a href="' + escapeHtml(postScanUrl) + '" target="_blank">Post Scan ✓</a>' : 'Post Scan - Missing') + '</div>' +
+'      <div class="doc-status ' + (hasInvoice ? 'present' : 'missing') + '"><span class="material-icons">' + (hasInvoice ? 'check_circle' : 'cancel') + '</span>' + (hasInvoice ? '<a href="' + escapeHtml(invoiceUrl) + '" target="_blank">Invoice ✓</a>' : 'Invoice - Missing') + '</div>' +
 '    </div>' +
-     (notes ? '<div class="section"><div class="section-title"><span class="material-icons">notes</span>Notes</div><div class="notes-box">' + escapeHtml(notes) + '</div></div>' : '') +
 '    <div class="section">' +
+'      <div class="section-title"><span class="material-icons">history</span>Flow History</div>' +
+'      <div class="flow-history">' + (historyEntries.length > 0 ? historyEntries.map(function(e) { return '<div class="flow-entry">' + escapeHtml(e) + '</div>'; }).join('') : '<div class="empty">No history yet</div>') + '</div>' +
+'    </div>';
+
+  // Status controls - only show if user can edit
+  if (userCanEdit) {
+    html += '<div class="section">' +
 '      <div class="section-title"><span class="material-icons">swap_horiz</span>Update Status</div>' +
-       (!canComplete ? '<div class="completion-notice"><span class="material-icons">info</span><div>To mark as Completed, all documents must be present: Revv Report, Post Scan, and Invoice.</div></div>' : '') +
 '      <div class="btn-group">' +
-'        <button class="btn btn-new ' + (status === 'New' ? 'current-status' : '') + '" onclick="setStatus(\'New\')"><span class="material-icons">fiber_new</span> New</button>' +
-'        <button class="btn btn-scheduled ' + (status === 'Scheduled' ? 'current-status' : '') + '" onclick="setStatus(\'Scheduled\')"><span class="material-icons">event</span> Scheduled</button>' +
-'        <button class="btn btn-ready ' + (status === 'Ready' ? 'current-status' : '') + '" onclick="setStatus(\'Ready\')"><span class="material-icons">check</span> Ready</button>' +
-'        <button class="btn btn-progress ' + (status === 'In Progress' ? 'current-status' : '') + '" onclick="setStatus(\'In Progress\')"><span class="material-icons">autorenew</span> In Progress</button>' +
-'        <button class="btn btn-complete ' + (status === 'Completed' ? 'current-status' : '') + '" onclick="setStatus(\'Completed\')\" ' + (!canComplete ? 'disabled' : '') + '><span class="material-icons">done_all</span> Completed</button>' +
-'        <button class="btn btn-cancel ' + (status === 'Cancelled' ? 'current-status' : '') + '" onclick="setStatus(\'Cancelled\')"><span class="material-icons">cancel</span> Cancelled</button>' +
+'        <button class="btn btn-new ' + (status === 'New' ? 'current-status' : '') + '" onclick="setStatus(\'New\')"><span class="material-icons">fiber_new</span>New</button>' +
+'        <button class="btn btn-ready ' + (status === 'Ready' ? 'current-status' : '') + '" onclick="setStatus(\'Ready\')"><span class="material-icons">check_circle</span>Ready</button>' +
+'        <button class="btn btn-scheduled ' + (status === 'Scheduled' ? 'current-status' : '') + '" onclick="setStatus(\'Scheduled\')"><span class="material-icons">event</span>Scheduled</button>' +
+'        <button class="btn btn-rescheduled ' + (status === 'Rescheduled' ? 'current-status' : '') + '" onclick="setStatus(\'Rescheduled\')"><span class="material-icons">update</span>Rescheduled</button>' +
+'        <button class="btn btn-complete ' + (status === 'Completed' ? 'current-status' : '') + '" onclick="setStatus(\'Completed\')" ' + (canComplete ? '' : 'disabled') + '><span class="material-icons">done_all</span>Completed</button>' +
 '      </div>' +
-'    </div>' +
-'  </div>' +
+'      <div class="cancel-notice"><strong>To cancel:</strong> Shop or Tech must call the assistant and provide a reason.</div>' +
+'    </div>';
+  } else {
+    html += '<div class="section">' +
+'      <div class="view-only-notice"><strong>View Only</strong><br>Status changes require calling the assistant.</div>' +
+'    </div>';
+  }
+
+  html += '  </div>' +
 '  <script>' +
-'    function setStatus(newStatus) {' +
-'      if (newStatus === "Completed") {' +
-'        if (!confirm("Mark this job as Completed?\\n\\nThis will trigger the closure email to the shop.")) { return; }' +
-'      }' +
-'      if (newStatus === "Cancelled") {' +
-'        if (!confirm("Cancel this job?")) { return; }' +
-'      }' +
+'    var currentRow = ' + row + ';' +
+'    setInterval(function() {' +
+'      google.script.run.withSuccessHandler(function(newRow) {' +
+'        if (newRow && newRow !== currentRow) {' +
+'          currentRow = newRow;' +
+'          google.script.run.withSuccessHandler(function(html) {' +
+'            if (html) document.body.innerHTML = html.replace(/<body[^>]*>/, "").replace(/<\\/body>/, "");' +
+'          }).getSidebarBodyHtml(newRow);' +
+'        }' +
+'      }).getSelectedRow();' +
+'    }, 500);' +
+'    function setStatus(s) {' +
+'      if (s === "Completed" && !confirm("Mark as Completed?")) return;' +
 '      google.script.run' +
-'        .withSuccessHandler(function() { alert("Status updated to: " + newStatus); google.script.host.close(); })' +
+'        .withSuccessHandler(function() { alert("Status updated to: " + s); google.script.host.close(); })' +
 '        .withFailureHandler(function(e) { alert("Error: " + e.message); })' +
-'        .updateRowStatusFromSidebar(' + row + ', newStatus);' +
+'        .updateRowStatusFromSidebar(' + row + ', s);' +
 '    }' +
 '  </script>' +
 '</body>' +
 '</html>';
 
-  const htmlOutput = HtmlService.createHtmlOutput(html)
-    .setTitle('RO ' + roPo)
-    .setWidth(380);
+  return html;
+}
 
-  SpreadsheetApp.getUi().showSidebar(htmlOutput);
+/**
+ * Get sidebar body HTML for auto-refresh (called from sidebar JS)
+ */
+function getSidebarBodyHtml(row) {
+  return buildSidebarHtml(row);
 }
 
 /**
@@ -1609,14 +1714,14 @@ function applyStatusColorFormatting() {
   // Define the status column range (F2:F1000)
   const statusRange = sheet.getRange('F2:F1000');
 
-  // Status color configurations (FINALIZED December 2024)
+  // Status color configurations (FINALIZED December 2024 - 6 statuses)
   const statusColors = [
     { text: 'New', background: '#e8f0fe', fontColor: '#1a73e8' },
-    { text: 'Scheduled', background: '#f3e8fd', fontColor: '#7c3aed' },
     { text: 'Ready', background: '#e6f4ea', fontColor: '#137333' },
-    { text: 'In Progress', background: '#fef7e0', fontColor: '#ea8600' },
+    { text: 'Scheduled', background: '#f3e8fd', fontColor: '#7c3aed' },
+    { text: 'Rescheduled', background: '#fff3e0', fontColor: '#e65100' },
     { text: 'Completed', background: '#d2e3fc', fontColor: '#1967d2' },
-    { text: 'Cancelled', background: '#f1f3f4', fontColor: '#5f6368' }
+    { text: 'Cancelled', background: '#fce8e6', fontColor: '#c5221f' }
   ];
 
   // Create conditional formatting rules for each status
@@ -1640,11 +1745,11 @@ function applyStatusColorFormatting() {
     'Status Colors Applied!',
     'The following colors are now active:\n\n' +
     '🔵 New = Blue\n' +
-    '🟣 Scheduled = Purple\n' +
     '🟢 Ready = Green\n' +
-    '🟡 In Progress = Yellow\n' +
+    '🟣 Scheduled = Purple\n' +
+    '🟠 Rescheduled = Orange\n' +
     '🔵 Completed = Dark Blue\n' +
-    '⚪ Cancelled = Gray',
+    '🔴 Cancelled = Red',
     SpreadsheetApp.getUi().ButtonSet.OK
   );
 }
@@ -1782,12 +1887,11 @@ function openUnifiedSidebar() {
     ? requiredCals.split(/[;,]/).map(function(c) { return c.trim(); }).filter(function(c) { return c.length > 0; })
     : [];
 
-  // Determine status color (FINALIZED December 2024)
+  // Determine status color (FINALIZED December 2024 - 5 statuses only)
   const statusColors = {
     'New': '#1a73e8',
-    'Scheduled': '#7c3aed',
     'Ready': '#137333',
-    'In Progress': '#ea8600',
+    'Scheduled': '#7c3aed',
     'Completed': '#1967d2',
     'Cancelled': '#5f6368'
   };
@@ -1892,15 +1996,15 @@ function openUnifiedSidebar() {
   <!-- Notes Section -->
   ${notes ? '<div class="section"><div class="section-title"><span class="icon">📝</span> Notes</div><div class="field-value">' + escapeHtml(notes) + '</div></div>' : ''}
 
-  <!-- Manual Override Section -->
+  <!-- Manual Override Section (6 statuses - Cancelled only via assistant) -->
   <div class="section override-section">
-    <div class="section-title"><span class="icon">⚡</span> Manual Status Override</div>
+    <div class="section-title"><span class="icon">⚡</span> Update Status</div>
     <button class="btn btn-secondary" onclick="setStatus('New')">📋 New</button>
-    <button class="btn btn-scheduled" onclick="setStatus('Scheduled')">📅 Scheduled</button>
     <button class="btn btn-ready" onclick="setStatus('Ready')">✓ Ready</button>
-    <button class="btn btn-secondary" onclick="setStatus('In Progress')">→ In Progress</button>
+    <button class="btn btn-scheduled" onclick="setStatus('Scheduled')">📅 Scheduled</button>
+    <button class="btn btn-rescheduled" onclick="setStatus('Rescheduled')">🔄 Rescheduled</button>
     <button class="btn btn-completed" onclick="setStatus('Completed')">✓ Completed</button>
-    <button class="btn btn-cancelled" onclick="setStatus('Cancelled')">✗ Cancelled</button>
+    <p style="font-size: 11px; color: #666; margin-top: 10px;">To cancel: Call assistant with reason.</p>
   </div>
 
   <script>
@@ -3217,24 +3321,86 @@ function updateRowStatusFromSidebar(rowNum, newStatus) {
 
   const validStatus = normalizeStatus(newStatus);
 
+  // CANCELLATION POLICY: Jobs can ONLY be cancelled via assistant with reason
+  if (validStatus === 'Cancelled') {
+    throw new Error('To cancel, call the assistant and provide a reason.');
+  }
+
+  const rowData = sheet.getRange(rowNum, 1, 1, TOTAL_COLUMNS).getValues()[0];
+  const currentStatus = rowData[COL.STATUS] || 'New';
+
   // Validate completion requirements
   if (validStatus === 'Completed') {
-    const rowData = sheet.getRange(rowNum, 1, 1, TOTAL_COLUMNS).getValues()[0];
     const hasRevv = !!rowData[COL.REVV_PDF];
-    const hasPostScan = !!rowData[COL.POSTSCAN_PDF];
     const hasInvoice = !!rowData[COL.INVOICE_PDF];
 
-    if (!hasRevv || !hasPostScan || !hasInvoice) {
+    if (!hasRevv || !hasInvoice) {
       const missing = [];
       if (!hasRevv) missing.push('Revv Report');
-      if (!hasPostScan) missing.push('Post Scan');
       if (!hasInvoice) missing.push('Invoice');
       throw new Error('Cannot complete. Missing: ' + missing.join(', '));
     }
   }
 
+  // Build timestamp in format: MM/DD H:MMp
+  const timestamp = Utilities.formatDate(new Date(), 'America/New_York', 'MM/dd h:mma').toLowerCase();
+
+  // Update flow history (Column T)
+  const statusPadded = validStatus.toUpperCase().padEnd(11);
+  const historyEntry = timestamp + '  ' + statusPadded + ' Manual update (sidebar)';
+  const currentHistory = rowData[COL.FLOW_HISTORY] || '';
+  const newHistory = currentHistory + (currentHistory ? '\n' : '') + historyEntry;
+
+  // Build full notes summary (Column S)
+  const roPo = rowData[COL.RO_PO];
+  const shopName = rowData[COL.SHOP_NAME];
+  const vehicle = rowData[COL.VEHICLE];
+  const technician = rowData[COL.TECHNICIAN];
+  const requiredCals = rowData[COL.REQUIRED_CALS];
+
+  const fullNotes = buildFullNotesSummary(roPo, shopName, vehicle, technician, requiredCals, newHistory);
+
+  // Update all fields
   sheet.getRange(rowNum, COL.STATUS + 1).setValue(validStatus);
+  sheet.getRange(rowNum, COL.NOTES + 1).setValue(fullNotes);
+  sheet.getRange(rowNum, COL.FLOW_HISTORY + 1).setValue(newHistory);
+
   return { success: true, status: validStatus };
+}
+
+/**
+ * Build a full notes summary from flow history
+ * Creates a formatted summary showing the entire RO journey
+ */
+function buildFullNotesSummary(roPo, shopName, vehicle, technician, requiredCals, flowHistory) {
+  var divider = '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━';
+  var lines = [];
+
+  // Header
+  lines.push('RO ' + (roPo || '?') + ' | ' + (shopName || 'Unknown') + ' | ' + (vehicle || 'TBD'));
+  lines.push(divider);
+
+  // Flow history entries
+  if (flowHistory) {
+    flowHistory.split('\n').forEach(function(entry) {
+      if (entry.trim()) lines.push(entry);
+    });
+  }
+
+  lines.push(divider);
+
+  // Footer
+  if (requiredCals) {
+    lines.push('Calibrations: ' + requiredCals);
+  }
+  if (technician || shopName) {
+    var parts = [];
+    if (technician) parts.push('Tech: ' + technician);
+    if (shopName) parts.push('Shop: ' + shopName);
+    lines.push(parts.join(' | '));
+  }
+
+  return lines.join('\n');
 }
 
 /**
@@ -3459,14 +3625,16 @@ function openApprovalSidebar() {
 '    <div class="section-title" style="font-size:12px;margin-top:8px;">Change Status:</div>' +
 '    <div class="btn-group">' +
 '      <button class="btn btn-secondary" onclick="changeStatus(\'New\')">New</button>' +
-'      <button class="btn btn-primary" onclick="changeStatus(\'Scheduled\')">Scheduled</button>' +
 '      <button class="btn btn-success" onclick="changeStatus(\'Ready\')">Ready</button>' +
 '    </div>' +
 '    <div class="btn-group">' +
-'      <button class="btn btn-warning" onclick="changeStatus(\'In Progress\')">In Progress</button>' +
-'      <button class="btn btn-primary" onclick="changeStatus(\'Completed\')">Completed</button>' +
-'      <button class="btn btn-secondary" onclick="changeStatus(\'Cancelled\')">Cancelled</button>' +
+'      <button class="btn btn-primary" onclick="changeStatus(\'Scheduled\')">Scheduled</button>' +
+'      <button class="btn btn-warning" onclick="changeStatus(\'Rescheduled\')">Rescheduled</button>' +
 '    </div>' +
+'    <div class="btn-group">' +
+'      <button class="btn btn-primary" onclick="changeStatus(\'Completed\')">Completed</button>' +
+'    </div>' +
+'    <p style="font-size:11px;color:#666;margin:8px 0 0 0;">To cancel: Call assistant with reason.</p>' +
 '    <div class="section-title" style="font-size:12px;margin-top:12px;">Manual Actions:</div>' +
 '    <button class="btn btn-primary" id="btnSendIntake" onclick="manualSendIntake()">📧 Send Intake Email to Shop</button>' +
 '    <button class="btn btn-success" id="btnSendClosure" onclick="manualSendClosure()">📧 Send Closure Email</button>' +
