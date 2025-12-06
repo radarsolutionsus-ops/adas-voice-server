@@ -1421,6 +1421,11 @@ const OPERATION_PATTERNS = [
   { pattern: /(?:suspension|strut|shock)\s+(?:replace|r[&\/]r)/gi, category: OPERATION_CATEGORIES.SUSPENSION },
   { pattern: /wheel\s+alignment/gi, category: OPERATION_CATEGORIES.ALIGNMENT },
   { pattern: /4[\s-]?wheel\s+align/gi, category: OPERATION_CATEGORIES.ALIGNMENT },
+  { pattern: /suspension\s+alignment/gi, category: OPERATION_CATEGORIES.ALIGNMENT },
+  // Sublet alignment operations (e.g., "Subl Suspension Alignment")
+  { pattern: /subl(?:et)?\s+(?:suspension\s+)?alignment/gi, category: OPERATION_CATEGORIES.ALIGNMENT },
+  { pattern: /subl(?:et)?\s+(?:wheel\s+)?align/gi, category: OPERATION_CATEGORIES.ALIGNMENT },
+  { pattern: /(?:front|rear|4-wheel)\s+align/gi, category: OPERATION_CATEGORIES.ALIGNMENT },
 
   // Module replacements
   { pattern: /abs\s+(?:module|control|unit)/gi, category: OPERATION_CATEGORIES.MODULE_ABS },
@@ -1470,8 +1475,8 @@ const CATEGORY_TO_CALIBRATION = {
   [OPERATION_CATEGORIES.GRILLE]: ['Front Radar Calibration', 'Millimeter Wave Radar Calibration'],
   [OPERATION_CATEGORIES.HOOD]: ['Front Camera Calibration'],
   [OPERATION_CATEGORIES.WIRING]: ['ADAS System Check'],
-  [OPERATION_CATEGORIES.SUSPENSION]: ['Wheel Alignment', 'ADAS Calibration Check'],
-  [OPERATION_CATEGORIES.ALIGNMENT]: ['ADAS Calibration Check'],
+  [OPERATION_CATEGORIES.SUSPENSION]: ['Wheel Alignment', 'Steering Angle Sensor Reset', 'Yaw Rate Sensor Reset', 'ADAS Calibration Check'],
+  [OPERATION_CATEGORIES.ALIGNMENT]: ['Steering Angle Sensor Reset', 'Yaw Rate Sensor Reset', 'ADAS Calibration Check'],
   [OPERATION_CATEGORIES.MODULE_ABS]: ['ABS Module Initialization', 'Steering Angle Sensor Reset'],
   [OPERATION_CATEGORIES.MODULE_BCM]: ['BCM Programming', 'ADAS System Reset'],
   [OPERATION_CATEGORIES.MODULE_ECM]: ['ECM Programming'],

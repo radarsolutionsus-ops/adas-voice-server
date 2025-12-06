@@ -101,18 +101,21 @@ const CALIBRATION_ALIASES = {
   ],
 
   // Steering Angle Sensor / Yaw Rate Sensor variations
+  // CRITICAL: Alignment operations trigger SAS reset
   'steering angle': [
     'steering angle', 'sas', 'steering angle sensor', 'steering sensor reset',
     'sas reset', 'sas calibration', 'zero point', 'steering sensor',
     'steering position sensor', 'sas zero point', 'sas initialization',
-    'steering wheel position sensor', 'swps', 'torque sensor reset'
+    'steering wheel position sensor', 'swps', 'torque sensor reset',
+    'steering angle sensor reset', 'steering angle reset'
   ],
   'yaw rate': [
     'yaw rate', 'yaw rate sensor', 'yaw rate and acceleration',
     'yaw rate and acceleration sensor', 'yaw sensor', 'stability sensor',
     'g sensor', 'lateral acceleration sensor', 'vdc sensor',
     'vehicle dynamics sensor', 'imu', 'inertial measurement unit',
-    'gyro sensor', 'rotation rate sensor', 'stability control sensor'
+    'gyro sensor', 'rotation rate sensor', 'stability control sensor',
+    'yaw rate sensor reset', 'yaw rate reset', 'yaw acceleration'
   ],
 
   // Headlamp variations
