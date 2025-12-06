@@ -1164,6 +1164,35 @@ async function processEmail(message) {
       }
     }
 
+    // CRITICAL FIX: If pdfParser detected calibrations, we have a Revv Report
+    // This catches Revv PDFs even when filename detection fails
+    if (mergedData.requiredCalibrationsText && !mergedData.revvReportPdf) {
+      console.log(`${LOG_TAG} Calibrations detected but no Revv PDF link - searching uploads...`);
+
+      for (const upload of uploadResults.uploads) {
+        const nameWithoutExt = upload.filename.replace(/\.pdf$/i, '');
+        const isVinFilename = /^[A-HJ-NPR-Z0-9]{17}$/i.test(nameWithoutExt);
+
+        // Match by type or VIN filename
+        if (upload.type === 'revv_report' || isVinFilename) {
+          mergedData.revvReportPdf = upload.webViewLink;
+          console.log(`${LOG_TAG} *** MATCHED Revv PDF: ${upload.webViewLink}`);
+          break;
+        }
+      }
+
+      // Fallback: first non-estimate/invoice/scan if still not found
+      if (!mergedData.revvReportPdf) {
+        const fallback = uploadResults.uploads.find(u =>
+          !['estimate', 'shop_estimate', 'invoice', 'scan_report'].includes(u.type)
+        );
+        if (fallback) {
+          mergedData.revvReportPdf = fallback.webViewLink;
+          console.log(`${LOG_TAG} *** FALLBACK Revv PDF: ${fallback.webViewLink}`);
+        }
+      }
+    }
+
     // Step 3: Update Google Sheets
     // Determine appropriate status based on document types received
     // SIMPLIFIED STATUS LOGIC (6 statuses only):
@@ -1177,7 +1206,9 @@ async function processEmail(message) {
     console.log(`${LOG_TAG} mergedData.revvReportPdf: ${mergedData.revvReportPdf || 'NOT SET'}`);
     console.log(`${LOG_TAG} uploadResults.uploads:`, JSON.stringify(uploadResults.uploads.map(u => ({ filename: u.filename, type: u.type })), null, 2));
 
-    const hasRevvReport = mergedData.revvReportPdf || uploadResults.uploads.some(u => u.type === 'revv_report');
+    const hasRevvReport = mergedData.revvReportPdf ||
+      mergedData.requiredCalibrationsText ||  // Calibrations = Revv was parsed
+      uploadResults.uploads.some(u => u.type === 'revv_report');
     const hasEstimateOnly = (mergedData.estimatePdf || uploadResults.uploads.some(u =>
       u.type === 'shop_estimate' || u.type === 'estimate'
     )) && !hasRevvReport;
@@ -1416,33 +1447,70 @@ async function processEmail(message) {
 }
 
 /**
- * Simple PDF type detection from filename
- * Enhanced to detect RevvADAS PDFs with various naming conventions:
- * - VehID_XXXXXXXX.pdf (RevvADAS vehicle reports)
- * - *revv* or *calibration* in filename
- * - *adas* in filename (ADAS calibration reports)
+ * PDF type detection from filename
+ *
+ * KNOWN PATTERNS:
+ * - Revv Report: VIN.pdf (17 alphanumeric chars, no I/O/Q)
+ * - Invoice: VIN_invoice.pdf
+ * - Scan Report: Contains "scan" or "autel"
+ * - Estimate: Contains "estimate", "quote", or "repair order"
  */
 function detectPDFType(filename) {
+  if (!filename) return 'document';
+
   const lower = filename.toLowerCase();
-  if (lower.includes('invoice')) return 'invoice';
-  if (lower.includes('scan') || lower.includes('autel')) return 'scan_report';
-  // RevvADAS detection - enhanced patterns
-  // VehID_XXXXXXXX.pdf is the standard RevvADAS filename format
-  // Also check for other common RevvADAS patterns
+  const nameWithoutExt = filename.replace(/\.pdf$/i, '');
+
+  // VIN pattern: exactly 17 alphanumeric characters, no I/O/Q
+  const vinPattern = /^[A-HJ-NPR-Z0-9]{17}$/i;
+
+  // INVOICE: VIN_invoice.pdf pattern (check FIRST - more specific)
+  if (lower.includes('_invoice') || lower.includes('-invoice')) {
+    console.log(`${LOG_TAG} Detected Invoice PDF: ${filename}`);
+    return 'invoice';
+  }
+
+  // INVOICE: General invoice detection
+  if (lower.includes('invoice') || lower.includes('inv_') || lower.includes('inv-')) {
+    console.log(`${LOG_TAG} Detected Invoice PDF: ${filename}`);
+    return 'invoice';
+  }
+
+  // SCAN REPORT: Autel or scan in filename
+  if (lower.includes('scan') || lower.includes('autel') || lower.includes('postscan') || lower.includes('post-scan')) {
+    const isPostScan = lower.includes('post') || lower.includes('final') || lower.includes('after');
+    console.log(`${LOG_TAG} Detected ${isPostScan ? 'Post-' : ''}Scan Report: ${filename}`);
+    return 'scan_report';
+  }
+
+  // REVV REPORT: Pure VIN filename (most common RevvADAS pattern)
+  if (vinPattern.test(nameWithoutExt)) {
+    console.log(`${LOG_TAG} Detected RevvADAS PDF by VIN filename: ${filename}`);
+    return 'revv_report';
+  }
+
+  // REVV REPORT: Other RevvADAS patterns
   if (lower.includes('revv') ||
       lower.includes('calibration') ||
       lower.startsWith('vehid') ||
-      /^vehid[_-]?\w/i.test(lower) ||    // VehID_ followed by any word char
-      /^veh[_-]?\d+/i.test(lower) ||     // Veh123 or Veh_123 patterns
+      /^vehid[_-]?\w/i.test(lower) ||
+      /^veh[_-]?\d+/i.test(lower) ||
       lower.includes('adas operations') ||
       lower.includes('adas report') ||
-      lower.includes('adas_') ||         // adas_something.pdf
-      lower.includes('_adas') ||         // something_adas.pdf
-      /\d{17}.*\.pdf$/i.test(lower)) {   // Contains VIN (17 digits) in filename
+      lower.includes('adas_') ||
+      lower.includes('_adas')) {
     console.log(`${LOG_TAG} Detected RevvADAS PDF: ${filename}`);
     return 'revv_report';
   }
-  if (lower.includes('estimate') || lower.includes('quote') || lower.includes('repair order')) return 'estimate';
+
+  // ESTIMATE: Estimate/quote patterns
+  if (lower.includes('estimate') || lower.includes('quote') || lower.includes('repair order') || lower.includes('repair_order')) {
+    console.log(`${LOG_TAG} Detected Estimate PDF: ${filename}`);
+    return 'estimate';
+  }
+
+  // DEFAULT: Unknown document type
+  console.log(`${LOG_TAG} Unknown PDF type, defaulting to 'document': ${filename}`);
   return 'document';
 }
 
