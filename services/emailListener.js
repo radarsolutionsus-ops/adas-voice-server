@@ -957,19 +957,36 @@ async function processEmail(message) {
         scrubResult.requiredFromRevv = revvItems;
 
         // Determine match status
-        if (reconciliation.scrubOnly.length === 0 && reconciliation.revvOnly.length === 0) {
+        // LOGIC: RevvADAS is the SOURCE OF TRUTH
+        // - scrubOnly = estimate detected something RevvADAS didn't → POTENTIAL FALSE POSITIVE (needs review)
+        // - revvOnly = RevvADAS recommends something estimate didn't trigger → VALID EXTRA CALIBRATIONS (OK)
+        // Status is OK if all ESTIMATE items are covered by RevvADAS
+        if (reconciliation.scrubOnly.length === 0) {
+          // All estimate items are validated by RevvADAS
           scrubResult.status = 'MATCH';
           scrubResult.needsAttention = false;
-          console.log(`${LOG_TAG} Reconciliation result: MATCH (all calibrations verified)`);
+          console.log(`${LOG_TAG} Reconciliation result: MATCH (all estimate calibrations verified by RevvADAS)`);
+          if (reconciliation.revvOnly.length > 0) {
+            console.log(`${LOG_TAG} RevvADAS also recommends: ${reconciliation.revvOnly.map(r => r.rawText || r.system).join(', ')}`);
+          }
         } else {
-          scrubResult.status = 'DISCREPANCY';
+          // Estimate has items NOT in RevvADAS - potential false positives
+          scrubResult.status = 'NEEDS_REVIEW';
           scrubResult.needsAttention = true;
-          console.log(`${LOG_TAG} Reconciliation result: DISCREPANCY`);
-          console.log(`${LOG_TAG} Matched: ${reconciliation.matched.length}, EstimateOnly: ${reconciliation.scrubOnly.length}, RevvOnly: ${reconciliation.revvOnly.length}`);
+          console.log(`${LOG_TAG} Reconciliation result: NEEDS_REVIEW`);
+          console.log(`${LOG_TAG} Matched: ${reconciliation.matched.length}`);
+          console.log(`${LOG_TAG} Estimate-only (verify before billing): ${reconciliation.scrubOnly.map(s => s.system).join(', ')}`);
+          if (reconciliation.revvOnly.length > 0) {
+            console.log(`${LOG_TAG} RevvADAS-only (valid, include): ${reconciliation.revvOnly.map(r => r.rawText || r.system).join(', ')}`);
+          }
         }
 
-        // Update missing calibrations list
-        scrubResult.missingCalibrations = reconciliation.revvOnly.map(r => r.rawText || r.system);
+        // "Missing" = items in ESTIMATE that RevvADAS doesn't validate (potential false positives)
+        // These need human review before billing
+        scrubResult.unverifiedFromEstimate = reconciliation.scrubOnly.map(s => s.system);
+
+        // Extra from RevvADAS = valid calibrations that should be included
+        scrubResult.extraFromRevv = reconciliation.revvOnly.map(r => r.rawText || r.system);
       }
 
       // Use NEW formatting functions:

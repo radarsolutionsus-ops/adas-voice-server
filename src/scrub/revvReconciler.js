@@ -40,9 +40,13 @@ export const CALIBRATION_SYSTEM_MAP = {
     'multipurpose camera', 'mpc', 'safety sense camera', 'tss camera'
   ],
   'parking_sensors': [
-    'parking sensor', 'front parking sensor', 'rear parking sensor',
-    'ultrasonic', 'pdc', 'park distance', 'clearance sonar',
-    'back sonar', 'clearance/back sonar', 'sonar sensor'
+    'parking sensor', 'parking sensors',
+    'front parking sensor', 'front parking sensors',
+    'rear parking sensor', 'rear parking sensors',
+    'ultrasonic', 'ultrasonic sensor', 'ultrasonic sensors',
+    'pdc', 'park distance', 'park distance control',
+    'clearance sonar', 'back sonar', 'clearance/back sonar',
+    'sonar sensor', 'sonar sensors', 'bumper sensor', 'bumper sensors'
   ],
   'rear_radar': [
     'rear radar', 'bsm', 'blind spot', 'blind spot monitor',
