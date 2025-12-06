@@ -25,6 +25,7 @@ import pdfParser from './pdfParser.js';
 import sheetWriter, { getGmailTokenFromSheets, saveGmailTokenToSheets, getShopEmailByName } from './sheetWriter.js';
 import billingMailer from './billingMailer.js';
 import { formatScrubResultsAsNotes, getScrubSummary, formatPreviewNotes, formatFullScrub, analyzeEstimateWithLLM } from './estimateScrubber.js';
+import { reconcileCalibrations, normalizeToSystem, parseRevvCalibrations } from '../src/scrub/revvReconciler.js';
 import jobState from '../data/jobState.js';
 import shopNotifier from './shopNotifier.js';
 import emailResponder from './emailResponder.js';
@@ -861,6 +862,45 @@ async function processEmail(message) {
       mergedData.roPo = roPo;
     }
 
+    // Step 2a: CRITICAL - Fetch existing data from Google Sheets
+    // This ensures we have RevvADAS calibrations even if they came in a previous email
+    try {
+      console.log(`${LOG_TAG} Checking for existing sheet data for RO: ${roPo}`);
+      const existingRow = await sheetWriter.getScheduleRowByRO(roPo);
+
+      if (existingRow) {
+        console.log(`${LOG_TAG} Found existing sheet data for RO: ${roPo}`);
+
+        // Merge existing Required Calibrations (Column J) if not in current email
+        if (!mergedData.requiredCalibrationsText && existingRow.required_calibrations) {
+          mergedData.requiredCalibrationsText = existingRow.required_calibrations;
+          console.log(`${LOG_TAG} Loaded existing RevvADAS calibrations: ${existingRow.required_calibrations}`);
+        }
+
+        // Merge existing VIN if not in current email
+        if (!mergedData.vin && existingRow.vin) {
+          mergedData.vin = existingRow.vin;
+          console.log(`${LOG_TAG} Loaded existing VIN: ${existingRow.vin}`);
+        }
+
+        // Merge existing vehicle info if not in current email
+        if (!mergedData.vehicle && existingRow.vehicle) {
+          mergedData.vehicle = existingRow.vehicle;
+          console.log(`${LOG_TAG} Loaded existing vehicle: ${existingRow.vehicle}`);
+        }
+
+        // Merge existing shop name if not in current email
+        if (!mergedData.shopName && existingRow.shop_name) {
+          mergedData.shopName = existingRow.shop_name;
+          console.log(`${LOG_TAG} Loaded existing shop name: ${existingRow.shop_name}`);
+        }
+      } else {
+        console.log(`${LOG_TAG} No existing sheet data found for RO: ${roPo}`);
+      }
+    } catch (sheetErr) {
+      console.log(`${LOG_TAG} Could not fetch existing sheet data: ${sheetErr.message}`);
+    }
+
     // Step 2b: Handle estimate scrub results if present
     // IMPORTANT: Notes are set ONCE here and nowhere else to prevent duplication
     // Column S = preview_notes (short, clean, single line)
@@ -892,6 +932,45 @@ async function processEmail(message) {
       const actualRevvCount = revvItems.length > 0 ? revvItems.length : (scrubResult.requiredFromRevv?.length || 0);
 
       console.log(`${LOG_TAG} Actual Revv count from Column J: ${actualRevvCount}`);
+
+      // CRITICAL: Re-run reconciliation with the fetched RevvADAS data
+      // This fixes the issue where estimate scrub runs before RevvADAS data is available
+      if (rawRevvText && scrubResult.requiredFromEstimate?.length > 0) {
+        console.log(`${LOG_TAG} Re-running reconciliation with fetched RevvADAS data...`);
+        console.log(`${LOG_TAG} Estimate calibrations: ${JSON.stringify(scrubResult.requiredFromEstimate)}`);
+        console.log(`${LOG_TAG} RevvADAS calibrations: ${rawRevvText}`);
+
+        // Parse RevvADAS text into structured array
+        const parsedRevvCals = parseRevvCalibrations(rawRevvText);
+
+        // Map estimate calibrations to reconciler format
+        const estCalsForReconciler = scrubResult.requiredFromEstimate.map(cal => {
+          const name = typeof cal === 'object' ? (cal.calibration || cal.name || cal.system) : cal;
+          return { system: name, name: name };
+        });
+
+        // Run reconciliation
+        const reconciliation = reconcileCalibrations(estCalsForReconciler, parsedRevvCals);
+
+        // Update scrub result with reconciliation
+        scrubResult.reconciliation = reconciliation;
+        scrubResult.requiredFromRevv = revvItems;
+
+        // Determine match status
+        if (reconciliation.scrubOnly.length === 0 && reconciliation.revvOnly.length === 0) {
+          scrubResult.status = 'MATCH';
+          scrubResult.needsAttention = false;
+          console.log(`${LOG_TAG} Reconciliation result: MATCH (all calibrations verified)`);
+        } else {
+          scrubResult.status = 'DISCREPANCY';
+          scrubResult.needsAttention = true;
+          console.log(`${LOG_TAG} Reconciliation result: DISCREPANCY`);
+          console.log(`${LOG_TAG} Matched: ${reconciliation.matched.length}, EstimateOnly: ${reconciliation.scrubOnly.length}, RevvOnly: ${reconciliation.revvOnly.length}`);
+        }
+
+        // Update missing calibrations list
+        scrubResult.missingCalibrations = reconciliation.revvOnly.map(r => r.rawText || r.system);
+      }
 
       // Use NEW formatting functions:
       // formatPreviewNotes - SHORT clean preview for Column S
