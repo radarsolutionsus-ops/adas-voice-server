@@ -1,4 +1,23 @@
 /**
+ * ============================================================
+ * DEPRECATED - DO NOT USE
+ * ============================================================
+ *
+ * scrubEngine.js - ADAS Estimate Scrubbing Engine
+ *
+ * STATUS: DEPRECATED as of December 2024
+ *
+ * All estimate scrubbing is now performed MANUALLY by technicians
+ * using RevvADAS. The AI system does NOT analyze estimates.
+ *
+ * This file is preserved for future reference only.
+ * DO NOT import or use this module in production code.
+ *
+ * @deprecated Use RevvADAS manual scrubbing instead
+ * ============================================================
+ */
+
+/**
  * scrubEngine.js - Main ADAS Scrub Orchestration Engine
  *
  * This is the CORRECTED scrub logic that follows the proper flow:

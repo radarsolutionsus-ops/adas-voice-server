@@ -61,6 +61,38 @@ const COL = {
 };
 
 /**
+ * FINALIZED STATUS VALUES
+ */
+const VALID_STATUSES = [
+  'New',
+  'Scheduled',
+  'Ready',
+  'In Progress',
+  'Completed',
+  'Cancelled'
+];
+
+const STATUS_MIGRATION = {
+  'Not Ready': 'New',
+  'Needs Attention': 'New',
+  'Needs Review': 'New',
+  'Blocked': 'Cancelled'
+};
+
+/**
+ * Normalize status to valid values, migrating deprecated statuses
+ * @param {string} status - Raw status value
+ * @returns {string} - Normalized valid status
+ */
+function normalizeStatus(status) {
+  if (!status) return 'New';
+  const trimmed = String(status).trim();
+  if (VALID_STATUSES.includes(trimmed)) return trimmed;
+  if (STATUS_MIGRATION[trimmed]) return STATUS_MIGRATION[trimmed];
+  return 'New';
+}
+
+/**
  * Handle POST requests from Node.js server
  */
 function doPost(e) {
@@ -1008,9 +1040,10 @@ function updateROStatus(data) {
     return { success: false, error: 'Status required' };
   }
 
-  const validStatuses = ['New', 'Ready', 'Not Ready', 'In Progress', 'Completed', 'Needs Attention', 'Needs Review'];
-  if (!validStatuses.includes(newStatus)) {
-    return { success: false, error: `Invalid status: ${newStatus}. Valid: ${validStatuses.join(', ')}` };
+  // Normalize the status to valid values (handles deprecated statuses)
+  const normalizedStatus = normalizeStatus(newStatus);
+  if (!VALID_STATUSES.includes(normalizedStatus)) {
+    return { success: false, error: `Invalid status: ${newStatus}. Valid: ${VALID_STATUSES.join(', ')}` };
   }
 
   const ss = SpreadsheetApp.getActive();
@@ -1029,9 +1062,9 @@ function updateROStatus(data) {
     if (rowRoPo === String(roPo).trim()) {
       const rowNumber = i + 1; // 1-based row number
 
-      // Update Status (Column F)
-      sheet.getRange(rowNumber, COL.STATUS + 1).setValue(newStatus);
-      Logger.log(`Updated status for RO ${roPo}: ${newStatus}`);
+      // Update Status (Column F) - use normalized status
+      sheet.getRange(rowNumber, COL.STATUS + 1).setValue(normalizedStatus);
+      Logger.log(`Updated status for RO ${roPo}: ${normalizedStatus}`);
 
       // Append notes if provided (Column S)
       if (notes && notes.trim()) {
@@ -1310,24 +1343,14 @@ function applyStatusColorFormatting() {
   // Define the status column range (F2:F1000)
   const statusRange = sheet.getRange('F2:F1000');
 
-  // Status color configurations
+  // Status color configurations (FINALIZED December 2024)
   const statusColors = [
-    // Green - Completed & Ready
-    { text: 'Completed', background: '#e6f4ea', fontColor: '#137333' },
-    { text: 'Ready', background: '#e6f4ea', fontColor: '#137333' },
-
-    // Blue - New
     { text: 'New', background: '#e8f0fe', fontColor: '#1a73e8' },
-
-    // Yellow/Orange - In Progress
+    { text: 'Scheduled', background: '#f3e8fd', fontColor: '#7c3aed' },
+    { text: 'Ready', background: '#e6f4ea', fontColor: '#137333' },
     { text: 'In Progress', background: '#fef7e0', fontColor: '#ea8600' },
-
-    // Red - Needs Attention / Needs Review
-    { text: 'Needs Attention', background: '#fce8e6', fontColor: '#c5221f' },
-    { text: 'Needs Review', background: '#fce8e6', fontColor: '#c5221f' },
-
-    // Gray - Not Ready
-    { text: 'Not Ready', background: '#f1f3f4', fontColor: '#5f6368' }
+    { text: 'Completed', background: '#d2e3fc', fontColor: '#1967d2' },
+    { text: 'Cancelled', background: '#f1f3f4', fontColor: '#5f6368' }
   ];
 
   // Create conditional formatting rules for each status
@@ -1350,11 +1373,12 @@ function applyStatusColorFormatting() {
   SpreadsheetApp.getUi().alert(
     'Status Colors Applied!',
     'The following colors are now active:\n\n' +
-    '🟢 Completed/Ready = Green\n' +
     '🔵 New = Blue\n' +
+    '🟣 Scheduled = Purple\n' +
+    '🟢 Ready = Green\n' +
     '🟡 In Progress = Yellow\n' +
-    '🔴 Needs Attention/Review = Red\n' +
-    '⚪ Not Ready = Gray',
+    '🔵 Completed = Dark Blue\n' +
+    '⚪ Cancelled = Gray',
     SpreadsheetApp.getUi().ButtonSet.OK
   );
 }
@@ -1492,15 +1516,14 @@ function openUnifiedSidebar() {
     ? requiredCals.split(/[;,]/).map(function(c) { return c.trim(); }).filter(function(c) { return c.length > 0; })
     : [];
 
-  // Determine status color
+  // Determine status color (FINALIZED December 2024)
   const statusColors = {
-    'Ready': '#34a853',
-    'Completed': '#1a73e8',
-    'In Progress': '#fbbc04',
-    'Needs Attention': '#ea4335',
-    'Needs Review': '#ea4335',
-    'Not Ready': '#9aa0a6',
-    'New': '#5f6368'
+    'New': '#1a73e8',
+    'Scheduled': '#7c3aed',
+    'Ready': '#137333',
+    'In Progress': '#ea8600',
+    'Completed': '#1967d2',
+    'Cancelled': '#5f6368'
   };
   const statusColor = statusColors[status] || '#5f6368';
 
@@ -1606,10 +1629,12 @@ function openUnifiedSidebar() {
   <!-- Manual Override Section -->
   <div class="section override-section">
     <div class="section-title"><span class="icon">⚡</span> Manual Status Override</div>
-    <button class="btn btn-ready" onclick="setStatus('Ready')">✓ Mark Ready</button>
-    <button class="btn btn-attention" onclick="setStatus('Needs Attention')">⚠ Needs Attention</button>
-    <button class="btn btn-completed" onclick="setStatus('Completed')">✓ Mark Completed</button>
+    <button class="btn btn-secondary" onclick="setStatus('New')">📋 New</button>
+    <button class="btn btn-scheduled" onclick="setStatus('Scheduled')">📅 Scheduled</button>
+    <button class="btn btn-ready" onclick="setStatus('Ready')">✓ Ready</button>
     <button class="btn btn-secondary" onclick="setStatus('In Progress')">→ In Progress</button>
+    <button class="btn btn-completed" onclick="setStatus('Completed')">✓ Completed</button>
+    <button class="btn btn-cancelled" onclick="setStatus('Cancelled')">✗ Cancelled</button>
   </div>
 
   <script>
@@ -2922,8 +2947,58 @@ function sendClosureEmailToShop(rowNum) {
  */
 function updateRowStatusFromSidebar(rowNum, newStatus) {
   const sheet = SpreadsheetApp.getActive().getSheetByName(SCHEDULE_SHEET);
-  sheet.getRange(rowNum, COL.STATUS + 1).setValue(newStatus);
-  return { success: true };
+  if (!sheet) throw new Error('Sheet not found');
+
+  const validStatus = normalizeStatus(newStatus);
+
+  // Validate completion requirements
+  if (validStatus === 'Completed') {
+    const rowData = sheet.getRange(rowNum, 1, 1, TOTAL_COLUMNS).getValues()[0];
+    const hasRevv = !!rowData[COL.REVV_PDF];
+    const hasPostScan = !!rowData[COL.POSTSCAN_PDF];
+    const hasInvoice = !!rowData[COL.INVOICE_PDF];
+
+    if (!hasRevv || !hasPostScan || !hasInvoice) {
+      const missing = [];
+      if (!hasRevv) missing.push('Revv Report');
+      if (!hasPostScan) missing.push('Post Scan');
+      if (!hasInvoice) missing.push('Invoice');
+      throw new Error('Cannot complete. Missing: ' + missing.join(', '));
+    }
+  }
+
+  sheet.getRange(rowNum, COL.STATUS + 1).setValue(validStatus);
+  return { success: true, status: validStatus };
+}
+
+/**
+ * Check if RO is eligible for completion
+ * @param {string} roPo - RO or PO number
+ * @returns {Object} - Eligibility details
+ */
+function checkCompletionEligibility(roPo) {
+  const ss = SpreadsheetApp.getActive();
+  const sheet = ss.getSheetByName(SCHEDULE_SHEET);
+  if (!sheet) return { success: false, error: 'Sheet not found' };
+
+  const row = findRowByRO(sheet, roPo);
+  if (row === 0) return { success: false, error: 'RO not found', eligible: false };
+
+  const rowData = sheet.getRange(row, 1, 1, TOTAL_COLUMNS).getValues()[0];
+
+  const hasRevvReport = !!rowData[COL.REVV_PDF];
+  const hasPostScan = !!rowData[COL.POSTSCAN_PDF];
+  const hasInvoice = !!rowData[COL.INVOICE_PDF];
+
+  const eligible = hasRevvReport && hasPostScan && hasInvoice;
+
+  return {
+    success: true,
+    eligible: eligible,
+    hasRevvReport: hasRevvReport,
+    hasPostScan: hasPostScan,
+    hasInvoice: hasInvoice
+  };
 }
 
 /**
@@ -3117,12 +3192,14 @@ function openApprovalSidebar() {
 '    <p style="font-size:11px;color:#856404;margin-bottom:12px;">Use these only when automated workflow needs manual intervention.</p>' +
 '    <div class="section-title" style="font-size:12px;margin-top:8px;">Change Status:</div>' +
 '    <div class="btn-group">' +
+'      <button class="btn btn-secondary" onclick="changeStatus(\'New\')">New</button>' +
+'      <button class="btn btn-primary" onclick="changeStatus(\'Scheduled\')">Scheduled</button>' +
 '      <button class="btn btn-success" onclick="changeStatus(\'Ready\')">Ready</button>' +
-'      <button class="btn btn-warning" onclick="changeStatus(\'Needs Attention\')">Needs Attention</button>' +
 '    </div>' +
 '    <div class="btn-group">' +
-'      <button class="btn btn-primary" onclick="changeStatus(\'In Progress\')">In Progress</button>' +
-'      <button class="btn btn-secondary" onclick="changeStatus(\'Completed\')">Completed</button>' +
+'      <button class="btn btn-warning" onclick="changeStatus(\'In Progress\')">In Progress</button>' +
+'      <button class="btn btn-primary" onclick="changeStatus(\'Completed\')">Completed</button>' +
+'      <button class="btn btn-secondary" onclick="changeStatus(\'Cancelled\')">Cancelled</button>' +
 '    </div>' +
 '    <div class="section-title" style="font-size:12px;margin-top:12px;">Manual Actions:</div>' +
 '    <button class="btn btn-primary" id="btnSendIntake" onclick="manualSendIntake()">📧 Send Intake Email to Shop</button>' +

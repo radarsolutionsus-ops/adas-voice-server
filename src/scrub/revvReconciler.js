@@ -1,4 +1,15 @@
 /**
+ * ============================================================
+ * DEPRECATED - DO NOT USE
+ * ============================================================
+ *
+ * revvReconciler.js - Estimate vs RevvADAS Reconciliation
+ * STATUS: DEPRECATED as of December 2024
+ * @deprecated Use RevvADAS manual scrubbing instead
+ * ============================================================
+ */
+
+/**
  * revvReconciler.js - RevvADAS Comparison and Reconciliation
  *
  * This module compares scrub results against RevvADAS recommendations

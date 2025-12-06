@@ -1,4 +1,15 @@
 /**
+ * ============================================================
+ * DEPRECATED - DO NOT USE
+ * ============================================================
+ *
+ * calibrationTriggers.js - Repair-to-Calibration Trigger Mapping
+ * STATUS: DEPRECATED as of December 2024
+ * @deprecated Use RevvADAS manual scrubbing instead
+ * ============================================================
+ */
+
+/**
  * calibrationTriggers.js - Comprehensive Calibration Trigger Mapping Database
  *
  * This module provides the CORRECT mapping: REPAIR OPERATIONS → REQUIRED CALIBRATIONS

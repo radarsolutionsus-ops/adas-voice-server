@@ -1,4 +1,15 @@
 /**
+ * ============================================================
+ * DEPRECATED - DO NOT USE
+ * ============================================================
+ *
+ * estimateParser.js - Estimate PDF Text Parser
+ * STATUS: DEPRECATED as of December 2024
+ * @deprecated Use RevvADAS manual scrubbing instead
+ * ============================================================
+ */
+
+/**
  * estimateParser.js - Structured Repair Line Extraction from Estimates
  *
  * CRITICAL: This module extracts ONLY actual repair operations from estimates.

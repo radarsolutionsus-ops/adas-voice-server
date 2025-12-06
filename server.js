@@ -23,14 +23,16 @@ import sheetWriter from "./services/sheetWriter.js";
 import dispatcher from "./services/dispatcher.js";
 import emailListener from "./services/emailListener.js";
 import billingMailer from "./services/billingMailer.js";
+// DEPRECATED: Scrubbing imports removed - all estimate analysis now done manually via RevvADAS
+// import { formatScrubResultsAsNotes, getScrubSummary } from "./services/estimateScrubber.js";
+// import { scrubEstimateNew } from "./src/scrub/index.js";
+
+// Keep utility functions for RO extraction
 import {
-  formatScrubResultsAsNotes,
-  getScrubSummary,
   extractROFromText,
   convertSpanishNumbersToDigits,
   padRO
 } from "./services/estimateScrubber.js";
-import { scrubEstimateNew } from "./src/scrub/index.js";
 
 // Import utilities (lazy-loaded on demand)
 import downloadPlan from "./utils/downloadPlan.js";
@@ -141,12 +143,12 @@ const OPS_TOOLS = [
   {
     type: "function",
     name: "update_ro_status",
-    description: "Update the status of an existing RO. Status options: New, Not Ready, Ready, In Progress, Completed",
+    description: "Update the status of an existing RO.",
     parameters: {
       type: "object",
       properties: {
         roPo: { type: "string", description: "RO or PO number" },
-        status: { type: "string", enum: ["New", "Not Ready", "Ready", "In Progress", "Completed"], description: "New status for the RO" },
+        status: { type: "string", enum: ["New", "Scheduled", "Ready", "In Progress", "Completed", "Cancelled"], description: "New status for the RO" },
         notes: { type: "string", description: "Additional notes to append" }
       },
       required: ["roPo", "status"]
@@ -199,7 +201,7 @@ const OPS_TOOLS = [
         scheduledDate: { type: "string", description: "Date in YYYY-MM-DD format (e.g., 2024-12-15)" },
         scheduledTime: { type: "string", description: "Time or time range (e.g., '10:00 AM' or '9:00 AM - 10:00 AM')" },
         suggestSlot: { type: "boolean", description: "If true, suggests an available time slot instead of setting a specific time" },
-        override: { type: "boolean", description: "If true, allows scheduling even when status is 'Needs Attention'. Shop must confirm they want to proceed despite estimate/RevvADAS mismatch." }
+        override: { type: "boolean", description: "DEPRECATED - override no longer needed with simplified status workflow" }
       },
       required: ["roPo", "scheduledDate"]
     }
@@ -276,19 +278,7 @@ const TECH_TOOLS = [
       required: ["roPo"]
     }
   },
-  {
-    type: "function",
-    name: "tech_scrub_estimate",
-    description: "Scrub an estimate for ADAS-related operations. Analyzes estimate text to identify R&I/R&R operations, windshield replacement, sensor work, etc. and determines required calibrations. Compares against RevvADAS requirements if available.",
-    parameters: {
-      type: "object",
-      properties: {
-        roPo: { type: "string", description: "RO or PO number" },
-        estimateText: { type: "string", description: "Raw text content from the estimate (paste or dictate line items)" }
-      },
-      required: ["roPo", "estimateText"]
-    }
-  },
+  // REMOVED: tech_scrub_estimate - All estimate analysis now done manually via RevvADAS
   {
     type: "function",
     name: "oem_lookup",
@@ -306,12 +296,12 @@ const TECH_TOOLS = [
   {
     type: "function",
     name: "tech_set_status",
-    description: "Manually set the status of an RO. Use when the technician wants to mark a vehicle as Ready, Needs Attention, In Progress, or Completed.",
+    description: "Manually set the status of an RO.",
     parameters: {
       type: "object",
       properties: {
         roPo: { type: "string", description: "RO or PO number" },
-        status: { type: "string", enum: ["Ready", "Needs Attention", "In Progress", "Completed", "Not Ready"], description: "New status to set" },
+        status: { type: "string", enum: ["New", "Scheduled", "Ready", "In Progress", "Completed", "Cancelled"], description: "New status to set" },
         reason: { type: "string", description: "Optional: Reason for the status change" }
       },
       required: ["roPo", "status"]
@@ -647,25 +637,7 @@ async function handleTechToolCall(toolName, args) {
         return { found: false, message: `RO ${args.roPo} not found` };
       }
 
-      case "tech_scrub_estimate": {
-        console.log(`[TECH_TOOL] Scrubbing estimate for RO: ${args.roPo}`);
-        const scrubResult = await scrubEstimateNew(args.estimateText, args.roPo);
-
-        // Format notes and update sheet
-        const formattedNotes = formatScrubResultsAsNotes(scrubResult);
-        await sheetWriter.updateWithScrubResult(args.roPo, scrubResult, formattedNotes);
-
-        // Return summary for voice assistant
-        return {
-          success: true,
-          roPo: args.roPo,
-          operationsFound: scrubResult.foundOperations.length,
-          calibrationsRequired: scrubResult.requiredFromEstimate,
-          missingCalibrations: scrubResult.missingCalibrations,
-          needsAttention: scrubResult.needsAttention,
-          summary: getScrubSummary(scrubResult)
-        };
-      }
+      // REMOVED: tech_scrub_estimate case - All estimate analysis now done manually via RevvADAS
 
       case "oem_lookup": {
         // OEM Knowledge lookup - shared between OPS and TECH
