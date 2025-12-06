@@ -1080,6 +1080,7 @@ function getOemPortalFromVehicle(vehicle) {
 /**
  * Populate Column U (OEM Position) for a row based on vehicle make
  * Called from sidebar or can be run on a range
+ * Uses RichText to create clickable hyperlinks
  * @param {number} rowNum - Row number to update
  * @returns {Object} - { success: boolean, message: string }
  */
@@ -1101,10 +1102,27 @@ function populateOemLinkForRow(rowNum) {
     return { success: false, message: 'Could not determine OEM from vehicle: ' + vehicle };
   }
 
-  // Set the OEM link in Column U
-  sheet.getRange(rowNum, COL.OEM_POSITION + 1).setValue(oemInfo.url);
+  // Set the OEM link as clickable RichText hyperlink
+  setOemLinkAsRichText(sheet, rowNum, oemInfo.name, oemInfo.url);
 
   return { success: true, message: 'Added OEM link: ' + oemInfo.url };
+}
+
+/**
+ * Set OEM link as clickable RichText hyperlink
+ * This ensures links open in browser, not Google Drive
+ * @param {Sheet} sheet - The sheet to update
+ * @param {number} rowNum - Row number
+ * @param {string} makeName - OEM name (e.g., "Toyota")
+ * @param {string} url - The OEM1Stop URL
+ */
+function setOemLinkAsRichText(sheet, rowNum, makeName, url) {
+  const label = makeName + ' Position Statements';
+  const richText = SpreadsheetApp.newRichTextValue()
+    .setText(label)
+    .setLinkUrl(url)
+    .build();
+  sheet.getRange(rowNum, COL.OEM_POSITION + 1).setRichTextValue(richText);
 }
 
 /**
@@ -1141,7 +1159,8 @@ function populateAllMissingOemLinks() {
 
     const oemInfo = getOemPortalFromVehicle(vehicle);
     if (oemInfo) {
-      sheet.getRange(i + 2, COL.OEM_POSITION + 1).setValue(oemInfo.url);
+      // Use RichText for clickable hyperlink
+      setOemLinkAsRichText(sheet, i + 2, oemInfo.name, oemInfo.url);
       updated++;
     } else {
       failed++;

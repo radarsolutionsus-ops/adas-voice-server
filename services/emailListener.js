@@ -872,6 +872,19 @@ async function processEmail(message) {
       console.log(`${LOG_TAG} Estimate detected for RO ${roPo}, scrub complete`);
       const scrubResult = mergedData.estimateScrubResult;
 
+      // CRITICAL: Inject vehicle/VIN from mergedData into scrubResult
+      // This ensures formatFullScrub has the correct vehicle info
+      const vehicleString = mergedData.vehicle ||
+        `${mergedData.vehicleYear || ''} ${mergedData.vehicleMake || ''} ${mergedData.vehicleModel || ''}`.trim();
+      if (vehicleString && !scrubResult.vehicle) {
+        scrubResult.vehicle = vehicleString;
+        console.log(`${LOG_TAG} Injected vehicle into scrubResult: ${vehicleString}`);
+      }
+      if (mergedData.vin && !scrubResult.vin) {
+        scrubResult.vin = mergedData.vin;
+        console.log(`${LOG_TAG} Injected VIN into scrubResult: ${mergedData.vin}`);
+      }
+
       // Get the raw Required Calibrations text from Column J (from RevvADAS)
       // This ensures we use the actual Revv data for the count
       const rawRevvText = mergedData.requiredCalibrationsText || '';
@@ -948,6 +961,8 @@ async function processEmail(message) {
 
     // Add Drive links (using new column names from spec)
     // Also record documents in job state for tracking
+    // CRITICAL FIX: Use content-detected type from parsedPDFs when available
+    // Filename-based detection may miss RevvADAS PDFs with unusual names
     for (const upload of uploadResults.uploads) {
       const docInfo = {
         driveFileId: upload.fileId,
@@ -955,7 +970,16 @@ async function processEmail(message) {
         webViewLink: upload.webViewLink
       };
 
-      switch (upload.type) {
+      // Check if parser detected a more specific type for this file
+      const parsedPdf = mergedData.parsedPDFs?.find(p => p.filename === upload.filename);
+      const contentType = parsedPdf?.type; // Type detected from content by pdfParser
+      const uploadType = upload.type; // Type detected from filename
+
+      // Use content-detected type if available, otherwise fall back to filename-detected
+      const effectiveType = contentType || uploadType;
+      console.log(`${LOG_TAG} PDF type: ${upload.filename} → filename: ${uploadType}, content: ${contentType}, using: ${effectiveType}`);
+
+      switch (effectiveType) {
         case 'revv_report':
           mergedData.revvReportPdf = upload.webViewLink;
           jobState.recordDocument(roPo, jobState.DOC_TYPES.REVV_REPORT, docInfo);
@@ -971,10 +995,12 @@ async function processEmail(message) {
             jobState.recordDocument(roPo, jobState.DOC_TYPES.PRE_SCAN, docInfo);
           }
           break;
+        case 'adas_invoice':
         case 'invoice':
           mergedData.invoicePdf = upload.webViewLink;
           jobState.recordDocument(roPo, jobState.DOC_TYPES.INVOICE, docInfo);
           break;
+        case 'shop_estimate':
         case 'estimate':
           mergedData.estimatePdf = upload.webViewLink;
           jobState.recordDocument(roPo, jobState.DOC_TYPES.ESTIMATE, docInfo);

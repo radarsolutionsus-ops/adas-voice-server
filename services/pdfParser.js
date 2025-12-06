@@ -914,8 +914,69 @@ export async function parseAndMergePDFs(pdfs, roPo = null) {
     console.log(`${LOG_TAG} Using shop name from OTHER source (priority 4): ${mergedData.shopName}`);
   }
 
+  // RO EXTRACTION FALLBACK: Try to extract RO from filenames if not found in content
+  // Patterns: "PO_11999-PM__3_.pdf", "RO_12345.pdf", "11999-PM_estimate.pdf"
+  if (!mergedData.roPo && pdfs && pdfs.length > 0) {
+    for (const pdfDoc of pdfs) {
+      const extractedRO = extractROFromFilename(pdfDoc.filename);
+      if (extractedRO) {
+        mergedData.roPo = extractedRO;
+        console.log(`${LOG_TAG} RO extracted from filename: ${extractedRO} (from ${pdfDoc.filename})`);
+        break;
+      }
+    }
+  }
+
   console.log(`${LOG_TAG} Merged data for RO: ${mergedData.roPo}`);
   return mergedData;
+}
+
+/**
+ * Extract RO/PO number from filename
+ * Handles patterns like:
+ * - "PO_11999-PM__3_.pdf" → "11999-PM"
+ * - "RO_12345.pdf" → "12345"
+ * - "11999-PM_estimate.pdf" → "11999-PM"
+ * - "Estimate_12345-1.pdf" → "12345-1"
+ *
+ * @param {string} filename - Original filename
+ * @returns {string|null} - Extracted RO or null
+ */
+function extractROFromFilename(filename) {
+  if (!filename) return null;
+
+  // Remove extension
+  const baseName = filename.replace(/\.[^.]+$/, '');
+
+  // Pattern 1: PO_ or RO_ prefix
+  const prefixMatch = baseName.match(/(?:PO|RO)[_\-]?([A-Za-z0-9]+-?[A-Za-z0-9]*)/i);
+  if (prefixMatch && prefixMatch[1]) {
+    // Clean up trailing underscores and numbers that are suffixes (like __3_)
+    const cleaned = prefixMatch[1].replace(/_+\d*_*$/, '');
+    if (cleaned.length >= 4) {
+      console.log(`${LOG_TAG} RO from filename prefix: ${cleaned}`);
+      return cleaned;
+    }
+  }
+
+  // Pattern 2: RO-like pattern at start (digits with optional suffix)
+  const startMatch = baseName.match(/^(\d{4,8}(?:-[A-Za-z0-9]+)?)/);
+  if (startMatch && startMatch[1]) {
+    console.log(`${LOG_TAG} RO from filename start: ${startMatch[1]}`);
+    return startMatch[1];
+  }
+
+  // Pattern 3: Look for RO pattern anywhere in filename
+  const anyMatch = baseName.match(/(\d{4,8}-[A-Za-z0-9]+|\d{5,8})/);
+  if (anyMatch && anyMatch[1]) {
+    // Verify it's not a date or year
+    if (!/^20[12]\d{4}$/.test(anyMatch[1])) {
+      console.log(`${LOG_TAG} RO from filename pattern: ${anyMatch[1]}`);
+      return anyMatch[1];
+    }
+  }
+
+  return null;
 }
 
 /**
