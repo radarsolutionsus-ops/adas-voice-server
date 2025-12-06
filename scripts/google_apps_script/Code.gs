@@ -1292,29 +1292,136 @@ function populateAllMissingOemLinks() {
 
 /**
  * Create custom menu on spreadsheet open
- * SIMPLIFIED: One main action "View Status & Details" opens unified sidebar
  */
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
 
   ui.createMenu('ADAS Tools')
-    // Primary action - opens unified sidebar with all info + override buttons
-    .addItem('View Status & Details', 'openUnifiedSidebar')
+    .addItem('View Job Details', 'openJobDetailsSidebar')
 
     .addSeparator()
 
-    // Admin functions in submenu
     .addSubMenu(ui.createMenu('Admin & Setup')
+      .addItem('Setup Status Column (Run Once)', 'setupStatusColumn')
       .addItem('Apply Status Colors', 'applyStatusColorFormatting')
       .addItem('Populate OEM Links (All Rows)', 'populateAllMissingOemLinks')
-      .addItem('Setup Columns S & T (Run Once)', 'setupColumnsST')
-      .addItem('Hide Column T', 'hideFullScrubColumn')
-      .addItem('Show Column T', 'showFullScrubColumn')
       .addSeparator()
+      .addItem('Hide Column T', 'hideColumnT')
       .addItem('Refresh Row Heights', 'reduceRowHeights')
     )
 
     .addToUi();
+}
+
+/**
+ * Setup the Status column with dropdown and colors
+ * Call from: ADAS Tools → Admin & Setup → Setup Status Column
+ */
+function setupStatusColumn() {
+  const ss = SpreadsheetApp.getActive();
+  const sheet = ss.getSheetByName(SCHEDULE_SHEET);
+
+  if (!sheet) {
+    SpreadsheetApp.getUi().alert("Sheet 'ADAS_Schedule' not found.");
+    return;
+  }
+
+  // Define valid statuses
+  const statuses = ['New', 'Scheduled', 'Ready', 'In Progress', 'Completed', 'Cancelled'];
+
+  // Status column range (F2:F1000)
+  const statusRange = sheet.getRange('F2:F1000');
+
+  // ============================================
+  // 1. SET UP DATA VALIDATION (DROPDOWN)
+  // ============================================
+  const rule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(statuses, true)  // true = show dropdown
+    .setAllowInvalid(false)              // reject invalid entries
+    .setHelpText('Select a status: New, Scheduled, Ready, In Progress, Completed, Cancelled')
+    .build();
+
+  statusRange.setDataValidation(rule);
+
+  // ============================================
+  // 2. SET UP CONDITIONAL FORMATTING (COLORS)
+  // ============================================
+
+  // Clear existing rules for column F
+  const existingRules = sheet.getConditionalFormatRules();
+  const newRules = existingRules.filter(function(rule) {
+    const ranges = rule.getRanges();
+    return !ranges.some(function(r) {
+      return r.getColumn() === 6 && r.getNumColumns() === 1;
+    });
+  });
+
+  // Status color configurations
+  const statusColors = [
+    { text: 'New', background: '#e8f0fe', fontColor: '#1a73e8' },           // Blue
+    { text: 'Scheduled', background: '#f3e8fd', fontColor: '#7c3aed' },     // Purple
+    { text: 'Ready', background: '#e6f4ea', fontColor: '#137333' },         // Green
+    { text: 'In Progress', background: '#fef7e0', fontColor: '#ea8600' },   // Yellow/Orange
+    { text: 'Completed', background: '#d2e3fc', fontColor: '#1967d2' },     // Dark Blue
+    { text: 'Cancelled', background: '#f1f3f4', fontColor: '#5f6368' }      // Gray
+  ];
+
+  // Create conditional formatting rule for each status
+  for (var i = 0; i < statusColors.length; i++) {
+    var status = statusColors[i];
+    var formatRule = SpreadsheetApp.newConditionalFormatRule()
+      .whenTextEqualTo(status.text)
+      .setBackground(status.background)
+      .setFontColor(status.fontColor)
+      .setBold(true)
+      .setRanges([statusRange])
+      .build();
+
+    newRules.push(formatRule);
+  }
+
+  // Apply all rules
+  sheet.setConditionalFormatRules(newRules);
+
+  // ============================================
+  // 3. SET COLUMN WIDTH
+  // ============================================
+  sheet.setColumnWidth(6, 110);  // Column F = 110px
+
+  // ============================================
+  // 4. CONFIRM
+  // ============================================
+  SpreadsheetApp.getUi().alert(
+    'Status Column Configured!',
+    'Column F now has:\n\n' +
+    '✓ Dropdown with valid statuses only\n' +
+    '✓ Color coding:\n' +
+    '   🔵 New = Blue\n' +
+    '   🟣 Scheduled = Purple\n' +
+    '   🟢 Ready = Green\n' +
+    '   🟡 In Progress = Yellow\n' +
+    '   🔷 Completed = Dark Blue\n' +
+    '   ⚪ Cancelled = Gray',
+    SpreadsheetApp.getUi().ButtonSet.OK
+  );
+}
+
+/**
+ * Hide Column T (Reserved/deprecated scrub column)
+ */
+function hideColumnT() {
+  const sheet = SpreadsheetApp.getActive().getSheetByName(SCHEDULE_SHEET);
+  if (sheet) {
+    sheet.hideColumns(20);  // Column T = 20
+    SpreadsheetApp.getUi().alert('Column T hidden.');
+  }
+}
+
+/**
+ * Alias for openUnifiedSidebar for menu compatibility
+ */
+function openJobDetailsSidebar() {
+  openUnifiedSidebar();
 }
 
 /**
