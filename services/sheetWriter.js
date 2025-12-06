@@ -603,6 +603,13 @@ export async function upsertScheduleRowByRO(roPo, dataObject) {
     Object.entries(normalizedData).filter(([k, v]) => k === 'roPo' || v !== '')
   );
 
+  // DEBUG: Log critical fields
+  console.log(`${LOG_TAG} === UPSERT DATA FOR ${roPo} ===`);
+  console.log(`${LOG_TAG} status: ${cleanedData.status_from_shop || 'NOT SET'}`);
+  console.log(`${LOG_TAG} revv_report_pdf: ${cleanedData.revv_report_pdf || 'NOT SET'}`);
+  console.log(`${LOG_TAG} shop_name: ${cleanedData.shop_name || 'NOT SET'}`);
+  console.log(`${LOG_TAG} oem_position: ${cleanedData.oem_position || 'NOT SET'}`);
+
   // Use 'log_ro' action (matches GAS script)
   const result = await makeGASRequest('log_ro', cleanedData);
 

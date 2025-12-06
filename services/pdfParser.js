@@ -12,7 +12,8 @@
 import pdf from 'pdf-parse';
 import axios from 'axios';
 import { isEstimatePDF } from './estimateScrubber.js';
-import { scrubEstimateNew } from '../src/scrub/index.js';
+// DEPRECATED: AI scrubbing removed - all estimate analysis done manually in RevvADAS
+// import { scrubEstimateNew } from '../src/scrub/index.js';
 import dotenv from 'dotenv';
 
 // Ensure environment variables are loaded
@@ -130,6 +131,42 @@ function isInvalidShopName(name) {
 }
 
 /**
+ * Extract OEM Position Statement links from PDF text content
+ * Looks for oem1stop.com links and other OEM portal URLs
+ * @param {string} text - PDF text content
+ * @returns {string} - Semicolon-separated list of unique OEM URLs
+ */
+function extractOemLinksFromText(text) {
+  if (!text) return '';
+
+  const links = new Set();
+
+  // Match oem1stop.com links (most common)
+  const oem1stopMatches = text.match(/https?:\/\/(?:www\.)?oem1stop\.com\/[^\s\n"')>\]]+/gi);
+  if (oem1stopMatches) {
+    oem1stopMatches.forEach(link => links.add(link.replace(/[.,;:]+$/, ''))); // Remove trailing punctuation
+  }
+
+  // Match other OEM portal links (techinfo, position statements)
+  const portalMatches = text.match(/https?:\/\/[^\s\n"')>\]]*(?:techinfo|position|statement|oem)[^\s\n"')>\]]+/gi);
+  if (portalMatches) {
+    portalMatches.forEach(link => links.add(link.replace(/[.,;:]+$/, '')));
+  }
+
+  // Match generic calibration/ADAS related URLs
+  const adasMatches = text.match(/https?:\/\/[^\s\n"')>\]]*(?:calibration|adas)[^\s\n"')>\]]+/gi);
+  if (adasMatches) {
+    adasMatches.forEach(link => links.add(link.replace(/[.,;:]+$/, '')));
+  }
+
+  const result = [...links].join('; ');
+  if (result) {
+    console.log(`${LOG_TAG} Extracted OEM links from PDF: ${result}`);
+  }
+  return result;
+}
+
+/**
  * Extract shop name from PDF text content
  * Looks for shop name patterns in header areas
  * @param {string} text - PDF text content
@@ -214,6 +251,42 @@ function extractShopNameFromPDF(text, pdfType = null) {
     }
     console.log(`${LOG_TAG} Extracted shop name from 'from' pattern: ${name}`);
     return name;
+  }
+
+  return null;
+}
+
+/**
+ * Extract vehicle info (Year Make Model) from estimate text
+ * @param {string} text - PDF text content
+ * @returns {object|null} - { year, make, model, full } or null
+ */
+function extractVehicleInfoFromText(text) {
+  if (!text) return null;
+
+  // Common patterns for vehicle info in estimates
+  const patterns = [
+    // "2023 Toyota Camry" or "2023 TOYOTA CAMRY"
+    /\b(20[0-2]\d|19[9]\d)\s+([A-Za-z]+)\s+([A-Za-z0-9]+(?:\s+[A-Za-z0-9]+)?)\b/,
+    // "Year: 2023 Make: Toyota Model: Camry"
+    /Year[:\s]+(\d{4})\s*(?:\n|\s)*Make[:\s]+([A-Za-z]+)\s*(?:\n|\s)*Model[:\s]+([A-Za-z0-9\s]+)/i,
+    // "Vehicle: 2023 Toyota Camry"
+    /Vehicle[:\s]+(\d{4})\s+([A-Za-z]+)\s+([A-Za-z0-9]+(?:\s+[A-Za-z0-9]+)?)/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) {
+      const year = match[1];
+      const make = match[2].charAt(0).toUpperCase() + match[2].slice(1).toLowerCase();
+      const model = match[3].trim();
+      return {
+        year,
+        make,
+        model,
+        full: `${year} ${make} ${model}`
+      };
+    }
   }
 
   return null;
@@ -338,7 +411,7 @@ function detectPDFType(filename, textContent) {
 
   // ========== STEP 5: Legacy estimate detection ==========
   if (isEstimatePDF(textContent)) {
-    console.log(`${LOG_TAG} Detected estimate via scrubber`);
+    console.log(`${LOG_TAG} Detected estimate via pattern matching`);
     return PDF_TYPES.ESTIMATE;
   }
 
@@ -604,16 +677,13 @@ export async function parsePDF(pdfBuffer, filename, roPo = null) {
     // Step 2b: Try to extract shop name from PDF text
     const extractedShopName = extractShopNameFromPDF(textContent);
 
-    // Step 3: Handle estimate PDFs with scrubber
-    // Run scrubber for both ESTIMATE and SHOP_ESTIMATE types
+    // Step 3: Handle estimate PDFs - NO SCRUBBING (all analysis done manually in RevvADAS)
     if (pdfType === PDF_TYPES.ESTIMATE || pdfType === PDF_TYPES.SHOP_ESTIMATE) {
-      console.log(`${LOG_TAG} Estimate detected (${pdfType}), running scrubber`);
-      // Extract VIN from text for better brand detection
+      console.log(`${LOG_TAG} Estimate detected (${pdfType}), extracting basic info only`);
+
+      // Extract VIN from text
       const vinMatch = textContent.match(/\b([A-HJ-NPR-Z0-9]{17})\b/i);
       const extractedVin = vinMatch ? vinMatch[1].toUpperCase() : null;
-
-      // Pass VIN to scrubber for accurate brand detection
-      const scrubResult = await scrubEstimateNew(textContent, roPo, { vin: extractedVin });
 
       // Get brand from VIN if possible
       let extractedBrand = null;
@@ -624,6 +694,9 @@ export async function parsePDF(pdfBuffer, filename, roPo = null) {
         }
       }
 
+      // Extract vehicle info (Year Make Model) from estimate text
+      const vehicleInfo = extractVehicleInfoFromText(textContent);
+
       return {
         success: true,
         pdfType,
@@ -631,10 +704,13 @@ export async function parsePDF(pdfBuffer, filename, roPo = null) {
           documentType: pdfType === PDF_TYPES.SHOP_ESTIMATE ? 'shop_estimate' : 'estimate',
           shopName: extractedShopName,
           vin: extractedVin,
-          vehicleMake: extractedBrand, // Use VIN-based brand
+          vehicleMake: extractedBrand,
+          vehicleYear: vehicleInfo?.year || null,
+          vehicleModel: vehicleInfo?.model || null,
+          vehicle: vehicleInfo?.full || null,
           rawText: textContent.substring(0, 2000)
         },
-        scrubResult,
+        // scrubResult removed - no AI scrubbing
         filename,
         extractedAt: new Date().toISOString()
       };
@@ -655,6 +731,15 @@ export async function parsePDF(pdfBuffer, filename, roPo = null) {
     // Merge extracted shop name if LLM didn't find one
     if (!structuredData.shopName && extractedShopName) {
       structuredData.shopName = extractedShopName;
+    }
+
+    // For REVV_REPORT: Extract OEM Position Statement links from text
+    if (pdfType === PDF_TYPES.REVV_REPORT) {
+      const oemLinks = extractOemLinksFromText(textContent);
+      if (oemLinks) {
+        structuredData.oemLinks = oemLinks;
+        console.log(`${LOG_TAG} Added OEM links to Revv data: ${oemLinks}`);
+      }
     }
 
     return {
@@ -709,8 +794,9 @@ export async function parseAndMergePDFs(pdfs, roPo = null) {
     invoiceAmount: null,
     notes: '',
     parsedPDFs: [],
-    estimateScrubResult: null,     // Scrub result if estimate was found
-    hasEstimate: false             // Flag if estimate PDF was detected
+    // estimateScrubResult removed - no AI scrubbing
+    hasEstimate: false,            // Flag if estimate PDF was detected
+    hasShopEstimate: false         // Flag if shop estimate PDF was detected
   };
 
   // Track shop names by source for priority-based selection
@@ -815,27 +901,19 @@ export async function parseAndMergePDFs(pdfs, roPo = null) {
 
       case PDF_TYPES.SHOP_ESTIMATE:
         // Shop estimates - store as reference, do NOT populate billing fields
-        console.log(`${LOG_TAG} Shop estimate detected - NOT extracting billing data`);
+        // NO SCRUBBING - all analysis done manually in RevvADAS
+        console.log(`${LOG_TAG} Shop estimate detected - extracting basic info only (no scrubbing)`);
         mergedData.hasShopEstimate = true;
-        mergedData.hasEstimate = true;  // Flag for scrub processing in emailListener
+        mergedData.hasEstimate = true;  // Flag for status determination
 
-        // Process scrub result if present (now run for SHOP_ESTIMATE too)
-        if (result.scrubResult) {
-          mergedData.estimateScrubResult = result.scrubResult;
-          console.log(`${LOG_TAG} Scrub result attached from SHOP_ESTIMATE`);
-          // Update RO from scrub result if not already set
-          if (result.scrubResult.roPo && !mergedData.roPo) {
-            mergedData.roPo = result.scrubResult.roPo;
-          }
-          // Update VIN if not already set
-          if (result.scrubResult.vin && !mergedData.vin) {
-            mergedData.vin = result.scrubResult.vin;
-          }
+        // Merge vehicle info from estimate if not already set
+        if (data.vehicle && !mergedData.vehicle) {
+          mergedData.vehicle = data.vehicle;
         }
 
         if (data.estimateTotal) {
           // Add to notes as reference only
-          const shopNote = `Shop estimate: $${data.estimateTotal.toLocaleString()} (${data.shopName || 'Unknown shop'})`;
+          const shopNote = `Estimate received: $${data.estimateTotal?.toLocaleString() || 'N/A'} (${data.shopName || 'Unknown shop'})`;
           if (mergedData.notes) {
             mergedData.notes += ` | ${shopNote}`;
           } else {
@@ -875,23 +953,22 @@ export async function parseAndMergePDFs(pdfs, roPo = null) {
             mergedData.completedCalibrationsText = completedSummary;
           }
         }
+        // Merge OEM links extracted from Revv PDF
+        if (data.oemLinks && !mergedData.oemPosition) {
+          mergedData.oemPosition = data.oemLinks;
+          console.log(`${LOG_TAG} Merged OEM links from Revv: ${data.oemLinks}`);
+        }
         break;
 
       case PDF_TYPES.ESTIMATE:
-        // Estimate detected - store scrub result
+        // Estimate detected - no scrubbing, just mark as having estimate
+        // All calibration analysis done manually in RevvADAS
         mergedData.hasEstimate = true;
-        if (result.scrubResult) {
-          mergedData.estimateScrubResult = result.scrubResult;
-          // Update RO from scrub result if not already set
-          if (result.scrubResult.roPo && !mergedData.roPo) {
-            mergedData.roPo = result.scrubResult.roPo;
-          }
-          // Update VIN if not already set
-          if (result.scrubResult.vin && !mergedData.vin) {
-            mergedData.vin = result.scrubResult.vin;
-          }
-          // DON'T set notes here - let emailListener handle it ONCE
-          // to prevent duplication. Notes are in estimateScrubResult.formattedNotes
+        console.log(`${LOG_TAG} Estimate PDF detected (type: ESTIMATE)`);
+
+        // Merge vehicle info from estimate if not already set
+        if (data.vehicle && !mergedData.vehicle) {
+          mergedData.vehicle = data.vehicle;
         }
         break;
     }

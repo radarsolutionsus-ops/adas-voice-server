@@ -1048,10 +1048,28 @@ async function processEmail(message) {
           console.log(`${LOG_TAG} Loaded existing vehicle: ${existingRow.vehicle}`);
         }
 
-        // Merge existing shop name if not in current email
-        if (!mergedData.shopName && existingRow.shop_name) {
-          mergedData.shopName = existingRow.shop_name;
-          console.log(`${LOG_TAG} Loaded existing shop name: ${existingRow.shop_name}`);
+        // CRITICAL: ALWAYS preserve existing shop name from the sheet
+        // Revv Reports often extract garbage names like "Provided Instruments"
+        // The original estimate has the correct shop name
+        const invalidShopNames = [
+          'provided instruments', 'revvadas', 'revv', 'calibration',
+          'adas', 'unknown', 'n/a', 'na', 'none', 'test'
+        ];
+        const currentShopLower = (mergedData.shopName || '').toLowerCase().trim();
+        const existingShopName = existingRow.shop_name || '';
+
+        // Preserve existing shop name if:
+        // 1. Existing row has a shop name AND
+        // 2. Current mergedData has no shop name OR has an invalid/suspicious name
+        if (existingShopName) {
+          const isCurrentInvalid = !mergedData.shopName ||
+            invalidShopNames.some(inv => currentShopLower.includes(inv)) ||
+            currentShopLower.length < 3;
+
+          if (isCurrentInvalid) {
+            console.log(`${LOG_TAG} PRESERVING existing shop name: "${existingShopName}" (current was: "${mergedData.shopName || 'empty'}")`);
+            mergedData.shopName = existingShopName;
+          }
         }
       } else {
         console.log(`${LOG_TAG} No existing sheet data found for RO: ${roPo}`);
