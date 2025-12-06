@@ -421,6 +421,131 @@ function extractRoFromFilename(filename) {
 }
 
 /**
+ * Extract vehicle information (year, make, model, VIN) from estimate PDF text
+ * @param {string} estimateText - Full extracted PDF text
+ * @returns {object} - { year, make, model, vin, vehicle }
+ */
+function extractVehicleFromEstimate(estimateText) {
+  if (!estimateText) return {};
+
+  const result = {};
+
+  // VIN patterns - 17 character alphanumeric (excluding I, O, Q)
+  const vinPatterns = [
+    /VIN[\s:]*([A-HJ-NPR-Z0-9]{17})/i,
+    /V\.I\.N\.[\s:]*([A-HJ-NPR-Z0-9]{17})/i,
+    /Vehicle\s*ID[\s:]*([A-HJ-NPR-Z0-9]{17})/i,
+    // Standalone 17-char VIN pattern
+    /\b([A-HJ-NPR-Z0-9]{17})\b/
+  ];
+
+  for (const pattern of vinPatterns) {
+    const match = estimateText.match(pattern);
+    if (match && match[1]) {
+      result.vin = match[1].toUpperCase();
+      console.log(`${LOG_TAG} Extracted VIN from estimate: ${result.vin}`);
+      break;
+    }
+  }
+
+  // Year/Make/Model patterns
+  const vehiclePatterns = [
+    // "2024 Toyota Camry" or "2024 TOYOTA CAMRY"
+    /\b(20[0-2]\d|19\d\d)\s+([A-Za-z]+(?:\s+[A-Za-z]+)?)\s+([A-Za-z0-9\-]+(?:\s+[A-Za-z0-9\-]+)?)/,
+    // "Year: 2024  Make: Toyota  Model: Camry"
+    /Year[\s:]+(\d{4})[\s,;]+Make[\s:]+([A-Za-z]+)[\s,;]+Model[\s:]+([A-Za-z0-9\-\s]+)/i,
+    // "Vehicle: 2024 Toyota Camry"
+    /Vehicle[\s:]+(\d{4})\s+([A-Za-z]+)\s+([A-Za-z0-9\-\s]+)/i
+  ];
+
+  for (const pattern of vehiclePatterns) {
+    const match = estimateText.match(pattern);
+    if (match) {
+      result.year = match[1];
+      result.make = match[2].trim();
+      result.model = match[3].trim();
+      result.vehicle = `${result.year} ${result.make} ${result.model}`;
+      console.log(`${LOG_TAG} Extracted vehicle from estimate: ${result.vehicle}`);
+      break;
+    }
+  }
+
+  // If VIN found but no vehicle info, try to decode make from VIN
+  if (result.vin && !result.make) {
+    const vinMake = getVinMake(result.vin);
+    if (vinMake) {
+      result.make = vinMake;
+      console.log(`${LOG_TAG} Decoded make from VIN: ${vinMake}`);
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Get vehicle make from VIN using WMI (first 3 chars)
+ * @param {string} vin - 17-character VIN
+ * @returns {string|null} - Make name or null
+ */
+function getVinMake(vin) {
+  if (!vin || vin.length < 3) return null;
+
+  const wmi = vin.substring(0, 3).toUpperCase();
+  const wmi2 = vin.substring(0, 2).toUpperCase();
+
+  // Common WMI codes
+  const wmiCodes = {
+    // Toyota/Lexus
+    'JT': 'Toyota', '4T': 'Toyota', '5T': 'Toyota',
+    '2T': 'Lexus', 'JTH': 'Lexus',
+    // Honda/Acura
+    'JH': 'Honda', '1H': 'Honda', '2H': 'Honda', '5J': 'Honda',
+    '19U': 'Acura', 'JH4': 'Acura',
+    // Nissan/Infiniti
+    'JN': 'Nissan', '1N': 'Nissan', '5N': 'Nissan',
+    'JNK': 'Infiniti',
+    // Ford/Lincoln
+    '1F': 'Ford', '3F': 'Ford',
+    '5L': 'Lincoln',
+    // GM brands
+    '1G': 'GM', '2G': 'GM', '3G': 'GM',
+    '1G1': 'Chevrolet', '2G1': 'Chevrolet', '3G1': 'Chevrolet',
+    '1GC': 'Chevrolet', '3GC': 'Chevrolet',
+    '1GT': 'GMC', '2GT': 'GMC', '3GT': 'GMC',
+    '1G6': 'Cadillac', '1GY': 'Cadillac',
+    '1G4': 'Buick',
+    // Stellantis
+    '1C': 'Chrysler', '2C': 'Chrysler', '3C': 'Chrysler',
+    '2D': 'Dodge', '3D': 'Dodge',
+    '1J': 'Jeep', '1C4': 'Jeep',
+    // BMW/Mini
+    'WB': 'BMW', '5U': 'BMW',
+    'WMW': 'MINI',
+    // Mercedes
+    'WD': 'Mercedes-Benz', '4J': 'Mercedes-Benz', '55': 'Mercedes-Benz',
+    // VW/Audi/Porsche
+    'WV': 'Volkswagen', '3V': 'Volkswagen',
+    'WAU': 'Audi', 'WA1': 'Audi',
+    'WP0': 'Porsche', 'WP1': 'Porsche',
+    // Hyundai/Kia/Genesis
+    'KM': 'Hyundai', '5N': 'Hyundai',
+    'KNA': 'Kia', 'KND': 'Kia', '5X': 'Kia',
+    'KMH': 'Genesis',
+    // Subaru
+    'JF': 'Subaru', '4S': 'Subaru',
+    // Mazda
+    'JM': 'Mazda', '1YV': 'Mazda',
+    // Tesla
+    '5YJ': 'Tesla',
+    // Volvo
+    'YV': 'Volvo'
+  };
+
+  // Check 3-char WMI first, then 2-char
+  return wmiCodes[wmi] || wmiCodes[wmi2] || null;
+}
+
+/**
  * Extract RO/PO from estimate document content
  * Enhanced patterns for estimates: RO#, Work Order, PO#, Claim#, File#
  * @param {string} estimateText - Full extracted PDF text
@@ -861,6 +986,39 @@ async function processEmail(message) {
     // Add RO from email subject if not found in PDFs
     if (!mergedData.roPo) {
       mergedData.roPo = roPo;
+    }
+
+    // Step 2-EXTRA: Extract vehicle info from estimate PDFs if not already set
+    // This ensures we capture vehicle/VIN from estimates even when no Revv Report yet
+    if (!mergedData.vehicle || !mergedData.vin) {
+      for (const pdf of pdfs) {
+        const pdfType = detectPDFType(pdf.filename);
+        if (pdfType === 'estimate' || pdfType === 'shop_estimate' || pdfType === 'document') {
+          try {
+            const pdfParse = await import('pdf-parse');
+            const pdfData = await pdfParse.default(pdf.buffer);
+            const vehicleInfo = extractVehicleFromEstimate(pdfData.text);
+
+            if (vehicleInfo.vin && !mergedData.vin) {
+              mergedData.vin = vehicleInfo.vin;
+              console.log(`${LOG_TAG} Set VIN from estimate: ${vehicleInfo.vin}`);
+            }
+            if (vehicleInfo.vehicle && !mergedData.vehicle) {
+              mergedData.vehicle = vehicleInfo.vehicle;
+              mergedData.vehicleYear = vehicleInfo.year;
+              mergedData.vehicleMake = vehicleInfo.make;
+              mergedData.vehicleModel = vehicleInfo.model;
+              console.log(`${LOG_TAG} Set vehicle from estimate: ${vehicleInfo.vehicle}`);
+            }
+            if (vehicleInfo.make && !mergedData.vehicleMake) {
+              mergedData.vehicleMake = vehicleInfo.make;
+              console.log(`${LOG_TAG} Set make from estimate VIN: ${vehicleInfo.make}`);
+            }
+          } catch (parseErr) {
+            console.log(`${LOG_TAG} Could not parse estimate for vehicle info: ${parseErr.message}`);
+          }
+        }
+      }
     }
 
     // Step 2a: CRITICAL - Fetch existing data from Google Sheets

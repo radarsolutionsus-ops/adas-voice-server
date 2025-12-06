@@ -1323,7 +1323,7 @@ function onOpen() {
     .addSeparator()
 
     .addSubMenu(ui.createMenu('Admin & Setup')
-      .addItem('Setup Status Column (5 Statuses)', 'setupStatusColumn')
+      .addItem('Setup Status Column (6 Statuses)', 'setupStatusColumn')
       .addItem('Apply Status Colors', 'applyStatusColorFormatting')
       .addItem('Install Auto-Refresh Trigger', 'installSelectionTrigger')
       .addItem('Populate OEM Links (All Rows)', 'populateAllMissingOemLinks')
@@ -1388,29 +1388,6 @@ function getSelectedRow() {
     return sheet.getActiveCell().getRow();
   }
   return null;
-}
-
-/**
- * Check if current user can edit (owner or editor)
- */
-function canUserEdit() {
-  try {
-    const ss = SpreadsheetApp.getActive();
-    const email = Session.getActiveUser().getEmail();
-    if (!email) return false;
-
-    // Owner can always edit
-    if (ss.getOwner() && ss.getOwner().getEmail() === email) {
-      return true;
-    }
-
-    // Check if user has edit access
-    const editors = ss.getEditors().map(function(e) { return e.getEmail(); });
-    return editors.includes(email);
-  } catch (e) {
-    // If we can't determine, default to view-only
-    return false;
-  }
 }
 
 /**
@@ -1532,11 +1509,9 @@ function buildSidebarHtml(row) {
   const vehicle = rowData[COL.VEHICLE] || '';
   const vin = rowData[COL.VIN] || '';
   const requiredCals = rowData[COL.REQUIRED_CALS] || '';
-  const completedCals = rowData[COL.COMPLETED_CALS] || '';
   const technician = rowData[COL.TECHNICIAN] || '';
   const scheduledDate = rowData[COL.SCHEDULED_DATE] || '';
   const scheduledTime = rowData[COL.SCHEDULED_TIME] || '';
-  const notes = rowData[COL.NOTES] || '';
   const revvPdfUrl = rowData[COL.REVV_PDF] || '';
   const postScanUrl = rowData[COL.POSTSCAN_PDF] || '';
   const invoiceUrl = rowData[COL.INVOICE_PDF] || '';
@@ -1551,8 +1526,6 @@ function buildSidebarHtml(row) {
   const hasRevv = !!revvPdfUrl;
   const hasPostScan = !!postScanUrl;
   const hasInvoice = !!invoiceUrl;
-  const canComplete = hasRevv && hasInvoice;  // Only Revv + Invoice required for completion
-  const userCanEdit = canUserEdit();
 
   const cfg = STATUS_CONFIG[status] || STATUS_CONFIG['New'];
   const statusColor = cfg.fontColor;
@@ -1560,10 +1533,10 @@ function buildSidebarHtml(row) {
 
   // Flow history entries
   const historyEntries = flowHistory
-    ? flowHistory.split('\\n').filter(function(e) { return e.trim().length > 0; })
+    ? flowHistory.split('\n').filter(function(e) { return e.trim().length > 0; })
     : [];
 
-  // Build HTML
+  // Build HTML - VIEW ONLY (no status buttons)
   var html = '<!DOCTYPE html>' +
 '<html>' +
 '<head>' +
@@ -1587,21 +1560,11 @@ function buildSidebarHtml(row) {
 '    .doc-status.present { background: #e6f4ea; color: #137333; }' +
 '    .doc-status.missing { background: #fce8e6; color: #c5221f; }' +
 '    .doc-status a { color: inherit; text-decoration: none; }' +
-'    .btn-group { display: flex; flex-direction: column; gap: 8px; }' +
-'    .btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit; }' +
-'    .btn-new { background: #e8f0fe; color: #1a73e8; }' +
-'    .btn-ready { background: #e6f4ea; color: #137333; }' +
-'    .btn-scheduled { background: #f3e8fd; color: #7c3aed; }' +
-'    .btn-rescheduled { background: #fff3e0; color: #e65100; }' +
-'    .btn-complete { background: #1a73e8; color: white; }' +
-'    .btn-complete:disabled { background: #dadce0; color: #9aa0a6; cursor: not-allowed; }' +
 '    .empty { color: #9aa0a6; font-style: italic; font-size: 13px; }' +
-'    .flow-history { max-height: 150px; overflow-y: auto; background: #f8f9fa; border-radius: 8px; padding: 10px; font-family: monospace; font-size: 11px; }' +
+'    .flow-history { max-height: 200px; overflow-y: auto; background: #f8f9fa; border-radius: 8px; padding: 10px; font-family: monospace; font-size: 11px; }' +
 '    .flow-entry { padding: 6px 0; border-bottom: 1px solid #e8eaed; color: #3c4043; }' +
 '    .flow-entry:last-child { border-bottom: none; }' +
-'    .view-only-notice { background: #fef7e0; border-radius: 8px; padding: 12px; font-size: 12px; color: #ea8600; }' +
-'    .cancel-notice { font-size: 11px; color: #5f6368; margin-top: 12px; padding: 10px; background: #f1f3f4; border-radius: 8px; }' +
-'    .current-status { border: 2px solid ' + statusColor + '; }' +
+'    .view-notice { background: #e8f0fe; border-radius: 8px; padding: 12px; font-size: 12px; color: #1a73e8; text-align: center; }' +
 '  </style>' +
 '</head>' +
 '<body>' +
@@ -1626,35 +1589,16 @@ function buildSidebarHtml(row) {
 '    </div>' +
 '    <div class="section">' +
 '      <div class="section-title"><span class="material-icons">folder</span>Documents</div>' +
-'      <div class="doc-status ' + (hasRevv ? 'present' : 'missing') + '"><span class="material-icons">' + (hasRevv ? 'check_circle' : 'cancel') + '</span>' + (hasRevv ? '<a href="' + escapeHtml(revvPdfUrl) + '" target="_blank">Revv Report ✓</a>' : 'Revv Report - Missing') + '</div>' +
-'      <div class="doc-status ' + (hasPostScan ? 'present' : 'missing') + '"><span class="material-icons">' + (hasPostScan ? 'check_circle' : 'cancel') + '</span>' + (hasPostScan ? '<a href="' + escapeHtml(postScanUrl) + '" target="_blank">Post Scan ✓</a>' : 'Post Scan - Missing') + '</div>' +
-'      <div class="doc-status ' + (hasInvoice ? 'present' : 'missing') + '"><span class="material-icons">' + (hasInvoice ? 'check_circle' : 'cancel') + '</span>' + (hasInvoice ? '<a href="' + escapeHtml(invoiceUrl) + '" target="_blank">Invoice ✓</a>' : 'Invoice - Missing') + '</div>' +
+'      <div class="doc-status ' + (hasRevv ? 'present' : 'missing') + '"><span class="material-icons">' + (hasRevv ? 'check_circle' : 'cancel') + '</span>' + (hasRevv ? '<a href="' + escapeHtml(revvPdfUrl) + '" target="_blank">Revv Report</a>' : 'Revv Report - Missing') + '</div>' +
+'      <div class="doc-status ' + (hasPostScan ? 'present' : 'missing') + '"><span class="material-icons">' + (hasPostScan ? 'check_circle' : 'cancel') + '</span>' + (hasPostScan ? '<a href="' + escapeHtml(postScanUrl) + '" target="_blank">Post Scan</a>' : 'Post Scan - Missing') + '</div>' +
+'      <div class="doc-status ' + (hasInvoice ? 'present' : 'missing') + '"><span class="material-icons">' + (hasInvoice ? 'check_circle' : 'cancel') + '</span>' + (hasInvoice ? '<a href="' + escapeHtml(invoiceUrl) + '" target="_blank">Invoice</a>' : 'Invoice - Missing') + '</div>' +
 '    </div>' +
 '    <div class="section">' +
 '      <div class="section-title"><span class="material-icons">history</span>Flow History</div>' +
 '      <div class="flow-history">' + (historyEntries.length > 0 ? historyEntries.map(function(e) { return '<div class="flow-entry">' + escapeHtml(e) + '</div>'; }).join('') : '<div class="empty">No history yet</div>') + '</div>' +
-'    </div>';
-
-  // Status controls - only show if user can edit
-  if (userCanEdit) {
-    html += '<div class="section">' +
-'      <div class="section-title"><span class="material-icons">swap_horiz</span>Update Status</div>' +
-'      <div class="btn-group">' +
-'        <button class="btn btn-new ' + (status === 'New' ? 'current-status' : '') + '" onclick="setStatus(\'New\')"><span class="material-icons">fiber_new</span>New</button>' +
-'        <button class="btn btn-ready ' + (status === 'Ready' ? 'current-status' : '') + '" onclick="setStatus(\'Ready\')"><span class="material-icons">check_circle</span>Ready</button>' +
-'        <button class="btn btn-scheduled ' + (status === 'Scheduled' ? 'current-status' : '') + '" onclick="setStatus(\'Scheduled\')"><span class="material-icons">event</span>Scheduled</button>' +
-'        <button class="btn btn-rescheduled ' + (status === 'Rescheduled' ? 'current-status' : '') + '" onclick="setStatus(\'Rescheduled\')"><span class="material-icons">update</span>Rescheduled</button>' +
-'        <button class="btn btn-complete ' + (status === 'Completed' ? 'current-status' : '') + '" onclick="setStatus(\'Completed\')" ' + (canComplete ? '' : 'disabled') + '><span class="material-icons">done_all</span>Completed</button>' +
-'      </div>' +
-'      <div class="cancel-notice"><strong>To cancel:</strong> Shop or Tech must call the assistant and provide a reason.</div>' +
-'    </div>';
-  } else {
-    html += '<div class="section">' +
-'      <div class="view-only-notice"><strong>View Only</strong><br>Status changes require calling the assistant.</div>' +
-'    </div>';
-  }
-
-  html += '  </div>' +
+'    </div>' +
+'    <div class="view-notice">Status changes are managed by the voice assistant</div>' +
+'  </div>' +
 '  <script>' +
 '    var currentRow = ' + row + ';' +
 '    setInterval(function() {' +
@@ -1667,13 +1611,6 @@ function buildSidebarHtml(row) {
 '        }' +
 '      }).getSelectedRow();' +
 '    }, 500);' +
-'    function setStatus(s) {' +
-'      if (s === "Completed" && !confirm("Mark as Completed?")) return;' +
-'      google.script.run' +
-'        .withSuccessHandler(function() { alert("Status updated to: " + s); google.script.host.close(); })' +
-'        .withFailureHandler(function(e) { alert("Error: " + e.message); })' +
-'        .updateRowStatusFromSidebar(' + row + ', s);' +
-'    }' +
 '  </script>' +
 '</body>' +
 '</html>';
@@ -3307,100 +3244,6 @@ function sendClosureEmailToShop(rowNum) {
     Logger.log('Email send error: ' + e.message);
     return { success: false, error: e.message };
   }
-}
-
-/**
- * Update row status - called from sidebar
- * @param {number} rowNum - Row number
- * @param {string} newStatus - New status value
- * @returns {Object} { success: boolean }
- */
-function updateRowStatusFromSidebar(rowNum, newStatus) {
-  const sheet = SpreadsheetApp.getActive().getSheetByName(SCHEDULE_SHEET);
-  if (!sheet) throw new Error('Sheet not found');
-
-  const validStatus = normalizeStatus(newStatus);
-
-  // CANCELLATION POLICY: Jobs can ONLY be cancelled via assistant with reason
-  if (validStatus === 'Cancelled') {
-    throw new Error('To cancel, call the assistant and provide a reason.');
-  }
-
-  const rowData = sheet.getRange(rowNum, 1, 1, TOTAL_COLUMNS).getValues()[0];
-  const currentStatus = rowData[COL.STATUS] || 'New';
-
-  // Validate completion requirements
-  if (validStatus === 'Completed') {
-    const hasRevv = !!rowData[COL.REVV_PDF];
-    const hasInvoice = !!rowData[COL.INVOICE_PDF];
-
-    if (!hasRevv || !hasInvoice) {
-      const missing = [];
-      if (!hasRevv) missing.push('Revv Report');
-      if (!hasInvoice) missing.push('Invoice');
-      throw new Error('Cannot complete. Missing: ' + missing.join(', '));
-    }
-  }
-
-  // Build timestamp in format: MM/DD H:MMp
-  const timestamp = Utilities.formatDate(new Date(), 'America/New_York', 'MM/dd h:mma').toLowerCase();
-
-  // Update flow history (Column T)
-  const statusPadded = validStatus.toUpperCase().padEnd(11);
-  const historyEntry = timestamp + '  ' + statusPadded + ' Manual update (sidebar)';
-  const currentHistory = rowData[COL.FLOW_HISTORY] || '';
-  const newHistory = currentHistory + (currentHistory ? '\n' : '') + historyEntry;
-
-  // Build full notes summary (Column S)
-  const roPo = rowData[COL.RO_PO];
-  const shopName = rowData[COL.SHOP_NAME];
-  const vehicle = rowData[COL.VEHICLE];
-  const technician = rowData[COL.TECHNICIAN];
-  const requiredCals = rowData[COL.REQUIRED_CALS];
-
-  const fullNotes = buildFullNotesSummary(roPo, shopName, vehicle, technician, requiredCals, newHistory);
-
-  // Update all fields
-  sheet.getRange(rowNum, COL.STATUS + 1).setValue(validStatus);
-  sheet.getRange(rowNum, COL.NOTES + 1).setValue(fullNotes);
-  sheet.getRange(rowNum, COL.FLOW_HISTORY + 1).setValue(newHistory);
-
-  return { success: true, status: validStatus };
-}
-
-/**
- * Build a full notes summary from flow history
- * Creates a formatted summary showing the entire RO journey
- */
-function buildFullNotesSummary(roPo, shopName, vehicle, technician, requiredCals, flowHistory) {
-  var divider = '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━';
-  var lines = [];
-
-  // Header
-  lines.push('RO ' + (roPo || '?') + ' | ' + (shopName || 'Unknown') + ' | ' + (vehicle || 'TBD'));
-  lines.push(divider);
-
-  // Flow history entries
-  if (flowHistory) {
-    flowHistory.split('\n').forEach(function(entry) {
-      if (entry.trim()) lines.push(entry);
-    });
-  }
-
-  lines.push(divider);
-
-  // Footer
-  if (requiredCals) {
-    lines.push('Calibrations: ' + requiredCals);
-  }
-  if (technician || shopName) {
-    var parts = [];
-    if (technician) parts.push('Tech: ' + technician);
-    if (shopName) parts.push('Shop: ' + shopName);
-    lines.push(parts.join(' | '));
-  }
-
-  return lines.join('\n');
 }
 
 /**
