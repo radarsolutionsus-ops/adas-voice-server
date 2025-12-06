@@ -1102,17 +1102,40 @@ async function processEmail(message) {
     }
 
     // Add OEM Position Statement links (Column U) based on vehicle brand
-    if (mergedData.vehicleMake) {
+    // Store just the URL so sidebar can make it clickable
+    if (mergedData.vehicleMake && !mergedData.oemPosition) {
       const oemPortalUrl = getOEM1StopLink(mergedData.vehicleMake);
       if (oemPortalUrl) {
-        mergedData.oemPosition = `${mergedData.vehicleMake} Position Statements: ${oemPortalUrl}`;
+        mergedData.oemPosition = oemPortalUrl;  // Just the URL, not "Make Position Statements: URL"
         console.log(`${LOG_TAG} OEM1Stop link added for ${mergedData.vehicleMake}: ${oemPortalUrl}`);
       }
     }
 
     // Add info from email body - ONLY set if not already set to avoid overwriting
+    // Also guard against suspicious shop names from Revv PDF metadata
+    const suspiciousShopNames = [
+      'provided instruments', 'revvadas', 'revv', 'vehicle information',
+      'calibration', 'adas', 'unknown', 'n/a', 'test', 'sample'
+    ];
+
+    const isSuspiciousShopName = (name) => {
+      if (!name || name.length < 3) return true;
+      const lower = name.toLowerCase().trim();
+      return suspiciousShopNames.some(s => lower.includes(s));
+    };
+
     if (bodyInfo.shopName && !mergedData.shopName) {
-      mergedData.shopName = bodyInfo.shopName;
+      if (isSuspiciousShopName(bodyInfo.shopName)) {
+        console.log(`${LOG_TAG} Ignoring suspicious shop name from email body: "${bodyInfo.shopName}"`);
+      } else {
+        mergedData.shopName = bodyInfo.shopName;
+      }
+    }
+
+    // Also check if mergedData.shopName from PDF parsing is suspicious
+    if (mergedData.shopName && isSuspiciousShopName(mergedData.shopName)) {
+      console.log(`${LOG_TAG} Clearing suspicious shop name from PDF: "${mergedData.shopName}"`);
+      mergedData.shopName = '';
     }
     if (bodyInfo.vin && !mergedData.vin) {
       mergedData.vin = bodyInfo.vin;
