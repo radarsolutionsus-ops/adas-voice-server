@@ -2395,7 +2395,11 @@ export function formatFullScrub(scrubResult, actualRevvCount = null, rawRevvText
 
   lines.push(`Estimate Required Calibrations (${estCount}):`);
   if (scrubResult.requiredFromEstimate?.length > 0) {
-    scrubResult.requiredFromEstimate.forEach(c => lines.push(`  - ${c}`));
+    scrubResult.requiredFromEstimate.forEach(c => {
+      // Handle both string and object calibrations (fixes [object Object] bug)
+      const calText = typeof c === 'object' ? (c.name || c.calibration || c.system || JSON.stringify(c)) : c;
+      lines.push(`  - ${calText}`);
+    });
   } else {
     lines.push('  None');
   }
@@ -2670,9 +2674,9 @@ export async function scrubEstimateLLM(estimateInput, roPo, options = {}) {
         notes: c.notes
       })),
 
-      // Summary counts
-      requiredFromEstimate: cals.filter(c => !c.in_revv),
-      requiredFromRevv: cals.filter(c => c.in_revv),
+      // Summary counts - extract names as strings (NOT objects)
+      requiredFromEstimate: cals.filter(c => !c.in_revv).map(c => c.name || String(c)),
+      requiredFromRevv: cals.filter(c => c.in_revv).map(c => c.name || String(c)),
       excludedItems: excluded,
       missingCalibrations: llmResult.discrepancies || [],
 

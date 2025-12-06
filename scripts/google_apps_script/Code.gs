@@ -1158,25 +1158,21 @@ function populateAllMissingOemLinks() {
 
 /**
  * Create custom menu on spreadsheet open
+ * SIMPLIFIED: One main action "View Status & Details" opens unified sidebar
  */
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
 
   ui.createMenu('ADAS Tools')
-    // Daily Use Tools - View
-    .addItem('View Status & Override', 'openApprovalSidebar')
-    .addItem('View Full Scrub Details', 'openScrubSidebar')
-
-    .addSeparator()
-
-    // Daily Use Tools - Actions
-    .addItem('Apply Status Colors', 'applyStatusColorFormatting')
-    .addItem('Populate OEM Links (All Rows)', 'populateAllMissingOemLinks')
+    // Primary action - opens unified sidebar with all info + override buttons
+    .addItem('View Status & Details', 'openUnifiedSidebar')
 
     .addSeparator()
 
     // Admin functions in submenu
     .addSubMenu(ui.createMenu('Admin & Setup')
+      .addItem('Apply Status Colors', 'applyStatusColorFormatting')
+      .addItem('Populate OEM Links (All Rows)', 'populateAllMissingOemLinks')
       .addItem('Setup Columns S & T (Run Once)', 'setupColumnsST')
       .addItem('Hide Column T', 'hideFullScrubColumn')
       .addItem('Show Column T', 'showFullScrubColumn')
@@ -1338,7 +1334,210 @@ function reduceRowHeights() {
 }
 
 /**
+ * UNIFIED SIDEBAR - Shows ALL info + manual override buttons
+ * Replaces both "View Status & Override" and "View Full Scrub Details"
+ *
+ * Features:
+ * - Vehicle info (RO, VIN, Shop, Vehicle, Status)
+ * - Calibrations required (from Column J/RevvADAS)
+ * - Full scrub analysis (from Column T)
+ * - OEM Position Statement link (from Column U)
+ * - Revv PDF link (from Column M)
+ * - Manual override buttons for status
+ */
+function openUnifiedSidebar() {
+  const ss = SpreadsheetApp.getActive();
+  const sheet = ss.getSheetByName(SCHEDULE_SHEET);
+
+  if (!sheet) {
+    SpreadsheetApp.getUi().alert("Sheet 'ADAS_Schedule' not found.");
+    return;
+  }
+
+  const row = sheet.getActiveCell().getRow();
+  if (row === 1) {
+    SpreadsheetApp.getUi().alert('Please select a data row (not the header).');
+    return;
+  }
+
+  const rowData = sheet.getRange(row, 1, 1, TOTAL_COLUMNS).getValues()[0];
+
+  // Extract all fields
+  const roPo = rowData[COL.RO_PO] || 'Unknown';
+  const shopName = rowData[COL.SHOP_NAME] || '';
+  const status = rowData[COL.STATUS] || 'Unknown';
+  const vehicle = rowData[COL.VEHICLE] || '';
+  const vin = rowData[COL.VIN] || '';
+  const requiredCals = rowData[COL.REQUIRED_CALS] || '';
+  const completedCals = rowData[COL.COMPLETED_CALS] || '';
+  const technician = rowData[COL.TECHNICIAN] || '';
+  const scheduledDate = rowData[COL.SCHEDULED_DATE] || '';
+  const scheduledTime = rowData[COL.SCHEDULED_TIME] || '';
+  const notes = rowData[COL.NOTES] || '';
+  const revvPdfUrl = rowData[COL.REVV_PDF] || '';
+  const postScanUrl = rowData[COL.POSTSCAN_PDF] || '';
+  const invoiceUrl = rowData[COL.INVOICE_PDF] || '';
+  const oemPosition = rowData[COL.OEM_POSITION] || '';
+
+  // Get full scrub DIRECTLY from Column T
+  let fullScrub = rowData[COL.FULL_SCRUB] || '';
+  if (fullScrub && fullScrub.startsWith('See ')) {
+    const detailScrub = getFullScrubFromDetails(roPo);
+    if (detailScrub) fullScrub = detailScrub;
+  }
+
+  // Parse calibrations for display
+  const calibrationList = requiredCals
+    ? requiredCals.split(/[;,]/).map(function(c) { return c.trim(); }).filter(function(c) { return c.length > 0; })
+    : [];
+
+  // Determine status color
+  const statusColors = {
+    'Ready': '#34a853',
+    'Completed': '#1a73e8',
+    'In Progress': '#fbbc04',
+    'Needs Attention': '#ea4335',
+    'Needs Review': '#ea4335',
+    'Not Ready': '#9aa0a6',
+    'New': '#5f6368'
+  };
+  const statusColor = statusColors[status] || '#5f6368';
+
+  // Build HTML for sidebar
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body { font-family: 'Google Sans', Arial, sans-serif; padding: 16px; margin: 0; background: #f8f9fa; }
+    .header { background: linear-gradient(135deg, #1a73e8, #4285f4); color: white; padding: 20px; margin: -16px -16px 16px; border-radius: 0 0 12px 12px; }
+    .header h2 { margin: 0 0 8px 0; font-size: 20px; }
+    .header .status { display: inline-block; padding: 4px 12px; border-radius: 16px; font-size: 12px; font-weight: 500; background: ${statusColor}; color: white; }
+    .section { background: white; border-radius: 8px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .section-title { font-weight: 600; color: #202124; margin-bottom: 12px; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+    .section-title .icon { font-size: 16px; }
+    .field { margin-bottom: 10px; }
+    .field-label { font-size: 11px; color: #5f6368; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
+    .field-value { font-size: 14px; color: #202124; word-break: break-word; }
+    .cal-list { list-style: none; padding: 0; margin: 0; }
+    .cal-list li { padding: 8px 12px; background: #e8f0fe; border-radius: 4px; margin-bottom: 6px; font-size: 13px; color: #1967d2; }
+    .scrub-box { background: #f1f3f4; border-radius: 8px; padding: 12px; font-family: monospace; font-size: 11px; white-space: pre-wrap; max-height: 300px; overflow-y: auto; color: #3c4043; }
+    .btn { display: block; width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; margin-bottom: 8px; transition: background 0.2s; }
+    .btn-ready { background: #34a853; color: white; }
+    .btn-ready:hover { background: #2e9348; }
+    .btn-attention { background: #ea4335; color: white; }
+    .btn-attention:hover { background: #d93025; }
+    .btn-completed { background: #1a73e8; color: white; }
+    .btn-completed:hover { background: #1557b0; }
+    .btn-secondary { background: #e8eaed; color: #3c4043; }
+    .btn-secondary:hover { background: #dadce0; }
+    .link { color: #1a73e8; text-decoration: none; font-size: 13px; display: flex; align-items: center; gap: 4px; }
+    .link:hover { text-decoration: underline; }
+    .links-section { display: flex; flex-direction: column; gap: 8px; }
+    .empty { color: #9aa0a6; font-style: italic; font-size: 13px; }
+    .override-section { margin-top: 16px; padding-top: 16px; border-top: 1px solid #dadce0; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h2>RO: ${escapeHtml(roPo)}</h2>
+    <div class="status">${escapeHtml(status)}</div>
+  </div>
+
+  <!-- Vehicle Info Section -->
+  <div class="section">
+    <div class="section-title"><span class="icon">🚗</span> Vehicle Info</div>
+    <div class="field">
+      <div class="field-label">Vehicle</div>
+      <div class="field-value">${vehicle ? escapeHtml(vehicle) : '<span class="empty">Not specified</span>'}</div>
+    </div>
+    <div class="field">
+      <div class="field-label">VIN</div>
+      <div class="field-value">${vin ? escapeHtml(vin) : '<span class="empty">Not specified</span>'}</div>
+    </div>
+    <div class="field">
+      <div class="field-label">Shop</div>
+      <div class="field-value">${shopName ? escapeHtml(shopName) : '<span class="empty">Not specified</span>'}</div>
+    </div>
+    <div class="field">
+      <div class="field-label">Technician</div>
+      <div class="field-value">${technician ? escapeHtml(technician) : '<span class="empty">Not assigned</span>'}</div>
+    </div>
+    <div class="field">
+      <div class="field-label">Scheduled</div>
+      <div class="field-value">${scheduledDate ? escapeHtml(scheduledDate) + (scheduledTime ? ' at ' + escapeHtml(scheduledTime) : '') : '<span class="empty">Not scheduled</span>'}</div>
+    </div>
+  </div>
+
+  <!-- Calibrations Section -->
+  <div class="section">
+    <div class="section-title"><span class="icon">🔧</span> Required Calibrations (${calibrationList.length})</div>
+    ${calibrationList.length > 0
+      ? '<ul class="cal-list">' + calibrationList.map(function(c) { return '<li>' + escapeHtml(c) + '</li>'; }).join('') + '</ul>'
+      : '<div class="empty">No calibrations required</div>'}
+    ${completedCals ? '<div class="field" style="margin-top:12px;"><div class="field-label">Completed</div><div class="field-value">' + escapeHtml(completedCals) + '</div></div>' : ''}
+  </div>
+
+  <!-- Links Section -->
+  <div class="section">
+    <div class="section-title"><span class="icon">📎</span> Documents & Links</div>
+    <div class="links-section">
+      ${revvPdfUrl ? '<a href="' + escapeHtml(revvPdfUrl) + '" target="_blank" class="link">📄 Revv Report PDF</a>' : ''}
+      ${postScanUrl ? '<a href="' + escapeHtml(postScanUrl) + '" target="_blank" class="link">📄 Post-Scan Report</a>' : ''}
+      ${invoiceUrl ? '<a href="' + escapeHtml(invoiceUrl) + '" target="_blank" class="link">📄 Invoice PDF</a>' : ''}
+      ${oemPosition ? '<div class="field"><div class="field-label">OEM Position Statement</div><div class="field-value">' + escapeHtml(oemPosition).replace(/\\n/g, '<br>').replace(/(https?:\\/\\/[^\\s<]+)/g, '<a href="$1" target="_blank" class="link">$1</a>') + '</div></div>' : ''}
+      ${!revvPdfUrl && !postScanUrl && !invoiceUrl && !oemPosition ? '<div class="empty">No documents attached</div>' : ''}
+    </div>
+  </div>
+
+  <!-- Full Scrub Analysis Section -->
+  <div class="section">
+    <div class="section-title"><span class="icon">📋</span> Scrub Analysis</div>
+    ${fullScrub && fullScrub.trim()
+      ? '<div class="scrub-box">' + escapeHtml(fullScrub) + '</div>'
+      : '<div class="empty">No scrub analysis available. Run estimate scrub to populate.</div>'}
+  </div>
+
+  <!-- Notes Section -->
+  ${notes ? '<div class="section"><div class="section-title"><span class="icon">📝</span> Notes</div><div class="field-value">' + escapeHtml(notes) + '</div></div>' : ''}
+
+  <!-- Manual Override Section -->
+  <div class="section override-section">
+    <div class="section-title"><span class="icon">⚡</span> Manual Status Override</div>
+    <button class="btn btn-ready" onclick="setStatus('Ready')">✓ Mark Ready</button>
+    <button class="btn btn-attention" onclick="setStatus('Needs Attention')">⚠ Needs Attention</button>
+    <button class="btn btn-completed" onclick="setStatus('Completed')">✓ Mark Completed</button>
+    <button class="btn btn-secondary" onclick="setStatus('In Progress')">→ In Progress</button>
+  </div>
+
+  <script>
+    function setStatus(newStatus) {
+      google.script.run
+        .withSuccessHandler(function() {
+          alert('Status updated to: ' + newStatus);
+          google.script.host.close();
+        })
+        .withFailureHandler(function(e) {
+          alert('Error: ' + e.message);
+        })
+        .updateRowStatusFromSidebar(${row}, newStatus);
+    }
+  </script>
+</body>
+</html>
+  `;
+
+  const htmlOutput = HtmlService.createHtmlOutput(html)
+    .setTitle('RO ' + roPo + ' - Status & Details')
+    .setWidth(400);
+
+  SpreadsheetApp.getUi().showSidebar(htmlOutput);
+}
+
+/**
  * Open sidebar with full scrub details - REVV-FIRST formatted display
+ * LEGACY: Keep for backward compatibility, but unified sidebar is preferred
  */
 function openScrubSidebar() {
   const ss = SpreadsheetApp.getActive();

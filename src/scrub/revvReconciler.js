@@ -15,6 +15,81 @@ import { ADAS_SYSTEMS, CALIBRATION_TYPES } from './calibrationTriggers.js';
 const LOG_TAG = '[REVV_RECONCILER]';
 
 /**
+ * CALIBRATION_SYSTEM_MAP - Maps normalized system names to all possible aliases
+ * CRITICAL: "Front Radar" and "Millimeter Wave Radar Sensor" MUST match as same system
+ */
+export const CALIBRATION_SYSTEM_MAP = {
+  'front_radar': [
+    'front radar', 'millimeter wave', 'millimeter wave radar',
+    'millimeter wave radar sensor', 'acc radar', 'grille radar',
+    'drcc radar', 'dynamic radar cruise control', 'forward radar',
+    'pre collision radar', 'precollision radar', 'pcs radar',
+    'adaptive cruise radar', 'long range radar', 'lrr', 'frr',
+    'toyota safety sense radar', 'tss radar', 'honda sensing radar'
+  ],
+  'steering_angle': [
+    'yaw rate', 'yaw rate sensor', 'yaw rate and acceleration',
+    'yaw rate and acceleration sensor', 'acceleration sensor',
+    'steering angle', 'steering angle sensor', 'sas', 'vsc calibration',
+    'sas reset', 'steering sensor', 'zero point', 'gyro sensor'
+  ],
+  'forward_camera': [
+    'forward camera', 'front camera', 'windshield camera',
+    'adas camera', 'eyesight', 'lane departure camera', 'lda camera',
+    'forward recognition camera', 'frc', 'sensing camera',
+    'multipurpose camera', 'mpc', 'safety sense camera', 'tss camera'
+  ],
+  'parking_sensors': [
+    'parking sensor', 'front parking sensor', 'rear parking sensor',
+    'ultrasonic', 'pdc', 'park distance', 'clearance sonar',
+    'back sonar', 'clearance/back sonar', 'sonar sensor'
+  ],
+  'rear_radar': [
+    'rear radar', 'bsm', 'blind spot', 'blind spot monitor',
+    'rcta', 'rear cross traffic', 'blind spot sensor',
+    'short range radar', 'srr', 'rear bumper radar'
+  ],
+  'surround_view': [
+    'surround view', 'surround view monitor', '360 camera',
+    'around view', 'avm', 'bird eye view', 'panoramic view',
+    'multi view camera', 'svm'
+  ],
+  'rear_camera': [
+    'rear camera', 'backup camera', 'reverse camera',
+    'rearview camera', 'rear view camera'
+  ],
+  'headlamp': [
+    'headlamp', 'headlight', 'headlamp aim', 'afs',
+    'adaptive front lighting', 'auto leveling', 'headlight aim'
+  ]
+};
+
+/**
+ * Normalize calibration text to a standard system name
+ * This is the KEY function that makes "Front Radar" === "Millimeter Wave Radar Sensor"
+ * @param {string} calText - Calibration name from estimate or Revv
+ * @returns {string} - Normalized system name (e.g., 'front_radar')
+ */
+export function normalizeToSystem(calText) {
+  if (!calText) return 'unknown';
+  const text = String(calText).toLowerCase().trim();
+
+  for (const [system, aliases] of Object.entries(CALIBRATION_SYSTEM_MAP)) {
+    for (const alias of aliases) {
+      if (text.includes(alias)) {
+        console.log(`${LOG_TAG} normalizeToSystem: "${calText}" → ${system}`);
+        return system;
+      }
+    }
+  }
+
+  // Fallback: create a simple key from the text
+  const fallback = text.replace(/[^a-z0-9]+/g, '_').substring(0, 40);
+  console.log(`${LOG_TAG} normalizeToSystem: "${calText}" → ${fallback} (no alias match)`);
+  return fallback;
+}
+
+/**
  * Normalize calibration names for comparison
  * Different sources may use different naming conventions
  *
@@ -264,11 +339,16 @@ export function calibrationsMatch(name1, name2) {
 
 /**
  * Reconcile scrub results with RevvADAS recommendations
+ * USES normalizeToSystem to match "Front Radar" with "Millimeter Wave Radar Sensor"
  * @param {Array} scrubCalibrations - Calibrations from our scrub engine
  * @param {Array} revvCalibrations - Calibrations from RevvADAS (parsed)
  * @returns {Object} - Reconciliation result
  */
 export function reconcileCalibrations(scrubCalibrations, revvCalibrations) {
+  console.log(`${LOG_TAG} ====== RECONCILIATION START ======`);
+  console.log(`${LOG_TAG} Estimate calibrations:`, JSON.stringify(scrubCalibrations.map(c => c.system || c)));
+  console.log(`${LOG_TAG} Revv calibrations:`, JSON.stringify(revvCalibrations.map(c => c.rawText || c)));
+
   const result = {
     matched: [],          // Both scrub and Revv agree
     scrubOnly: [],        // Scrub found it, Revv didn't mention
@@ -282,66 +362,86 @@ export function reconcileCalibrations(scrubCalibrations, revvCalibrations) {
     }
   };
 
-  // Track which Revv items have been matched
-  const revvMatched = new Set();
+  // Build normalized sets for comparison using normalizeToSystem
+  const estSystems = new Set();
+  const revvSystems = new Set();
+  const estSystemMap = new Map(); // Map normalized system -> original calibration object
+  const revvSystemMap = new Map();
 
-  // Check each scrub calibration against Revv
-  for (const scrubCal of scrubCalibrations) {
-    let foundMatch = false;
+  // Normalize estimate calibrations
+  for (const cal of scrubCalibrations) {
+    const name = typeof cal === 'object' ? (cal.system || cal.type || cal.name) : cal;
+    const normalized = normalizeToSystem(name);
+    estSystems.add(normalized);
+    estSystemMap.set(normalized, cal);
+  }
 
-    for (let i = 0; i < revvCalibrations.length; i++) {
-      const revvCal = revvCalibrations[i];
+  // Normalize Revv calibrations
+  for (const cal of revvCalibrations) {
+    const name = typeof cal === 'object' ? (cal.rawText || cal.type || cal.name) : cal;
+    const normalized = normalizeToSystem(name);
+    revvSystems.add(normalized);
+    revvSystemMap.set(normalized, cal);
+  }
 
-      if (calibrationsMatch(scrubCal.system, revvCal.rawText)) {
-        foundMatch = true;
-        revvMatched.add(i);
+  console.log(`${LOG_TAG} Normalized estimate systems:`, [...estSystems]);
+  console.log(`${LOG_TAG} Normalized Revv systems:`, [...revvSystems]);
 
-        // Check for type conflict
-        if (scrubCal.calibrationType && revvCal.calibrationType &&
-            scrubCal.calibrationType !== revvCal.calibrationType) {
-          result.typeConflicts.push({
-            system: scrubCal.system,
-            scrubType: scrubCal.calibrationType,
-            revvType: revvCal.calibrationType,
-            scrubDetails: scrubCal,
-            revvDetails: revvCal
-          });
-        } else {
-          result.matched.push({
-            system: scrubCal.system,
-            calibrationType: scrubCal.calibrationType || revvCal.calibrationType,
-            triggeredBy: scrubCal.triggeredBy,
-            revvText: revvCal.rawText,
-            confidence: 'HIGH'
-          });
-        }
-        break;
+  // Find matches and discrepancies
+  for (const sys of estSystems) {
+    if (revvSystems.has(sys)) {
+      // MATCH - both agree on this system
+      const estCal = estSystemMap.get(sys);
+      const revvCal = revvSystemMap.get(sys);
+
+      // Check for type conflict
+      const estType = typeof estCal === 'object' ? estCal.calibrationType : null;
+      const revvType = typeof revvCal === 'object' ? revvCal.calibrationType : null;
+
+      if (estType && revvType && estType !== revvType) {
+        result.typeConflicts.push({
+          system: sys,
+          scrubType: estType,
+          revvType: revvType,
+          scrubDetails: estCal,
+          revvDetails: revvCal
+        });
+      } else {
+        result.matched.push({
+          system: sys,
+          calibrationType: estType || revvType,
+          triggeredBy: typeof estCal === 'object' ? estCal.triggeredBy : 'estimate',
+          revvText: typeof revvCal === 'object' ? revvCal.rawText : revvCal,
+          confidence: 'HIGH'
+        });
       }
-    }
-
-    if (!foundMatch) {
-      // Scrub found a calibration that Revv didn't mention
+      console.log(`${LOG_TAG} MATCHED: ${sys}`);
+    } else {
+      // Estimate found it, Revv didn't
+      const estCal = estSystemMap.get(sys);
       result.scrubOnly.push({
-        system: scrubCal.system,
-        calibrationType: scrubCal.calibrationType,
-        triggeredBy: scrubCal.triggeredBy,
-        reason: scrubCal.reason,
-        confidence: scrubCal.confidence,
+        system: sys,
+        calibrationType: typeof estCal === 'object' ? estCal.calibrationType : null,
+        triggeredBy: typeof estCal === 'object' ? estCal.triggeredBy : 'estimate',
+        reason: typeof estCal === 'object' ? estCal.reason : 'detected in estimate',
+        confidence: typeof estCal === 'object' ? estCal.confidence : 'MEDIUM',
         note: 'Repair operation triggers this calibration but RevvADAS did not list it'
       });
+      console.log(`${LOG_TAG} ESTIMATE ONLY: ${sys}`);
     }
   }
 
-  // Check for Revv calibrations that scrub didn't find
-  for (let i = 0; i < revvCalibrations.length; i++) {
-    if (!revvMatched.has(i)) {
-      const revvCal = revvCalibrations[i];
+  // Find Revv-only calibrations
+  for (const sys of revvSystems) {
+    if (!estSystems.has(sys)) {
+      const revvCal = revvSystemMap.get(sys);
       result.revvOnly.push({
-        system: revvCal.normalizedName,
-        rawText: revvCal.rawText,
-        calibrationType: revvCal.calibrationType,
+        system: sys,
+        rawText: typeof revvCal === 'object' ? revvCal.rawText : revvCal,
+        calibrationType: typeof revvCal === 'object' ? revvCal.calibrationType : null,
         note: 'RevvADAS recommends this but no repair operation triggers it - verify if vehicle feature triggered'
       });
+      console.log(`${LOG_TAG} REVV ONLY: ${sys}`);
     }
   }
 
@@ -349,6 +449,10 @@ export function reconcileCalibrations(scrubCalibrations, revvCalibrations) {
   result.summary.matchedCount = result.matched.length;
   result.summary.discrepancyCount =
     result.scrubOnly.length + result.revvOnly.length + result.typeConflicts.length;
+
+  const status = result.scrubOnly.length === 0 ? 'MATCH' : 'DISCREPANCY';
+  console.log(`${LOG_TAG} Status: ${status}, Matched: ${result.matched.length}, EstimateOnly: ${result.scrubOnly.length}, RevvOnly: ${result.revvOnly.length}`);
+  console.log(`${LOG_TAG} ====== RECONCILIATION END ======`);
 
   return result;
 }
@@ -531,10 +635,12 @@ export function buildFinalCalibrationList(reconciliation, options = {}) {
 
 export default {
   normalizeCalibrationName,
+  normalizeToSystem,
   parseRevvCalibrations,
   calibrationsMatch,
   reconcileCalibrations,
   getReconciliationStatus,
   generateReconciliationNotes,
-  buildFinalCalibrationList
+  buildFinalCalibrationList,
+  CALIBRATION_SYSTEM_MAP
 };
