@@ -62,7 +62,8 @@ import {
 } from '../src/scrub/index.js';
 
 // Import calibration matching with OEM terminology aliases
-import { calibrationsMatch, normalizeCalibrationName } from '../src/scrub/revvReconciler.js';
+// Note: Only import calibrationsMatch - this file has its own normalizeCalibrationName
+import { calibrationsMatch } from '../src/scrub/revvReconciler.js';
 
 const LOG_TAG = '[ESTIMATE_SCRUB]';
 
