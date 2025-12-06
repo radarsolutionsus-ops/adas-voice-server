@@ -2817,12 +2817,12 @@ function openApprovalSidebar() {
 '    <p style="font-size:11px;color:#856404;margin-bottom:12px;">Use these only when automated workflow needs manual intervention.</p>' +
 '    <div class="section-title" style="font-size:12px;margin-top:8px;">Change Status:</div>' +
 '    <div class="btn-group">' +
-'      <button class="btn btn-success" onclick="changeStatus(\\'Ready\\')">Ready</button>' +
-'      <button class="btn btn-warning" onclick="changeStatus(\\'Needs Attention\\')">Needs Attention</button>' +
+'      <button class="btn btn-success" onclick="changeStatus(\'Ready\')">Ready</button>' +
+'      <button class="btn btn-warning" onclick="changeStatus(\'Needs Attention\')">Needs Attention</button>' +
 '    </div>' +
 '    <div class="btn-group">' +
-'      <button class="btn btn-primary" onclick="changeStatus(\\'In Progress\\')">In Progress</button>' +
-'      <button class="btn btn-secondary" onclick="changeStatus(\\'Completed\\')">Completed</button>' +
+'      <button class="btn btn-primary" onclick="changeStatus(\'In Progress\')">In Progress</button>' +
+'      <button class="btn btn-secondary" onclick="changeStatus(\'Completed\')">Completed</button>' +
 '    </div>' +
 '    <div class="section-title" style="font-size:12px;margin-top:12px;">Manual Actions:</div>' +
 '    <button class="btn btn-primary" id="btnSendIntake" onclick="manualSendIntake()">📧 Send Intake Email to Shop</button>' +
