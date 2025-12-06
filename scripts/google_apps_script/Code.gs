@@ -3,7 +3,7 @@
  * Web App for Node.js server communication
  *
  * Sheet: ADAS_FIRST_Operations
- * Main tab: ADAS_Schedule (Columns A-U)
+ * Main tab: ADAS_Schedule (Columns A-T)
  *
  * Column Mapping:
  * A: Timestamp Created (MM/dd/yyyy HH:mm)
@@ -201,26 +201,12 @@ function upsertScheduleRow(data) {
   }
 
   const roPo = String(data.roPo || data.ro_number || '').trim();
-  const vin = String(data.vin || '').trim();
-
   if (!roPo) {
     return { success: false, error: 'RO/PO number required' };
   }
 
-  // PRIORITY 1: Try VIN match first (most reliable identifier)
-  let existingRow = 0;
-  if (vin && vin.length === 17) {
-    existingRow = findRowByVIN(sheet, vin);
-    if (existingRow > 0) {
-      Logger.log('Found existing row by VIN: ' + vin + ' at row ' + existingRow);
-    }
-  }
-
-  // PRIORITY 2: Try RO match (exact then fuzzy)
-  if (existingRow === 0) {
-    existingRow = findRowByRO(sheet, roPo);
-  }
-
+  // Check if RO already exists
+  const existingRow = findRowByRO(sheet, roPo);
   if (existingRow > 0) {
     return updateExistingRow(sheet, existingRow, data);
   }
@@ -229,25 +215,8 @@ function upsertScheduleRow(data) {
 }
 
 /**
- * Find row by VIN (most reliable match)
- */
-function findRowByVIN(sheet, vin) {
-  if (!vin || vin.length !== 17) return 0;
-  const data = sheet.getDataRange().getValues();
-  const vinUpper = vin.toUpperCase();
-
-  for (let i = 1; i < data.length; i++) {
-    const rowVin = String(data[i][COL.VIN] || '').trim().toUpperCase();
-    if (rowVin === vinUpper) {
-      return i + 1; // 1-based row number
-    }
-  }
-  return 0;
-}
-
-/**
- * Normalize RO/PO for fuzzy matching
- * Strips common suffixes like -1, -A, _REV so "12313-1" matches "12313"
+ * Normalize RO/PO number for fuzzy matching
+ * Removes common suffixes like -1, -A, _REV, etc.
  * @param {string} ro - Raw RO/PO number
  * @returns {string} - Normalized RO for matching
  */
@@ -315,8 +284,8 @@ function createNewRow(sheet, data, roPo) {
   // Store full scrub text DIRECTLY in Column T (not a reference)
   const fullScrubText = data.full_scrub_text || data.fullScrubText || '';
 
-  // OEM Position Statement links for Column U
-  const oemPosition = data.oem_position || data.oemPosition || '';
+  // OEM Position Statement links (Column U)
+  const oemPosition = data.oem_position || data.oemPosition || data.oem_links || '';
 
   // Build new row (A through U = 21 columns)
   const newRow = [
@@ -393,9 +362,9 @@ function updateExistingRow(sheet, rowNum, data) {
     fullScrubText = newFullScrubText;
   }
 
-  // Handle OEM Position Statement links (Column U)
+  // Handle OEM Position - update if new data provided
   let oemPosition = curr[COL.OEM_POSITION] || '';
-  const newOemPosition = data.oem_position || data.oemPosition || '';
+  const newOemPosition = data.oem_position || data.oemPosition || data.oem_links || '';
   if (newOemPosition && newOemPosition.trim().length > 0) {
     oemPosition = newOemPosition;
   }
@@ -981,16 +950,186 @@ function escapeHtml(text) {
 }
 
 /**
+ * OEM Portal Links - lookup table for Position Statement access
+ * Maps vehicle makes to their official technical information portals
+ */
+const OEM_PORTAL_LINKS = {
+  // Japanese OEMs
+  'toyota': { name: 'Toyota', portal: 'techinfo.toyota.com', url: 'https://techinfo.toyota.com' },
+  'lexus': { name: 'Lexus', portal: 'techinfo.toyota.com', url: 'https://techinfo.toyota.com' },
+  'scion': { name: 'Scion', portal: 'techinfo.toyota.com', url: 'https://techinfo.toyota.com' },
+  'honda': { name: 'Honda', portal: 'techinfo.honda.com', url: 'https://techinfo.honda.com' },
+  'acura': { name: 'Acura', portal: 'techinfo.honda.com', url: 'https://techinfo.honda.com' },
+  'nissan': { name: 'Nissan', portal: 'nissan-techinfo.com', url: 'https://nissan-techinfo.com' },
+  'infiniti': { name: 'Infiniti', portal: 'nissan-techinfo.com', url: 'https://nissan-techinfo.com' },
+  'subaru': { name: 'Subaru', portal: 'techinfo.subaru.com', url: 'https://techinfo.subaru.com' },
+  'mazda': { name: 'Mazda', portal: 'mazdatechinfo.com', url: 'https://mazdatechinfo.com' },
+  'mitsubishi': { name: 'Mitsubishi', portal: 'mitsubishitechinfo.com', url: 'https://mitsubishitechinfo.com' },
+
+  // Korean OEMs
+  'hyundai': { name: 'Hyundai', portal: 'hyundaitechinfo.com', url: 'https://hyundaitechinfo.com' },
+  'kia': { name: 'Kia', portal: 'kiatechinfo.com', url: 'https://kiatechinfo.com' },
+  'genesis': { name: 'Genesis', portal: 'genesistechinfo.com', url: 'https://genesistechinfo.com' },
+
+  // German OEMs
+  'bmw': { name: 'BMW', portal: 'bmwtechinfo.bmwgroup.com', url: 'https://bmwtechinfo.bmwgroup.com' },
+  'mini': { name: 'MINI', portal: 'minitechinfo.bmwgroup.com', url: 'https://minitechinfo.bmwgroup.com' },
+  'mercedes-benz': { name: 'Mercedes-Benz', portal: 'startekinfo.com', url: 'https://startekinfo.com' },
+  'mercedes': { name: 'Mercedes-Benz', portal: 'startekinfo.com', url: 'https://startekinfo.com' },
+  'audi': { name: 'Audi', portal: 'erwin.audi.com', url: 'https://erwin.audi.com' },
+  'volkswagen': { name: 'Volkswagen', portal: 'erwin.vw.com', url: 'https://erwin.vw.com' },
+  'vw': { name: 'Volkswagen', portal: 'erwin.vw.com', url: 'https://erwin.vw.com' },
+  'porsche': { name: 'Porsche', portal: 'porscheone.com', url: 'https://techinfo2.porsche.com' },
+
+  // American OEMs
+  'ford': { name: 'Ford', portal: 'motorcraftservice.com', url: 'https://motorcraftservice.com' },
+  'lincoln': { name: 'Lincoln', portal: 'motorcraftservice.com', url: 'https://motorcraftservice.com' },
+  'chevrolet': { name: 'Chevrolet', portal: 'acdelcotds.com', url: 'https://acdelcotds.com' },
+  'chevy': { name: 'Chevrolet', portal: 'acdelcotds.com', url: 'https://acdelcotds.com' },
+  'gmc': { name: 'GMC', portal: 'acdelcotds.com', url: 'https://acdelcotds.com' },
+  'buick': { name: 'Buick', portal: 'acdelcotds.com', url: 'https://acdelcotds.com' },
+  'cadillac': { name: 'Cadillac', portal: 'acdelcotds.com', url: 'https://acdelcotds.com' },
+  'chrysler': { name: 'Chrysler', portal: 'techauthority.com', url: 'https://techauthority.com' },
+  'dodge': { name: 'Dodge', portal: 'techauthority.com', url: 'https://techauthority.com' },
+  'jeep': { name: 'Jeep', portal: 'techauthority.com', url: 'https://techauthority.com' },
+  'ram': { name: 'Ram', portal: 'techauthority.com', url: 'https://techauthority.com' },
+  'fiat': { name: 'Fiat', portal: 'techauthority.com', url: 'https://techauthority.com' },
+  'alfa romeo': { name: 'Alfa Romeo', portal: 'techauthority.com', url: 'https://techauthority.com' },
+  'tesla': { name: 'Tesla', portal: 'service.tesla.com', url: 'https://service.tesla.com', note: 'Limited access for third-party' },
+
+  // European OEMs
+  'volvo': { name: 'Volvo', portal: 'volvotechinfo.com', url: 'https://volvotechinfo.com/vida' },
+  'jaguar': { name: 'Jaguar', portal: 'topix.jaguar.jlrext.com', url: 'https://topix.jaguar.jlrext.com' },
+  'land rover': { name: 'Land Rover', portal: 'topix.landrover.jlrext.com', url: 'https://topix.landrover.jlrext.com' },
+  'range rover': { name: 'Land Rover', portal: 'topix.landrover.jlrext.com', url: 'https://topix.landrover.jlrext.com' }
+};
+
+/**
+ * Get OEM portal link for a vehicle make
+ * @param {string} make - Vehicle make (e.g., "Toyota", "Honda")
+ * @returns {Object|null} - { name, portal, url } or null if not found
+ */
+function getOemPortalLink(make) {
+  if (!make) return null;
+  const makeLower = make.toLowerCase().trim();
+  return OEM_PORTAL_LINKS[makeLower] || null;
+}
+
+/**
+ * Get OEM portal link from vehicle string (Year Make Model)
+ * @param {string} vehicle - Vehicle string (e.g., "2023 Toyota Camry")
+ * @returns {Object|null} - { name, portal, url } or null if not found
+ */
+function getOemPortalFromVehicle(vehicle) {
+  if (!vehicle) return null;
+
+  const vehicleLower = vehicle.toLowerCase();
+
+  // Check each OEM make against the vehicle string
+  for (const [key, value] of Object.entries(OEM_PORTAL_LINKS)) {
+    if (vehicleLower.includes(key)) {
+      return value;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Populate Column U (OEM Position) for a row based on vehicle make
+ * Called from sidebar or can be run on a range
+ * @param {number} rowNum - Row number to update
+ * @returns {Object} - { success: boolean, message: string }
+ */
+function populateOemLinkForRow(rowNum) {
+  const sheet = SpreadsheetApp.getActive().getSheetByName(SCHEDULE_SHEET);
+  if (!sheet) return { success: false, message: 'Sheet not found' };
+
+  const rowData = sheet.getRange(rowNum, 1, 1, TOTAL_COLUMNS).getValues()[0];
+  const vehicle = rowData[COL.VEHICLE] || '';
+  const currentOem = rowData[COL.OEM_POSITION] || '';
+
+  // Skip if already has OEM link
+  if (currentOem && currentOem.length > 0) {
+    return { success: true, message: 'OEM link already populated' };
+  }
+
+  const oemInfo = getOemPortalFromVehicle(vehicle);
+  if (!oemInfo) {
+    return { success: false, message: 'Could not determine OEM from vehicle: ' + vehicle };
+  }
+
+  // Set the OEM link in Column U
+  sheet.getRange(rowNum, COL.OEM_POSITION + 1).setValue(oemInfo.url);
+
+  return { success: true, message: 'Added OEM link: ' + oemInfo.url };
+}
+
+/**
+ * Populate OEM links for all rows missing them
+ * Can be run from menu
+ */
+function populateAllMissingOemLinks() {
+  const sheet = SpreadsheetApp.getActive().getSheetByName(SCHEDULE_SHEET);
+  if (!sheet) {
+    SpreadsheetApp.getUi().alert('Sheet not found');
+    return;
+  }
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) {
+    SpreadsheetApp.getUi().alert('No data rows found');
+    return;
+  }
+
+  const data = sheet.getRange(2, 1, lastRow - 1, TOTAL_COLUMNS).getValues();
+  let updated = 0;
+  let skipped = 0;
+  let failed = 0;
+
+  for (let i = 0; i < data.length; i++) {
+    const vehicle = data[i][COL.VEHICLE] || '';
+    const currentOem = data[i][COL.OEM_POSITION] || '';
+
+    // Skip if already has OEM link
+    if (currentOem && currentOem.length > 0) {
+      skipped++;
+      continue;
+    }
+
+    const oemInfo = getOemPortalFromVehicle(vehicle);
+    if (oemInfo) {
+      sheet.getRange(i + 2, COL.OEM_POSITION + 1).setValue(oemInfo.url);
+      updated++;
+    } else {
+      failed++;
+    }
+  }
+
+  SpreadsheetApp.getUi().alert(
+    'OEM Links Update Complete\n\n' +
+    'Updated: ' + updated + '\n' +
+    'Already populated: ' + skipped + '\n' +
+    'Could not determine OEM: ' + failed
+  );
+}
+
+/**
  * Create custom menu on spreadsheet open
  */
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
 
   ui.createMenu('ADAS Tools')
-    // Daily Use Tools
-    .addItem('View Status', 'openApprovalSidebar')
+    // Daily Use Tools - View
+    .addItem('View Status & Override', 'openApprovalSidebar')
     .addItem('View Full Scrub Details', 'openScrubSidebar')
+
+    .addSeparator()
+
+    // Daily Use Tools - Actions
     .addItem('Apply Status Colors', 'applyStatusColorFormatting')
+    .addItem('Populate OEM Links (All Rows)', 'populateAllMissingOemLinks')
 
     .addSeparator()
 
@@ -2575,8 +2714,22 @@ function openApprovalSidebar() {
 '    .info-box { background: #e8f0fe; border-left: 4px solid #1a73e8; padding: 12px; margin-bottom: 16px; border-radius: 4px; font-size: 12px; }' +
 '    .scrub-details { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 4px; padding: 12px; font-size: 11px; max-height: 200px; overflow-y: auto; font-family: monospace; white-space: pre-wrap; }' +
 '    .btn { width: 100%; padding: 10px; font-size: 13px; border: none; border-radius: 4px; cursor: pointer; margin-bottom: 8px; }' +
+'    .btn-primary { background: #1a73e8; color: white; }' +
+'    .btn-primary:hover { background: #1557b0; }' +
+'    .btn-success { background: #137333; color: white; }' +
+'    .btn-success:hover { background: #0d5c28; }' +
+'    .btn-warning { background: #ea8600; color: white; }' +
+'    .btn-warning:hover { background: #c87000; }' +
 '    .btn-secondary { background: #f1f3f4; color: #5f6368; }' +
 '    .btn-secondary:hover { background: #e0e0e0; }' +
+'    .btn:disabled { opacity: 0.5; cursor: not-allowed; }' +
+'    .btn-group { display: flex; gap: 8px; margin-bottom: 8px; }' +
+'    .btn-group .btn { width: auto; flex: 1; }' +
+'    .manual-override-section { background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 12px; margin-bottom: 16px; }' +
+'    .manual-override-section .section-title { color: #856404; }' +
+'    .status-result { margin-top: 8px; padding: 8px; border-radius: 4px; font-size: 12px; display: none; }' +
+'    .status-result.success { background: #e6f4ea; color: #137333; display: block; }' +
+'    .status-result.error { background: #fce8e6; color: #c5221f; display: block; }' +
 '  </style>' +
 '</head>' +
 '<body>' +
@@ -2617,9 +2770,87 @@ function openApprovalSidebar() {
 '  </div>' +
 (notes ? '<div class="section"><div class="section-title">📝 Notes</div><div class="notes-box">' + escapeHtml(notes) + '</div></div>' : '') +
 (fullScrub ? '<div class="section"><div class="section-title">🔍 Full Scrub Details</div><div class="scrub-details">' + escapeHtml(fullScrub) + '</div></div>' : '') +
+'  <div class="manual-override-section">' +
+'    <div class="section-title">⚠️ Manual Overrides</div>' +
+'    <p style="font-size:11px;color:#856404;margin-bottom:12px;">Use these only when automated workflow needs manual intervention.</p>' +
+'    <div class="section-title" style="font-size:12px;margin-top:8px;">Change Status:</div>' +
+'    <div class="btn-group">' +
+'      <button class="btn btn-success" onclick="changeStatus(\\'Ready\\')">Ready</button>' +
+'      <button class="btn btn-warning" onclick="changeStatus(\\'Needs Attention\\')">Needs Attention</button>' +
+'    </div>' +
+'    <div class="btn-group">' +
+'      <button class="btn btn-primary" onclick="changeStatus(\\'In Progress\\')">In Progress</button>' +
+'      <button class="btn btn-secondary" onclick="changeStatus(\\'Completed\\')">Completed</button>' +
+'    </div>' +
+'    <div class="section-title" style="font-size:12px;margin-top:12px;">Manual Actions:</div>' +
+'    <button class="btn btn-primary" id="btnSendIntake" onclick="manualSendIntake()">📧 Send Intake Email to Shop</button>' +
+'    <button class="btn btn-success" id="btnSendClosure" onclick="manualSendClosure()">📧 Send Closure Email</button>' +
+'    <div id="statusResult" class="status-result"></div>' +
+'  </div>' +
 '  <div style="margin-top: 16px;">' +
 '    <button class="btn btn-secondary" onclick="google.script.host.close()">Close</button>' +
 '  </div>' +
+'  <script>' +
+'    var rowNum = ' + row + ';' +
+'    function changeStatus(newStatus) {' +
+'      google.script.run' +
+'        .withSuccessHandler(function(result) {' +
+'          showResult(true, "Status changed to: " + newStatus);' +
+'          setTimeout(function() { location.reload(); }, 1000);' +
+'        })' +
+'        .withFailureHandler(function(err) {' +
+'          showResult(false, "Error: " + err.message);' +
+'        })' +
+'        .updateRowStatusFromSidebar(rowNum, newStatus);' +
+'    }' +
+'    function manualSendIntake() {' +
+'      var btn = document.getElementById("btnSendIntake");' +
+'      btn.disabled = true;' +
+'      btn.textContent = "Sending...";' +
+'      google.script.run' +
+'        .withSuccessHandler(function(result) {' +
+'          btn.disabled = false;' +
+'          btn.textContent = "📧 Send Intake Email to Shop";' +
+'          if (result.success) {' +
+'            showResult(true, "Intake email sent to: " + result.email);' +
+'          } else {' +
+'            showResult(false, "Error: " + result.error);' +
+'          }' +
+'        })' +
+'        .withFailureHandler(function(err) {' +
+'          btn.disabled = false;' +
+'          btn.textContent = "📧 Send Intake Email to Shop";' +
+'          showResult(false, "Error: " + err.message);' +
+'        })' +
+'        .sendIntakeEmailToShop(rowNum);' +
+'    }' +
+'    function manualSendClosure() {' +
+'      var btn = document.getElementById("btnSendClosure");' +
+'      btn.disabled = true;' +
+'      btn.textContent = "Sending...";' +
+'      google.script.run' +
+'        .withSuccessHandler(function(result) {' +
+'          btn.disabled = false;' +
+'          btn.textContent = "📧 Send Closure Email";' +
+'          if (result.success) {' +
+'            showResult(true, "Closure email sent to: " + result.email);' +
+'          } else {' +
+'            showResult(false, "Error: " + result.error);' +
+'          }' +
+'        })' +
+'        .withFailureHandler(function(err) {' +
+'          btn.disabled = false;' +
+'          btn.textContent = "📧 Send Closure Email";' +
+'          showResult(false, "Error: " + err.message);' +
+'        })' +
+'        .sendClosureEmailToShop(rowNum);' +
+'    }' +
+'    function showResult(success, message) {' +
+'      var el = document.getElementById("statusResult");' +
+'      el.className = "status-result " + (success ? "success" : "error");' +
+'      el.textContent = message;' +
+'    }' +
+'  </script>' +
 '</body>' +
 '</html>';
 

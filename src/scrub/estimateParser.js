@@ -439,6 +439,151 @@ const COMPONENT_PATTERNS = [
       /inflat(?:or|ed)/gi
     ],
     category: REPAIR_CATEGORIES.AIRBAG_DEPLOYMENT
+  },
+
+  // Additional Front Radar patterns - CCC ONE terminology
+  {
+    patterns: [
+      /(?:pre[\s-]?collision|pcs)\s*(?:sensor|radar|system)/gi,
+      /tss\s*(?:radar|sensor)/gi,
+      /toyota\s*safety\s*sense\s*(?:radar|sensor)/gi,
+      /millimeter[\s-]?wave\s*(?:radar|sensor)?/gi,
+      /mm[\s-]?wave\s*(?:radar|sensor)?/gi,
+      /adaptive\s*cruise\s*(?:control|sensor|radar)/gi,
+      /acc\s*(?:sensor|radar|module)/gi,
+      /forward\s*collision\s*(?:warning|sensor)/gi,
+      /fcw\s*(?:sensor|module)/gi,
+      /automatic\s*emergency\s*(?:braking|brake)\s*(?:sensor)?/gi,
+      /aeb\s*(?:sensor|radar|module)/gi,
+      /dynamic\s*radar\s*cruise/gi,
+      /drcc\s*(?:sensor|radar)?/gi
+    ],
+    category: REPAIR_CATEGORIES.FRONT_RADAR
+  },
+
+  // Additional Front Camera patterns - expanded OEM terminology
+  {
+    patterns: [
+      /sensing\s*camera\s*(?:unit)?/gi,
+      /safety\s*sense\s*camera/gi,
+      /honda\s*sensing\s*camera/gi,
+      /eyesight\s*camera/gi,
+      /mobileye\s*(?:camera|unit)/gi,
+      /lane\s*departure\s*warning\s*camera/gi,
+      /ldw\s*camera/gi,
+      /lanewatch\s*(?:camera)?/gi,
+      /road\s*departure\s*(?:camera|sensor)/gi,
+      /collision\s*mitigation\s*camera/gi
+    ],
+    category: REPAIR_CATEGORIES.FRONT_CAMERA
+  },
+
+  // Additional BSM patterns - expanded terminology
+  {
+    patterns: [
+      /blind\s*spot\s*(?:detection|warning|indicator)/gi,
+      /bsd\s*(?:sensor|module)/gi,
+      /bsw\s*(?:sensor|module)/gi,
+      /lane\s*change\s*(?:assist|warning)\s*(?:sensor)?/gi,
+      /lca\s*(?:sensor|module)/gi,
+      /side\s*object\s*(?:detection|sensor)/gi,
+      /quarter\s*panel\s*(?:radar|sensor)/gi,
+      /rear\s*corner\s*(?:radar|sensor)/gi
+    ],
+    category: REPAIR_CATEGORIES.BSM_SENSOR
+  },
+
+  // Door patterns - for surround view context
+  {
+    patterns: [
+      /(?:front|fr)\s*(?:left|lt|lh|driver)\s*door/gi,
+      /(?:left|lt|lh|driver)\s*(?:front|fr)\s*door/gi
+    ],
+    category: REPAIR_CATEGORIES.DOOR_FRONT_LEFT
+  },
+  {
+    patterns: [
+      /(?:front|fr)\s*(?:right|rt|rh|passenger)\s*door/gi,
+      /(?:right|rt|rh|passenger)\s*(?:front|fr)\s*door/gi
+    ],
+    category: REPAIR_CATEGORIES.DOOR_FRONT_RIGHT
+  },
+  {
+    patterns: [
+      /(?:rear|rr)\s*(?:left|lt|lh)\s*door/gi,
+      /(?:left|lt|lh)\s*(?:rear|rr)\s*door/gi
+    ],
+    category: REPAIR_CATEGORIES.DOOR_REAR_LEFT
+  },
+  {
+    patterns: [
+      /(?:rear|rr)\s*(?:right|rt|rh)\s*door/gi,
+      /(?:right|rt|rh)\s*(?:rear|rr)\s*door/gi
+    ],
+    category: REPAIR_CATEGORIES.DOOR_REAR_RIGHT
+  },
+
+  // Fender patterns
+  {
+    patterns: [
+      /(?:front|fr)\s*fender/gi,
+      /fender\s*(?:panel|assy|assembly)/gi,
+      /(?:left|lt|lh|right|rt|rh)\s*fender/gi
+    ],
+    category: REPAIR_CATEGORIES.FRONT_BUMPER,  // Fender work may affect radar
+    contextCheck: (line) => /(?:front|fr)/i.test(line) || !/(rear|rr|back)/i.test(line)
+  },
+
+  // A-pillar/B-pillar/C-pillar - may affect cameras
+  {
+    patterns: [
+      /a[\s-]?pillar/gi,
+      /windshield\s*pillar/gi
+    ],
+    category: REPAIR_CATEGORIES.WINDSHIELD  // A-pillar affects windshield camera mounting
+  },
+
+  // Roof/Headliner patterns - may affect surround view cameras
+  {
+    patterns: [
+      /roof\s*(?:panel|assy|assembly)/gi,
+      /sun\s*roof/gi,
+      /sunroof/gi,
+      /moon\s*roof/gi,
+      /moonroof/gi,
+      /roof\s*rail/gi,
+      /headliner/gi
+    ],
+    category: REPAIR_CATEGORIES.SURROUND_CAMERA
+  },
+
+  // Instrument panel / Dash - may affect camera wiring
+  {
+    patterns: [
+      /instrument\s*panel/gi,
+      /dash(?:board)?/gi,
+      /ip\s*(?:assy|assembly)/gi
+    ],
+    category: REPAIR_CATEGORIES.MODULE_ADAS  // Dashboard work may affect ADAS modules
+  },
+
+  // Wiring harness patterns - may affect sensor calibration
+  {
+    patterns: [
+      /(?:front|rear)\s*(?:bumper\s*)?wiring\s*(?:harness)?/gi,
+      /(?:camera|radar|sensor)\s*wiring/gi,
+      /adas\s*wiring/gi
+    ],
+    category: REPAIR_CATEGORIES.MODULE_ADAS
+  },
+
+  // Bracket patterns - often indicate sensor work
+  {
+    patterns: [
+      /(?:radar|camera|sensor)\s*bracket/gi,
+      /mounting\s*bracket\s*(?:radar|camera|sensor)/gi
+    ],
+    category: REPAIR_CATEGORIES.FRONT_CAMERA  // Default to camera, will be overridden by specific context
   }
 ];
 
