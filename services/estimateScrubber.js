@@ -96,13 +96,48 @@ const KNOWN_MAKES = [
   'Bentley', 'Rolls-Royce', 'Aston Martin', 'McLaren', 'Polestar'
 ];
 
-// Normalize make names
+// Normalize make names - includes 4-letter estimate abbreviations (TOYO, HOND, etc.)
 const MAKE_NORMALIZATIONS = {
+  // Common abbreviations
   'chevy': 'Chevrolet',
   'mercedes': 'Mercedes-Benz',
   'benz': 'Mercedes-Benz',
   'vw': 'Volkswagen',
-  'range rover': 'Land Rover'
+  'range rover': 'Land Rover',
+  // 4-letter estimate abbreviations (CCC ONE, Mitchell, etc.)
+  'toyo': 'Toyota',
+  'hond': 'Honda',
+  'ford': 'Ford',
+  'chev': 'Chevrolet',
+  'niss': 'Nissan',
+  'hyun': 'Hyundai',
+  'kia': 'Kia',
+  'gene': 'Genesis',
+  'suba': 'Subaru',
+  'mazd': 'Mazda',
+  'volk': 'Volkswagen',
+  'audi': 'Audi',
+  'bmw': 'BMW',
+  'merc': 'Mercedes-Benz',
+  'lexu': 'Lexus',
+  'acur': 'Acura',
+  'infi': 'Infiniti',
+  'volv': 'Volvo',
+  'jagu': 'Jaguar',
+  'land': 'Land Rover',
+  'pors': 'Porsche',
+  'tesl': 'Tesla',
+  'jeep': 'Jeep',
+  'dodg': 'Dodge',
+  'ram': 'RAM',
+  'chry': 'Chrysler',
+  'buic': 'Buick',
+  'cadi': 'Cadillac',
+  'linc': 'Lincoln',
+  'gmc': 'GMC',
+  'mini': 'MINI',
+  'mits': 'Mitsubishi',
+  'fiat': 'Fiat'
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -418,14 +453,28 @@ function normalizeYear(year) {
 }
 
 /**
- * Normalize make name
+ * Normalize make name - handles full names, abbreviations, and 4-letter codes
+ * Examples: "TOYO" → "Toyota", "HOND" → "Honda", "chevy" → "Chevrolet"
  * @param {string} make - Raw make name
  * @returns {string} - Normalized make name
  */
 function normalizeMake(make) {
   if (!make) return null;
   const lower = make.toLowerCase().trim();
-  return MAKE_NORMALIZATIONS[lower] || make.charAt(0).toUpperCase() + make.slice(1).toLowerCase();
+
+  // First try exact match
+  if (MAKE_NORMALIZATIONS[lower]) {
+    return MAKE_NORMALIZATIONS[lower];
+  }
+
+  // Try first 4 characters (for patterns like "TOYO CAMRY" or "TOYOMAKE")
+  const first4 = lower.substring(0, 4);
+  if (MAKE_NORMALIZATIONS[first4]) {
+    return MAKE_NORMALIZATIONS[first4];
+  }
+
+  // Default: capitalize first letter
+  return make.charAt(0).toUpperCase() + make.slice(1).toLowerCase();
 }
 
 /**
