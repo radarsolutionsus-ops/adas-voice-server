@@ -65,6 +65,10 @@ export const CALIBRATION_SYSTEM_MAP = {
   'headlamp': [
     'headlamp', 'headlight', 'headlamp aim', 'afs',
     'adaptive front lighting', 'auto leveling', 'headlight aim'
+  ],
+  'srs_unit': [
+    'srs', 'srs unit', 'airbag', 'airbag module', 'supplemental restraint',
+    'occupant sensor', 'seat weight', 'seat weight sensor', 'srs reset'
   ]
 };
 

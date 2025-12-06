@@ -130,6 +130,10 @@ function doPost(e) {
         result = updateROStatus(data);
         break;
 
+      case 'get_row':
+        result = getRowByROOrVIN(data);
+        break;
+
       default:
         result = { success: false, error: `Unknown action: ${action}` };
     }
@@ -590,6 +594,84 @@ function getScheduleByRO(roPo) {
     },
     rowNumber: rowNum
   };
+}
+
+/**
+ * Get row by RO/PO or VIN - used by Node.js to fetch existing data
+ * Priority: VIN (most reliable) > RO/PO
+ */
+function getRowByROOrVIN(data) {
+  const ss = SpreadsheetApp.getActive();
+  const sheet = ss.getSheetByName(SCHEDULE_SHEET);
+
+  if (!sheet) {
+    return { success: false, row: null };
+  }
+
+  const roPo = String(data.roPo || '').trim();
+  const vin = String(data.vin || '').trim();
+  const dataRange = sheet.getDataRange().getValues();
+
+  // Priority 1: Match by VIN (most reliable)
+  if (vin && vin.length === 17) {
+    for (let i = 1; i < dataRange.length; i++) {
+      if (String(dataRange[i][COL.VIN]).trim() === vin) {
+        Logger.log('Found row by VIN: ' + vin + ' at row ' + (i + 1));
+        return {
+          success: true,
+          row: {
+            roPo: dataRange[i][COL.RO_PO],
+            vin: dataRange[i][COL.VIN],
+            vehicle_info: dataRange[i][COL.VEHICLE],
+            required_calibrations: dataRange[i][COL.REQUIRED_CALS],
+            shop_name: dataRange[i][COL.SHOP_NAME]
+          }
+        };
+      }
+    }
+  }
+
+  // Priority 2: Match by exact RO
+  if (roPo) {
+    for (let i = 1; i < dataRange.length; i++) {
+      if (String(dataRange[i][COL.RO_PO]).trim() === roPo) {
+        Logger.log('Found row by RO: ' + roPo + ' at row ' + (i + 1));
+        return {
+          success: true,
+          row: {
+            roPo: dataRange[i][COL.RO_PO],
+            vin: dataRange[i][COL.VIN],
+            vehicle_info: dataRange[i][COL.VEHICLE],
+            required_calibrations: dataRange[i][COL.REQUIRED_CALS],
+            shop_name: dataRange[i][COL.SHOP_NAME]
+          }
+        };
+      }
+    }
+  }
+
+  // Priority 3: Match by normalized RO (12313-1 matches 12313)
+  if (roPo) {
+    const normalizedRO = roPo.replace(/-.*$/, '');
+    for (let i = 1; i < dataRange.length; i++) {
+      const existingRO = String(dataRange[i][COL.RO_PO]).trim().replace(/-.*$/, '');
+      if (existingRO === normalizedRO) {
+        Logger.log('Found row by normalized RO: ' + roPo + ' at row ' + (i + 1));
+        return {
+          success: true,
+          row: {
+            roPo: dataRange[i][COL.RO_PO],
+            vin: dataRange[i][COL.VIN],
+            vehicle_info: dataRange[i][COL.VEHICLE],
+            required_calibrations: dataRange[i][COL.REQUIRED_CALS],
+            shop_name: dataRange[i][COL.SHOP_NAME]
+          }
+        };
+      }
+    }
+  }
+
+  return { success: false, row: null };
 }
 
 /**
