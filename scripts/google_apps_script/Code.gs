@@ -105,11 +105,11 @@ function normalizeStatus(status) {
 }
 
 function getStatusColor(status) {
-  return STATUS_CONFIG[status]?.fontColor || '#5f6368';
+  return (STATUS_CONFIG[status] || {}).fontColor || '#5f6368';
 }
 
 function getStatusIcon(status) {
-  return STATUS_CONFIG[status]?.icon || 'help';
+  return (STATUS_CONFIG[status] || {}).icon || 'help';
 }
 
 /**
