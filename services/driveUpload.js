@@ -50,21 +50,54 @@ const folderCache = new Map();
 
 /**
  * Initialize the Google Drive client using OAuth2 (same credentials as Gmail)
+ * Supports both environment variables (Railway) and file-based credentials (local dev)
  */
 async function initializeDriveClient() {
   if (driveClient) return driveClient;
 
   try {
-    // Load OAuth credentials
-    if (!fs.existsSync(OAUTH_CREDENTIALS_PATH)) {
-      throw new Error(`OAuth credentials not found at ${OAUTH_CREDENTIALS_PATH}`);
+    let credentials;
+    let token;
+
+    // PRIORITY 1: Environment variables (for Railway deployment)
+    if (process.env.GOOGLE_OAUTH_CREDENTIALS) {
+      try {
+        credentials = JSON.parse(process.env.GOOGLE_OAUTH_CREDENTIALS);
+        console.log(`${LOG_TAG} Loaded OAuth credentials from environment variable`);
+      } catch (e) {
+        console.error(`${LOG_TAG} Failed to parse GOOGLE_OAUTH_CREDENTIALS:`, e.message);
+      }
     }
 
-    if (!fs.existsSync(OAUTH_TOKEN_PATH)) {
-      throw new Error(`OAuth token not found at ${OAUTH_TOKEN_PATH}. Run: node scripts/gmail-auth.js`);
+    // PRIORITY 2: File path (for local development)
+    if (!credentials && fs.existsSync(OAUTH_CREDENTIALS_PATH)) {
+      credentials = JSON.parse(fs.readFileSync(OAUTH_CREDENTIALS_PATH, 'utf8'));
+      console.log(`${LOG_TAG} Loaded OAuth credentials from file: ${OAUTH_CREDENTIALS_PATH}`);
     }
 
-    const credentials = JSON.parse(fs.readFileSync(OAUTH_CREDENTIALS_PATH, 'utf8'));
+    if (!credentials) {
+      throw new Error(`OAuth credentials not found. Set GOOGLE_OAUTH_CREDENTIALS env var or create ${OAUTH_CREDENTIALS_PATH}`);
+    }
+
+    // Get token - try env var first, then file, then Google Sheets Config
+    if (process.env.GMAIL_OAUTH_TOKEN) {
+      try {
+        token = JSON.parse(process.env.GMAIL_OAUTH_TOKEN);
+        console.log(`${LOG_TAG} Loaded OAuth token from environment variable`);
+      } catch (e) {
+        console.error(`${LOG_TAG} Failed to parse GMAIL_OAUTH_TOKEN:`, e.message);
+      }
+    }
+
+    if (!token && fs.existsSync(OAUTH_TOKEN_PATH)) {
+      token = JSON.parse(fs.readFileSync(OAUTH_TOKEN_PATH, 'utf8'));
+      console.log(`${LOG_TAG} Loaded OAuth token from file: ${OAUTH_TOKEN_PATH}`);
+    }
+
+    if (!token) {
+      throw new Error(`OAuth token not found. Set GMAIL_OAUTH_TOKEN env var or run: node scripts/gmail-auth.js`);
+    }
+
     const { client_id, client_secret } = credentials.installed || credentials.web;
 
     const oauth2Client = new google.auth.OAuth2(
@@ -73,7 +106,6 @@ async function initializeDriveClient() {
       'urn:ietf:wg:oauth:2.0:oob'
     );
 
-    const token = JSON.parse(fs.readFileSync(OAUTH_TOKEN_PATH, 'utf8'));
     oauth2Client.setCredentials(token);
 
     // Check if token needs refresh
@@ -81,7 +113,10 @@ async function initializeDriveClient() {
       console.log(`${LOG_TAG} Token expired, refreshing...`);
       const { credentials: newCredentials } = await oauth2Client.refreshAccessToken();
       oauth2Client.setCredentials(newCredentials);
-      fs.writeFileSync(OAUTH_TOKEN_PATH, JSON.stringify(newCredentials, null, 2));
+      // Save refreshed token to file if local
+      if (fs.existsSync(path.dirname(OAUTH_TOKEN_PATH))) {
+        fs.writeFileSync(OAUTH_TOKEN_PATH, JSON.stringify(newCredentials, null, 2));
+      }
     }
 
     driveClient = google.drive({ version: 'v3', auth: oauth2Client });
