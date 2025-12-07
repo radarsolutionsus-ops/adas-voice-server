@@ -519,10 +519,18 @@ export async function upsertScheduleRowByRO(roPo, dataObject) {
   console.log(`${LOG_TAG} Upserting schedule row for RO: ${roPo}`);
 
   // Build vehicle string (Year Make Model combined)
+  // Filter empty parts to avoid double spaces like "2019  Camry"
   const vehicleYear = dataObject.vehicleYear || dataObject.year || '';
   const vehicleMake = dataObject.vehicleMake || dataObject.make || '';
   const vehicleModel = dataObject.vehicleModel || dataObject.model || '';
-  const vehicleStr = dataObject.vehicle || `${vehicleYear} ${vehicleMake} ${vehicleModel}`.trim() || '';
+  const vehicleTrim = dataObject.vehicleTrim || dataObject.trim || '';
+
+  // Build from parts, filtering empty values
+  const vehicleParts = [vehicleYear, vehicleMake, vehicleModel, vehicleTrim].filter(p => p && p.trim());
+  const builtVehicle = vehicleParts.join(' ');
+  const vehicleStr = dataObject.vehicle || builtVehicle || '';
+
+  console.log(`${LOG_TAG} Vehicle parts: year="${vehicleYear}", make="${vehicleMake}", model="${vehicleModel}", built="${builtVehicle}", final="${vehicleStr}"`);
 
   // Combine DTCs into single field if separate pre/post provided
   let dtcsStr = dataObject.dtcs || '';
