@@ -1407,6 +1407,22 @@ function getSelectedRow() {
 }
 
 /**
+ * Get current active row number (alternative helper for sidebar polling)
+ */
+function getActiveRowNumber() {
+  var sheet = SpreadsheetApp.getActive().getSheetByName(SCHEDULE_SHEET);
+  if (!sheet) return 1;
+  return sheet.getActiveCell().getRow();
+}
+
+/**
+ * Track sidebar open state (called when sidebar closes)
+ */
+function closeSidebar() {
+  PropertiesService.getUserProperties().setProperty('sidebarOpen', 'false');
+}
+
+/**
  * Setup the Status column with dropdown and colors
  * Call from: ADAS Tools → Admin & Setup → Setup Status Column
  */
@@ -3480,9 +3496,17 @@ function openApprovalSidebar() {
 '  <div class="section">' +
 '    <div class="section-title">📋 Documents</div>' +
 '    <div class="doc-status">' +
-'      ' + (hasRevvPdf ? '<span class="doc-ok">✓ RevvADAS PDF</span>' : '<span class="doc-missing">✗ RevvADAS PDF</span>') + '<br>' +
-'      ' + (hasPostScan ? '<span class="doc-ok">✓ Post-Scan</span>' : '<span class="doc-missing">✗ Post-Scan</span>') + '<br>' +
-'      ' + (hasInvoice ? '<span class="doc-ok">✓ Invoice</span>' : '<span class="doc-missing">✗ Invoice</span>') +
+'      ' + (hasRevvPdf
+  ? (revvPdfUrl && revvPdfUrl.startsWith('http')
+     ? '<a href="' + escapeHtml(revvPdfUrl) + '" target="_blank" style="color:#137333;text-decoration:none;">✓ RevvADAS PDF ↗</a>'
+     : '<span class="doc-ok">✓ RevvADAS PDF (processed)</span>')
+  : '<span class="doc-missing">✗ RevvADAS PDF</span>') + '<br>' +
+'      ' + (hasPostScan
+  ? '<a href="' + escapeHtml(postScanUrl) + '" target="_blank" style="color:#137333;text-decoration:none;">✓ Post-Scan ↗</a>'
+  : '<span class="doc-missing">✗ Post-Scan</span>') + '<br>' +
+'      ' + (hasInvoice
+  ? '<a href="' + escapeHtml(invoiceUrl) + '" target="_blank" style="color:#137333;text-decoration:none;">✓ Invoice ↗</a>'
+  : '<span class="doc-missing">✗ Invoice</span>') +
 '    </div>' +
 '  </div>' +
 (notes ? '<div class="section"><div class="section-title">📝 Notes</div><div class="notes-box">' + escapeHtml(notes) + '</div></div>' : '') +
