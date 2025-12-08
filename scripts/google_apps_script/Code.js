@@ -57,6 +57,7 @@ const COL = {
   INVOICE_DATE: 17,   // R
   NOTES: 18,          // S
   FLOW_HISTORY: 19,   // T - Flow History (timestamped status changes)
+  FULL_SCRUB: 19,     // T - Alias for backward compatibility (same as FLOW_HISTORY)
   OEM_POSITION: 20    // U - OEM Position Statement links
 };
 
@@ -378,8 +379,9 @@ function createNewRow(sheet, data, roPo) {
   const shopName = data.shop_name || data.shopName || data.shop || '';
   const vin = data.vin || '';
 
-  // Store full scrub text DIRECTLY in Column T (not a reference)
-  const fullScrubText = data.full_scrub_text || data.fullScrubText || '';
+  // Initialize Flow History with creation entry (Column T)
+  const initialFlowEntry = timestamp + '  NEW          Row created';
+  const flowHistory = data.flow_history || data.flowHistory || initialFlowEntry;
 
   // OEM Position Statement links (Column U)
   const oemPosition = data.oem_position || data.oemPosition || data.oem_links || '';
@@ -405,7 +407,7 @@ function createNewRow(sheet, data, roPo) {
     data.invoice_amount || data.invoiceAmount || '',             // Q: Invoice Amount
     data.invoice_date || data.invoiceDate || '',                 // R: Invoice Date
     data.notes || data.shop_notes || '',                         // S: Notes (short preview)
-    fullScrubText,                                                // T: Full Scrub Text
+    flowHistory,                                                  // T: Flow History
     oemPosition                                                   // U: OEM Position Statement links
   ];
 
@@ -468,11 +470,12 @@ function updateExistingRow(sheet, rowNum, data) {
 
   const roPo = curr[COL.RO_PO];
 
-  // Handle full scrub text - store DIRECTLY in Column T
-  let fullScrubText = curr[COL.FULL_SCRUB] || '';
-  const newFullScrubText = data.full_scrub_text || data.fullScrubText || '';
-  if (newFullScrubText && newFullScrubText.trim().length > 0) {
-    fullScrubText = newFullScrubText;
+  // Handle Flow History (Column T) - append new entries, don't replace
+  let flowHistory = curr[COL.FLOW_HISTORY] || '';
+  const newFlowEntry = data.flow_history || data.flowHistory || '';
+  if (newFlowEntry && newFlowEntry.trim().length > 0) {
+    // Append new entry to existing history
+    flowHistory = flowHistory ? flowHistory + '\n' + newFlowEntry : newFlowEntry;
   }
 
   // Handle OEM Position - update if new data provided
@@ -502,7 +505,7 @@ function updateExistingRow(sheet, rowNum, data) {
     data.invoice_amount || data.invoiceAmount || curr[COL.INVOICE_AMOUNT], // Q
     data.invoice_date || data.invoiceDate || curr[COL.INVOICE_DATE], // R
     notes,                                                        // S: Notes (short preview)
-    fullScrubText,                                                // T: Full Scrub Text
+    flowHistory,                                                  // T: Flow History
     oemPosition                                                   // U: OEM Position Statement links
   ];
 
@@ -566,7 +569,7 @@ function techUpdateRow(data) {
     curr[COL.INVOICE_AMOUNT],                                     // Q: KEEP
     curr[COL.INVOICE_DATE],                                       // R: KEEP
     data.notes ? (curr[COL.NOTES] ? curr[COL.NOTES] + ' | ' + data.notes : data.notes) : curr[COL.NOTES], // S: Append
-    curr[COL.FULL_SCRUB],                                         // T: KEEP
+    data.flowHistory || data.flow_history || curr[COL.FLOW_HISTORY] || '', // T: Flow History - append new entries
     curr[COL.OEM_POSITION] || ''                                  // U: KEEP
   ];
 
@@ -576,7 +579,8 @@ function techUpdateRow(data) {
     success: true,
     message: 'Tech update applied',
     roPo: roPo,
-    rowNumber: rowNum
+    rowNumber: rowNum,
+    flowHistoryUpdated: !!(data.flowHistory || data.flow_history)
   };
 }
 

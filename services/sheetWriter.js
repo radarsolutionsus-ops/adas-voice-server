@@ -519,25 +519,40 @@ export async function upsertScheduleRowByRO(roPo, dataObject) {
   console.log(`${LOG_TAG} Upserting schedule row for RO: ${roPo}`);
 
   // Build vehicle string (Year Make Model combined)
-  // Filter empty parts to avoid double spaces like "2019  Camry"
+  // ONLY use Year, Make, Model - NO trim to avoid duplication
   const vehicleYear = dataObject.vehicleYear || dataObject.year || '';
   const vehicleMake = dataObject.vehicleMake || dataObject.make || '';
   const vehicleModel = dataObject.vehicleModel || dataObject.model || '';
-  const vehicleTrim = dataObject.vehicleTrim || dataObject.trim || '';
 
-  // Build from parts, filtering empty values
-  const vehicleParts = [vehicleYear, vehicleMake, vehicleModel, vehicleTrim].filter(p => p && p.trim());
+  // Build clean string from parts (Year Make Model only)
+  const vehicleParts = [vehicleYear, vehicleMake, vehicleModel].filter(p => p && p.trim());
   const builtVehicle = vehicleParts.join(' ');
+
+  // Start with existing vehicle or built string
+  let vehicleStr = dataObject.vehicle || builtVehicle || '';
 
   // CRITICAL FIX: If dataObject.vehicle exists but is missing make, rebuild it
   // This handles cases where estimate parsing extracted incomplete vehicle info
-  let vehicleStr = dataObject.vehicle || builtVehicle || '';
-
-  // If we have separate make info but it's missing from vehicle string, rebuild
   if (vehicleMake && vehicleStr && !vehicleStr.toLowerCase().includes(vehicleMake.toLowerCase())) {
-    // Existing vehicle string is missing the make - use built version instead
     console.log(`${LOG_TAG} Vehicle string "${vehicleStr}" missing make "${vehicleMake}" - rebuilding`);
     vehicleStr = builtVehicle || vehicleStr;
+  }
+
+  // CRITICAL FIX: Remove duplicate model names (e.g., "2019 Toyota Camry Camry SE" -> "2019 Toyota Camry")
+  // This happens when vehicle string already has model and we're appending model+trim
+  if (vehicleModel && vehicleStr) {
+    // Check if model appears twice in the string
+    const modelLower = vehicleModel.toLowerCase();
+    const vehicleLower = vehicleStr.toLowerCase();
+    const firstIndex = vehicleLower.indexOf(modelLower);
+    if (firstIndex !== -1) {
+      const secondIndex = vehicleLower.indexOf(modelLower, firstIndex + modelLower.length);
+      if (secondIndex !== -1) {
+        // Model appears twice - truncate at second occurrence
+        vehicleStr = vehicleStr.substring(0, secondIndex).trim();
+        console.log(`${LOG_TAG} Removed duplicate model, cleaned: "${vehicleStr}"`);
+      }
+    }
   }
 
   console.log(`${LOG_TAG} Vehicle parts: year="${vehicleYear}", make="${vehicleMake}", model="${vehicleModel}", built="${builtVehicle}", final="${vehicleStr}"`);
@@ -610,8 +625,8 @@ export async function upsertScheduleRowByRO(roPo, dataObject) {
     invoice_date: dataObject.invoiceDate || '',
     // Column S: Notes (compact summary for display)
     notes: dataObject.notes || '',
-    // Column T: Full Scrub Text (for sidebar, hidden in sheet)
-    full_scrub_text: dataObject.fullScrubText || '',
+    // Column T: Flow History (timestamped document submissions)
+    flow_history: dataObject.flowHistory || dataObject.flow_history || '',
     // Column U: OEM Position Statement links
     oem_position: dataObject.oemPosition || dataObject.oem_position || dataObject.oemLinks || ''
   };
