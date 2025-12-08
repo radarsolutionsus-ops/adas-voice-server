@@ -1230,8 +1230,10 @@ async function processEmail(message) {
       const contentType = parsedPdf?.type; // Type detected from content by pdfParser
       const uploadType = upload.type; // Type detected from filename
 
-      // Use content-detected type if available, otherwise fall back to filename-detected
-      const effectiveType = contentType || uploadType;
+      // Use content-detected type ONLY if it's specific (not 'unknown' or 'document')
+      // Otherwise prefer filename-detected type (more reliable for VIN.pdf patterns)
+      const isContentTypeSpecific = contentType && contentType !== 'unknown' && contentType !== 'document';
+      const effectiveType = isContentTypeSpecific ? contentType : (uploadType || contentType);
       console.log(`${LOG_TAG} PDF type: ${upload.filename} → filename: ${uploadType}, content: ${contentType}, using: ${effectiveType}`);
 
       switch (effectiveType) {
