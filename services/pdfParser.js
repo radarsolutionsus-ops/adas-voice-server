@@ -387,22 +387,60 @@ function detectPDFType(filename, textContent) {
 
   // ========== STEP 4: Check for Shop Repair Estimates ==========
   // These are body shop documents, NOT ADAS billing
+  // Enhanced detection for common estimate patterns and repair line items
   const isShopEstimate =
+    // Filename patterns
     filenameLower.includes('supplement') ||
     filenameLower.includes('estimate') ||
     filenameLower.includes('repair order') ||
+    // Content patterns - document structure
     contentLower.includes('supplement of record') ||
     contentLower.includes('estimate totals') ||
+    contentLower.includes('grand total') ||
+    contentLower.includes('subtotal') ||
+    // Labor categories (common in collision estimates)
     contentLower.includes('body labor') ||
     contentLower.includes('paint labor') ||
     contentLower.includes('paint materials') ||
     contentLower.includes('refinish labor') ||
     contentLower.includes('structural labor') ||
     contentLower.includes('frame labor') ||
+    contentLower.includes('mechanical labor') ||
+    contentLower.includes('electrical labor') ||
+    contentLower.includes('labor hours') ||
+    contentLower.includes('labor rate') ||
+    // Parts and totals
     contentLower.includes('parts total') ||
     contentLower.includes('labor total') ||
+    contentLower.includes('materials total') ||
+    contentLower.includes('oem parts') ||
+    contentLower.includes('aftermarket parts') ||
+    contentLower.includes('recycled parts') ||
+    contentLower.includes('lkq parts') ||
+    // Repair line items (common in CCC, Mitchell, Audatex estimates)
+    contentLower.includes('r&i') ||  // Remove & Install
+    contentLower.includes('r&r') ||  // Remove & Replace
+    contentLower.includes('blend') ||
+    contentLower.includes('refinish') ||
+    contentLower.includes('overhaul') ||
+    contentLower.includes('repair line') ||
+    contentLower.includes('line item') ||
+    // Insurance/claim patterns
+    contentLower.includes('deductible') ||
+    contentLower.includes('claim number') ||
+    contentLower.includes('policy number') ||
+    contentLower.includes('insured') ||
+    contentLower.includes('claimant') ||
+    // Common estimate software signatures
+    contentLower.includes('ccc one') ||
+    contentLower.includes('cccone') ||
+    contentLower.includes('mitchell') ||
+    contentLower.includes('audatex') ||
+    contentLower.includes('pathways') ||
+    // Combination patterns
     (contentLower.includes('repair order') && contentLower.includes('grand total')) ||
-    (contentLower.includes('ro number') && contentLower.includes('insurance'));
+    (contentLower.includes('ro number') && contentLower.includes('insurance')) ||
+    (contentLower.includes('estimate') && contentLower.includes('total'));
 
   if (isShopEstimate) {
     console.log(`${LOG_TAG} Detected SHOP ESTIMATE (NOT ADAS billing - body shop document)`);

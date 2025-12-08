@@ -1064,12 +1064,16 @@ async function processEmail(message) {
 
     // Step 2a: CRITICAL - Fetch existing data from Google Sheets
     // This ensures we have RevvADAS calibrations even if they came in a previous email
+    // Also captures existing status for status protection (Bug Fix: prevent Ready → New downgrade)
+    let existingStatus = '';  // Store existing status for later protection check
     try {
       console.log(`${LOG_TAG} Checking for existing sheet data for RO: ${roPo}`);
       const existingRow = await sheetWriter.getScheduleRowByRO(roPo);
 
       if (existingRow) {
         console.log(`${LOG_TAG} Found existing sheet data for RO: ${roPo}`);
+        // Capture existing status for protection check later
+        existingStatus = existingRow.status || '';
 
         // Merge existing Required Calibrations (Column J) if not in current email
         if (!mergedData.requiredCalibrationsText && existingRow.required_calibrations) {
@@ -1403,6 +1407,28 @@ async function processEmail(message) {
 
     console.log(`${LOG_TAG} === STATUS DECISION: ${status} (${statusChangeNote}) ===`);
 
+    // === STATUS PROTECTION: Prevent downgrade from higher-priority statuses ===
+    // Status hierarchy: Completed > Scheduled > Rescheduled > Ready > New
+    // Only allow status to go UP, never DOWN (except Cancelled can override anything)
+    const STATUS_PRIORITY = {
+      'Completed': 5,
+      'Scheduled': 4,
+      'Rescheduled': 3,
+      'Ready': 2,
+      'New': 1,
+      '': 0
+    };
+
+    const existingPriority = STATUS_PRIORITY[existingStatus] || 0;
+    const proposedPriority = STATUS_PRIORITY[status] || 0;
+
+    if (existingStatus && existingPriority > proposedPriority) {
+      console.log(`${LOG_TAG} STATUS PROTECTION: Keeping "${existingStatus}" (priority ${existingPriority}) instead of downgrading to "${status}" (priority ${proposedPriority})`);
+      status = existingStatus;
+      statusChangeNote = `Document received (status protected: ${existingStatus})`;
+    }
+    // === END STATUS PROTECTION ===
+
     // Note: "Needs Attention" and "Needs Review" are deprecated
     // Synthetic ROs still need manual handling but stay as "New"
     if (isSyntheticRo) {
@@ -1674,6 +1700,25 @@ function detectPDFType(filename) {
     return 'estimate';
   }
 
+  // ESTIMATE: Supplement patterns (supplements are estimate revisions)
+  if (lower.includes('supplement') || lower.includes('supp') || lower.includes('revised')) {
+    console.log(`${LOG_TAG} Detected Estimate PDF (supplement): ${filename}`);
+    return 'estimate';
+  }
+
+  // ESTIMATE: Short numeric filename (likely RO/PO number) - e.g., "3045.pdf", "12345.pdf"
+  // These are typically estimates sent by shops with just the RO number as filename
+  if (/^\d{3,6}$/.test(nameWithoutExt)) {
+    console.log(`${LOG_TAG} Detected Estimate PDF (numeric RO filename): ${filename}`);
+    return 'estimate';
+  }
+
+  // ESTIMATE: RO/PO prefixed patterns - e.g., "RO12345.pdf", "PO-3045.pdf"
+  if (/^(ro|po|wo)[-_]?\d+/i.test(nameWithoutExt)) {
+    console.log(`${LOG_TAG} Detected Estimate PDF (RO/PO prefix): ${filename}`);
+    return 'estimate';
+  }
+
   // DEFAULT: Unknown document type
   console.log(`${LOG_TAG} Unknown PDF type, defaulting to 'document': ${filename}`);
   return 'document';
@@ -1704,9 +1749,15 @@ async function checkNewEmails() {
     });
 
     const messages = response.data.messages || [];
-    console.log(`${LOG_TAG} Found ${messages.length} unprocessed emails with PDFs`);
 
-    for (const message of messages) {
+    // CRITICAL FIX: Process emails oldest-first to prevent status regression
+    // Gmail API returns messages in descending order (newest first)
+    // When Revv Report arrives before Estimate in mailbox but Estimate is processed first,
+    // status would incorrectly go Ready → New. Reversing ensures proper chronological order.
+    const messagesOldestFirst = [...messages].reverse();
+    console.log(`${LOG_TAG} Found ${messagesOldestFirst.length} unprocessed emails with PDFs (processing oldest first)`);
+
+    for (const message of messagesOldestFirst) {
       // Skip if already processed locally
       if (processedMessageIds.has(message.id)) {
         console.log(`${LOG_TAG} Skipping ${message.id} - already in local tracking`);

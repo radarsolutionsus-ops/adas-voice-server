@@ -455,8 +455,31 @@ function updateExistingRow(sheet, rowNum, data) {
   const newVehicle = data.vehicle || data.vehicle_info || buildVehicleString(data) || '';
   const vehicle = existingVehicle || newVehicle;
 
-  // Status CAN be updated (e.g., New -> Ready when Revv arrives)
-  const status = data.status || data.status_from_shop || curr[COL.STATUS];
+  // === STATUS PROTECTION: Prevent downgrade from higher-priority statuses ===
+  // Status hierarchy: Completed > Scheduled > Rescheduled > Ready > New
+  // Only allow status to go UP, never DOWN
+  const STATUS_PRIORITY = {
+    'Completed': 5,
+    'Scheduled': 4,
+    'Rescheduled': 3,
+    'Ready': 2,
+    'New': 1,
+    '': 0
+  };
+
+  const existingStatus = curr[COL.STATUS] || '';
+  const proposedStatus = data.status || data.status_from_shop || existingStatus;
+  const existingPriority = STATUS_PRIORITY[existingStatus] || 0;
+  const proposedPriority = STATUS_PRIORITY[proposedStatus] || 0;
+
+  let status;
+  if (existingStatus && existingPriority > proposedPriority) {
+    Logger.log('STATUS PROTECTION: Keeping "' + existingStatus + '" (priority ' + existingPriority + ') instead of "' + proposedStatus + '" (priority ' + proposedPriority + ')');
+    status = existingStatus;
+  } else {
+    status = proposedStatus;
+  }
+  // === END STATUS PROTECTION ===
 
   let scheduledDate = data.scheduled_date || data.scheduledDate || curr[COL.SCHEDULED_DATE];
   let scheduledTime = data.scheduled_time || data.scheduledTime || curr[COL.SCHEDULED_TIME];
