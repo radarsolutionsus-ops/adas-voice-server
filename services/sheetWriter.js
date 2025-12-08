@@ -508,6 +508,39 @@ export async function getScheduleRowByRO(roPo) {
 }
 
 /**
+ * Lookup a schedule row by VIN
+ * Used as fallback when shop name is unknown (e.g., Revv Report arrives first)
+ * @param {string} vin - The VIN to search for
+ * @returns {Promise<Object|null>} - The row data or null if not found
+ */
+export async function lookupByVIN(vin) {
+  if (!vin || vin.length < 11) {
+    console.log(`${LOG_TAG} Invalid VIN for lookup: ${vin}`);
+    return null;
+  }
+
+  console.log(`${LOG_TAG} Looking up schedule row by VIN: ${vin}`);
+
+  const result = await makeGASRequest('lookup_by_vin', {
+    vin: vin,
+    sheet: SCHEDULE_SHEET_ID
+  });
+
+  if (result.success && result.data?.found && result.data?.data) {
+    console.log(`${LOG_TAG} Found row by VIN: ${vin}`);
+    return result.data.data;
+  }
+
+  if (!result.success) {
+    console.log(`${LOG_TAG} VIN lookup failed: ${result.error}`);
+  } else if (!result.data?.found) {
+    console.log(`${LOG_TAG} VIN ${vin} not found in sheet`);
+  }
+
+  return null;
+}
+
+/**
  * Upsert (insert or update) a schedule row by RO/PO
  * If the RO exists, updates it. If not, creates a new row.
  *
@@ -1511,6 +1544,7 @@ function extractModelFromVehicleInfo(vehicleInfo) {
 
 export default {
   getScheduleRowByRO,
+  lookupByVIN,  // VIN lookup fallback for shop name retrieval
   upsertScheduleRowByRO,
   updateScheduleRow,
   updateScheduleRowWithFullNotes,  // Full notes rewrite on status change

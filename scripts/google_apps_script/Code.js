@@ -188,6 +188,10 @@ function doPost(e) {
         result = getRowByROOrVIN(data);
         break;
 
+      case 'lookup_by_vin':
+        result = lookupByVIN(data.vin);
+        break;
+
       default:
         result = { success: false, error: `Unknown action: ${action}` };
     }
@@ -691,6 +695,49 @@ function getScheduleByRO(roPo) {
     },
     rowNumber: rowNum
   };
+}
+
+/**
+ * Lookup a schedule row by VIN only
+ * Used as fallback when shop name is unknown (e.g., Revv Report arrives first)
+ * @param {string} vin - The VIN to search for
+ * @returns {Object} - { success, found, data, rowNumber } or { success: false, found: false }
+ */
+function lookupByVIN(vin) {
+  const ss = SpreadsheetApp.getActive();
+  const sheet = ss.getSheetByName(SCHEDULE_SHEET);
+
+  if (!sheet) {
+    return { success: false, found: false, error: 'Sheet not found' };
+  }
+
+  if (!vin || vin.length < 11) {
+    return { success: false, found: false, error: 'Invalid VIN' };
+  }
+
+  const vinUpper = String(vin).toUpperCase().trim();
+  const data = sheet.getDataRange().getValues();
+
+  // Skip header row
+  for (let i = 1; i < data.length; i++) {
+    const rowVin = String(data[i][COL.VIN] || '').toUpperCase().trim();
+    if (rowVin === vinUpper) {
+      return {
+        success: true,
+        found: true,
+        data: {
+          shop_name: data[i][COL.SHOP_NAME] || '',
+          ro_po: data[i][COL.RO_PO] || '',
+          vin: data[i][COL.VIN] || '',
+          vehicle: data[i][COL.VEHICLE] || '',
+          status: data[i][COL.STATUS] || ''
+        },
+        rowNumber: i + 1
+      };
+    }
+  }
+
+  return { success: true, found: false };
 }
 
 /**

@@ -22,7 +22,7 @@ dotenv.config();
 
 import driveUpload from './driveUpload.js';
 import pdfParser from './pdfParser.js';
-import sheetWriter, { getGmailTokenFromSheets, saveGmailTokenToSheets, getShopEmailByName } from './sheetWriter.js';
+import sheetWriter, { getGmailTokenFromSheets, saveGmailTokenToSheets, getShopEmailByName, lookupByVIN } from './sheetWriter.js';
 import billingMailer from './billingMailer.js';
 // DEPRECATED: AI scrubbing removed - all estimate analysis done manually in RevvADAS
 // import { formatScrubResultsAsNotes, getScrubSummary, formatPreviewNotes, formatFullScrub, analyzeEstimateWithLLM } from './estimateScrubber.js';
@@ -1178,6 +1178,24 @@ async function processEmail(message) {
       console.log(`${LOG_TAG} Clearing suspicious shop name from PDF: "${mergedData.shopName}"`);
       mergedData.shopName = '';
     }
+
+    // VIN LOOKUP FALLBACK: If shop name is empty but we have a VIN, try to find shop from existing row
+    // This handles the case where Revv Report arrives first (before estimate with shop info)
+    if (!mergedData.shopName && mergedData.vin) {
+      console.log(`${LOG_TAG} Shop name empty, checking for existing row by VIN: ${mergedData.vin}`);
+      try {
+        const existingByVin = await lookupByVIN(mergedData.vin);
+        if (existingByVin && existingByVin.shop_name) {
+          mergedData.shopName = existingByVin.shop_name;
+          console.log(`${LOG_TAG} Retrieved shop name from VIN-matched row: ${existingByVin.shop_name}`);
+        } else {
+          console.log(`${LOG_TAG} No existing row found for VIN: ${mergedData.vin}`);
+        }
+      } catch (vinLookupErr) {
+        console.log(`${LOG_TAG} VIN lookup failed: ${vinLookupErr.message}`);
+      }
+    }
+
     if (bodyInfo.vin && !mergedData.vin) {
       mergedData.vin = bodyInfo.vin;
     }
@@ -1241,7 +1259,21 @@ async function processEmail(message) {
         case 'shop_estimate':
         case 'estimate':
           mergedData.estimatePdf = upload.webViewLink;
+          console.log(`${LOG_TAG} *** SET mergedData.estimatePdf = ${upload.webViewLink}`);
           jobState.recordDocument(roPo, jobState.DOC_TYPES.ESTIMATE, docInfo);
+          break;
+        case 'document':
+          // Generic documents might be estimates if no other estimate was found
+          // Only set as estimate if it's not a VIN-named file (which is likely a Revv Report)
+          if (!mergedData.estimatePdf) {
+            const nameWithoutExt = upload.filename.replace(/\.pdf$/i, '');
+            const isVinFilename = /^[A-HJ-NPR-Z0-9]{17}$/i.test(nameWithoutExt);
+            if (!isVinFilename) {
+              mergedData.estimatePdf = upload.webViewLink;
+              console.log(`${LOG_TAG} *** SET mergedData.estimatePdf (from document) = ${upload.webViewLink}`);
+              jobState.recordDocument(roPo, jobState.DOC_TYPES.ESTIMATE, docInfo);
+            }
+          }
           break;
       }
     }
