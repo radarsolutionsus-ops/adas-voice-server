@@ -1275,6 +1275,59 @@ async function processEmail(message) {
       }
     }
 
+    // === CRITICAL FIX: Extract RO from Revv Report and flag for update ===
+    // When a Revv Report arrives, it may have the CORRECT RO that should replace
+    // garbage ROs like "LICY" that were extracted from estimate subject lines
+    for (const pdf of pdfs) {
+      const pdfType = detectPDFType(pdf.filename);
+      const nameWithoutExt = pdf.filename.replace(/\.pdf$/i, '');
+      const isVinFilename = /^[A-HJ-NPR-Z0-9]{17}$/i.test(nameWithoutExt);
+
+      // Check if this is a Revv Report (VIN.pdf or detected as revv_report)
+      if (pdfType === 'revv_report' || isVinFilename) {
+        try {
+          const pdfParse = await import('pdf-parse');
+          const pdfData = await pdfParse.default(pdf.buffer);
+          const pdfText = pdfData.text || '';
+
+          // Extract RO from Revv PDF content - patterns used in RevvADAS
+          const roPatterns = [
+            /Repair\s*Order[\s#:\-]*([A-Za-z0-9]+-?[A-Za-z0-9]*)/i,
+            /RO\s*(?:Number|#)?[\s:\-]*([A-Za-z0-9]+-?[A-Za-z0-9]*)/i,
+            /R\.O\.[\s#:\-]*([A-Za-z0-9]+-?[A-Za-z0-9]*)/i,
+            /Work\s*Order[\s#:\-]*([A-Za-z0-9]+-?[A-Za-z0-9]*)/i
+          ];
+
+          let revvRO = null;
+          for (const pattern of roPatterns) {
+            const match = pdfText.match(pattern);
+            if (match && match[1]) {
+              const candidate = match[1].trim();
+              // Validate: must have digits and be reasonable length
+              if (/\d/.test(candidate) && candidate.length >= 4 && candidate.length <= 15) {
+                revvRO = candidate;
+                break;
+              }
+            }
+          }
+
+          if (revvRO) {
+            console.log(`${LOG_TAG} *** Revv Report contains RO: ${revvRO}`);
+
+            // Set the RO from Revv and flag for forced update
+            mergedData.roPo = revvRO;
+            mergedData.ro_number = revvRO;
+            mergedData.updateROFromRevv = true;  // Flag to force RO update in updateExistingRow
+
+            console.log(`${LOG_TAG} *** Set updateROFromRevv=true to force RO update`);
+            break; // Only process first Revv Report
+          }
+        } catch (parseErr) {
+          console.log(`${LOG_TAG} Could not extract RO from Revv PDF: ${parseErr.message}`);
+        }
+      }
+    }
+
     // Step 3: Update Google Sheets
     // Determine appropriate status based on document types received
     // SIMPLIFIED STATUS LOGIC (6 statuses only):

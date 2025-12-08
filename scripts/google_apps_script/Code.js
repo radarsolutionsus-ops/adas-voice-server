@@ -470,7 +470,26 @@ function updateExistingRow(sheet, rowNum, data) {
     notes = data.shop_notes;
   }
 
-  const roPo = curr[COL.RO_PO];
+  // ========= FIXED: Allow RO update from Revv when current is garbage =========
+  let roPo = curr[COL.RO_PO] || '';
+  const incomingRO = data.roPo || data.ro_number || '';
+
+  if (incomingRO && incomingRO.trim()) {
+    const currentHasDigits = /\d/.test(roPo);
+    const incomingHasDigits = /\d/.test(incomingRO);
+    const currentIsGarbage = !roPo ||
+                             roPo.length < 4 ||
+                             !currentHasDigits ||
+                             roPo.toUpperCase() === 'LICY' ||
+                             roPo.toUpperCase() === 'UNKNOWN';
+
+    // Update RO if current is garbage OR explicitly flagged for update from Revv
+    if ((currentIsGarbage && incomingHasDigits) || data.updateROFromRevv) {
+      Logger.log('Updating RO from "' + roPo + '" to "' + incomingRO + '"');
+      roPo = incomingRO;
+    }
+  }
+  // ====================================================
 
   // Handle Flow History (Column T) - append new entries, don't replace
   let flowHistory = curr[COL.FLOW_HISTORY] || '';
