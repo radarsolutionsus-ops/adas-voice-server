@@ -35,6 +35,45 @@ import { getESTTimestamp, getESTISOTimestamp, formatToEST } from '../utils/timez
 const LOG_TAG = '[EMAIL_PIPELINE]';
 
 /**
+ * Make name mapping - convert abbreviated/truncated make names to full names
+ * VIN decoders sometimes return abbreviated versions
+ */
+const MAKE_NAME_MAP = {
+  'TOYO': 'Toyota', 'HOND': 'Honda', 'NISS': 'Nissan',
+  'FORD': 'Ford', 'CHEV': 'Chevrolet', 'GMC': 'GMC',
+  'GENE': 'Genesis', 'HYUN': 'Hyundai', 'KIA': 'Kia',
+  'BMW': 'BMW', 'MERC': 'Mercedes-Benz', 'AUDI': 'Audi',
+  'VOLK': 'Volkswagen', 'LEXU': 'Lexus', 'ACUR': 'Acura',
+  'INFI': 'Infiniti', 'MAZD': 'Mazda', 'SUBA': 'Subaru',
+  'DODG': 'Dodge', 'JEEP': 'Jeep', 'RAM': 'Ram',
+  'CADI': 'Cadillac', 'BUIC': 'Buick', 'LINC': 'Lincoln',
+  'CHRY': 'Chrysler', 'TESL': 'Tesla', 'PORS': 'Porsche',
+  'VOLV': 'Volvo', 'JAGU': 'Jaguar', 'LAND': 'Land Rover'
+};
+
+/**
+ * Clean make name - convert abbreviated names to full names
+ * @param {string} rawMake - Raw make name (possibly abbreviated)
+ * @returns {string} - Cleaned make name
+ */
+function cleanMakeName(rawMake) {
+  if (!rawMake) return '';
+  const firstWord = rawMake.split(/\s+/)[0].toUpperCase();
+  // Check if it's an abbreviation
+  if (MAKE_NAME_MAP[firstWord]) {
+    return MAKE_NAME_MAP[firstWord];
+  }
+  // Check if it's already a full name (return as-is with proper casing)
+  const values = Object.values(MAKE_NAME_MAP);
+  const matchedFull = values.find(v => v.toUpperCase() === firstWord);
+  if (matchedFull) {
+    return matchedFull;
+  }
+  // Return first word with title case
+  return rawMake.split(/\s+/)[0].charAt(0).toUpperCase() + rawMake.split(/\s+/)[0].slice(1).toLowerCase();
+}
+
+/**
  * OEM1Stop Portal Links - central hub for all OEM position statements
  * Used to populate Column U with clickable links
  */
@@ -1004,15 +1043,17 @@ async function processEmail(message) {
               console.log(`${LOG_TAG} Set VIN from estimate: ${vehicleInfo.vin}`);
             }
             if (vehicleInfo.vehicle && !mergedData.vehicle) {
+              // Clean the make name to full form (e.g., "TOYO" -> "Toyota")
+              const cleanedMake = cleanMakeName(vehicleInfo.make);
               mergedData.vehicle = vehicleInfo.vehicle;
               mergedData.vehicleYear = vehicleInfo.year;
-              mergedData.vehicleMake = vehicleInfo.make;
+              mergedData.vehicleMake = cleanedMake;
               mergedData.vehicleModel = vehicleInfo.model;
-              console.log(`${LOG_TAG} Set vehicle from estimate: ${vehicleInfo.vehicle}`);
+              console.log(`${LOG_TAG} Set vehicle from estimate: ${vehicleInfo.vehicle} (make cleaned: ${vehicleInfo.make} -> ${cleanedMake})`);
             }
             if (vehicleInfo.make && !mergedData.vehicleMake) {
-              mergedData.vehicleMake = vehicleInfo.make;
-              console.log(`${LOG_TAG} Set make from estimate VIN: ${vehicleInfo.make}`);
+              mergedData.vehicleMake = cleanMakeName(vehicleInfo.make);
+              console.log(`${LOG_TAG} Set make from estimate VIN: ${vehicleInfo.make} -> ${mergedData.vehicleMake}`);
             }
           } catch (parseErr) {
             console.log(`${LOG_TAG} Could not parse estimate for vehicle info: ${parseErr.message}`);

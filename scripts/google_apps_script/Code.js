@@ -33,7 +33,7 @@ const SCHEDULE_SHEET = 'ADAS_Schedule';
 const BILLING_SHEET = 'Billing';
 const SHOPS_SHEET = 'Shops';
 const SCRUB_DETAILS_SHEET = 'Scrub_Details';
-const TOTAL_COLUMNS = 21; // A through U
+const TOTAL_COLUMNS = 22; // A through V
 
 // Column indices (0-based)
 const COL = {
@@ -58,7 +58,8 @@ const COL = {
   NOTES: 18,          // S
   FLOW_HISTORY: 19,   // T - Flow History (timestamped status changes)
   FULL_SCRUB: 19,     // T - Alias for backward compatibility (same as FLOW_HISTORY)
-  OEM_POSITION: 20    // U - OEM Position Statement links
+  OEM_POSITION: 20,   // U - OEM Position Statement links
+  ESTIMATE_PDF: 21    // V - Estimate PDF link
 };
 
 /**
@@ -408,7 +409,8 @@ function createNewRow(sheet, data, roPo) {
     data.invoice_date || data.invoiceDate || '',                 // R: Invoice Date
     data.notes || data.shop_notes || '',                         // S: Notes (short preview)
     flowHistory,                                                  // T: Flow History
-    oemPosition                                                   // U: OEM Position Statement links
+    oemPosition,                                                  // U: OEM Position Statement links
+    data.estimate_pdf || data.estimatePdf || ''                  // V: Estimate PDF link
   ];
 
   sheet.appendRow(newRow);
@@ -506,7 +508,8 @@ function updateExistingRow(sheet, rowNum, data) {
     data.invoice_date || data.invoiceDate || curr[COL.INVOICE_DATE], // R
     notes,                                                        // S: Notes (short preview)
     flowHistory,                                                  // T: Flow History
-    oemPosition                                                   // U: OEM Position Statement links
+    oemPosition,                                                  // U: OEM Position Statement links
+    data.estimate_pdf || data.estimatePdf || curr[COL.ESTIMATE_PDF] || '' // V: Estimate PDF link
   ];
 
   range.setValues([updatedRow]);
@@ -570,7 +573,8 @@ function techUpdateRow(data) {
     curr[COL.INVOICE_DATE],                                       // R: KEEP
     data.notes ? (curr[COL.NOTES] ? curr[COL.NOTES] + ' | ' + data.notes : data.notes) : curr[COL.NOTES], // S: Append
     data.flowHistory || data.flow_history || curr[COL.FLOW_HISTORY] || '', // T: Flow History - append new entries
-    curr[COL.OEM_POSITION] || ''                                  // U: KEEP
+    curr[COL.OEM_POSITION] || '',                                 // U: KEEP
+    curr[COL.ESTIMATE_PDF] || ''                                  // V: KEEP
   ];
 
   range.setValues([updatedRow]);
@@ -663,7 +667,8 @@ function getScheduleByRO(roPo) {
       notes: data[COL.NOTES],
       flow_history: data[COL.FLOW_HISTORY],
       flowHistory: data[COL.FLOW_HISTORY],
-      oem_position: data[COL.OEM_POSITION] || ''
+      oem_position: data[COL.OEM_POSITION] || '',
+      estimate_pdf: data[COL.ESTIMATE_PDF] || ''
     },
     rowNumber: rowNum
   };
@@ -1550,6 +1555,8 @@ function buildSidebarHtml(row) {
   const postScanUrl = rowData[COL.POSTSCAN_PDF] || '';
   const invoiceUrl = rowData[COL.INVOICE_PDF] || '';
   const flowHistory = rowData[COL.FLOW_HISTORY] || '';
+  const oemPosition = rowData[COL.OEM_POSITION] || '';
+  const estimateUrl = rowData[COL.ESTIMATE_PDF] || '';
 
   // DEBUG: Log flow history for troubleshooting
   console.log('Flow History for row ' + row + ': "' + flowHistory + '" (Column T index ' + COL.FLOW_HISTORY + ')');
@@ -1599,6 +1606,9 @@ function buildSidebarHtml(row) {
 '    .doc-link.present:hover { background: #ceead6; }' +
 '    .doc-link.present .open-icon { margin-left: auto; font-size: 16px; opacity: 0.7; }' +
 '    .doc-link.missing { background: #fce8e6; color: #c5221f; }' +
+'    .doc-link.pending { background: #fff8e1; color: #ef6c00; }' +
+'    .doc-link.oem { background: #fff3e0; color: #e65100; cursor: pointer; }' +
+'    .doc-link.oem:hover { background: #ffe0b2; }' +
 '    .empty { color: #9aa0a6; font-style: italic; font-size: 13px; }' +
 '    .flow-history { max-height: 200px; overflow-y: auto; background: #f8f9fa; border-radius: 8px; padding: 10px; font-family: monospace; font-size: 11px; }' +
 '    .flow-entry { padding: 6px 0; border-bottom: 1px solid #e8eaed; color: #3c4043; }' +
@@ -1628,15 +1638,23 @@ function buildSidebarHtml(row) {
 '    </div>' +
 '    <div class="section">' +
 '      <div class="section-title"><span class="material-icons">folder</span>Documents</div>' +
+       (estimateUrl
+         ? '<a href="' + escapeHtml(estimateUrl) + '" target="_blank" class="doc-link present"><span class="material-icons">description</span><span>Estimate PDF</span><span class="material-icons open-icon">open_in_new</span></a>'
+         : '<div class="doc-link pending"><span class="material-icons">hourglass_empty</span><span>Estimate - Not uploaded</span></div>') +
        (hasRevv
          ? '<a href="' + escapeHtml(revvPdfUrl) + '" target="_blank" class="doc-link present"><span class="material-icons">check_circle</span><span>Revv Report</span><span class="material-icons open-icon">open_in_new</span></a>'
-         : '<div class="doc-link missing"><span class="material-icons">cancel</span><span>Revv Report - Missing</span></div>') +
+         : (calibrationList.length > 0
+           ? '<div class="doc-link present"><span class="material-icons">check_circle</span><span>Revv Report (processed)</span></div>'
+           : '<div class="doc-link missing"><span class="material-icons">cancel</span><span>Revv Report - Missing</span></div>')) +
        (hasPostScan
          ? '<a href="' + escapeHtml(postScanUrl) + '" target="_blank" class="doc-link present"><span class="material-icons">check_circle</span><span>Post Scan</span><span class="material-icons open-icon">open_in_new</span></a>'
-         : '<div class="doc-link missing"><span class="material-icons">cancel</span><span>Post Scan - Missing</span></div>') +
+         : '<div class="doc-link pending"><span class="material-icons">hourglass_empty</span><span>Post Scan - Pending</span></div>') +
        (hasInvoice
          ? '<a href="' + escapeHtml(invoiceUrl) + '" target="_blank" class="doc-link present"><span class="material-icons">check_circle</span><span>Invoice</span><span class="material-icons open-icon">open_in_new</span></a>'
-         : '<div class="doc-link missing"><span class="material-icons">cancel</span><span>Invoice - Missing</span></div>') +
+         : '<div class="doc-link pending"><span class="material-icons">hourglass_empty</span><span>Invoice - Pending</span></div>') +
+       (oemPosition
+         ? '<a href="' + escapeHtml(oemPosition) + '" target="_blank" class="doc-link oem"><span class="material-icons">business</span><span>OEM Position Statement</span><span class="material-icons open-icon">open_in_new</span></a>'
+         : '') +
 '    </div>' +
 '    <div class="section">' +
 '      <div class="section-title"><span class="material-icons">history</span>Flow History</div>' +

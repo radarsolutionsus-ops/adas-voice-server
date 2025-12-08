@@ -538,20 +538,21 @@ export async function upsertScheduleRowByRO(roPo, dataObject) {
     vehicleStr = builtVehicle || vehicleStr;
   }
 
-  // CRITICAL FIX: Remove duplicate model names (e.g., "2019 Toyota Camry Camry SE" -> "2019 Toyota Camry")
-  // This happens when vehicle string already has model and we're appending model+trim
-  if (vehicleModel && vehicleStr) {
-    // Check if model appears twice in the string
-    const modelLower = vehicleModel.toLowerCase();
-    const vehicleLower = vehicleStr.toLowerCase();
-    const firstIndex = vehicleLower.indexOf(modelLower);
-    if (firstIndex !== -1) {
-      const secondIndex = vehicleLower.indexOf(modelLower, firstIndex + modelLower.length);
-      if (secondIndex !== -1) {
-        // Model appears twice - truncate at second occurrence
-        vehicleStr = vehicleStr.substring(0, secondIndex).trim();
-        console.log(`${LOG_TAG} Removed duplicate model, cleaned: "${vehicleStr}"`);
-      }
+  // CRITICAL FIX: Remove duplicate words in vehicle string
+  // This handles: "2019 TOYO Camry Camry SE" -> "2019 TOYO Camry SE"
+  // And: "2025 GMC Acadia Acadia 4" -> "2025 GMC Acadia 4"
+  if (vehicleStr) {
+    const words = vehicleStr.split(/\s+/);
+    const deduped = words.filter((word, i) => {
+      // Keep first word always
+      if (i === 0) return true;
+      // Remove if same as previous word (case-insensitive)
+      return word.toLowerCase() !== words[i - 1].toLowerCase();
+    });
+    const cleanedVehicle = deduped.join(' ');
+    if (cleanedVehicle !== vehicleStr) {
+      console.log(`${LOG_TAG} Removed duplicate words: "${vehicleStr}" -> "${cleanedVehicle}"`);
+      vehicleStr = cleanedVehicle;
     }
   }
 
@@ -628,7 +629,9 @@ export async function upsertScheduleRowByRO(roPo, dataObject) {
     // Column T: Flow History (timestamped document submissions)
     flow_history: dataObject.flowHistory || dataObject.flow_history || '',
     // Column U: OEM Position Statement links
-    oem_position: dataObject.oemPosition || dataObject.oem_position || dataObject.oemLinks || ''
+    oem_position: dataObject.oemPosition || dataObject.oem_position || dataObject.oemLinks || '',
+    // Column V: Estimate PDF link
+    estimate_pdf: dataObject.estimatePdf || dataObject.estimate_pdf || ''
   };
 
   // Remove empty string values (but keep roPo)
@@ -642,6 +645,7 @@ export async function upsertScheduleRowByRO(roPo, dataObject) {
   console.log(`${LOG_TAG} revv_report_pdf: ${cleanedData.revv_report_pdf || 'NOT SET'}`);
   console.log(`${LOG_TAG} shop_name: ${cleanedData.shop_name || 'NOT SET'}`);
   console.log(`${LOG_TAG} oem_position: ${cleanedData.oem_position || 'NOT SET'}`);
+  console.log(`${LOG_TAG} estimate_pdf: ${cleanedData.estimate_pdf || 'NOT SET'}`);
 
   // Use 'log_ro' action (matches GAS script)
   const result = await makeGASRequest('log_ro', cleanedData);
