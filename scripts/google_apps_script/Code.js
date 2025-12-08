@@ -661,7 +661,8 @@ function getScheduleByRO(roPo) {
       invoice_amount: data[COL.INVOICE_AMOUNT],
       invoice_date: data[COL.INVOICE_DATE],
       notes: data[COL.NOTES],
-      full_scrub: data[COL.FULL_SCRUB],
+      flow_history: data[COL.FLOW_HISTORY],
+      flowHistory: data[COL.FLOW_HISTORY],
       oem_position: data[COL.OEM_POSITION] || ''
     },
     rowNumber: rowNum
@@ -1550,6 +1551,9 @@ function buildSidebarHtml(row) {
   const invoiceUrl = rowData[COL.INVOICE_PDF] || '';
   const flowHistory = rowData[COL.FLOW_HISTORY] || '';
 
+  // DEBUG: Log flow history for troubleshooting
+  console.log('Flow History for row ' + row + ': "' + flowHistory + '" (Column T index ' + COL.FLOW_HISTORY + ')');
+
   // Parse calibrations
   const calibrationList = requiredCals
     ? requiredCals.split(/[;,]/).map(function(c) { return c.trim(); }).filter(function(c) { return c.length > 0; })
@@ -1636,7 +1640,7 @@ function buildSidebarHtml(row) {
 '    </div>' +
 '    <div class="section">' +
 '      <div class="section-title"><span class="material-icons">history</span>Flow History</div>' +
-'      <div class="flow-history">' + (historyEntries.length > 0 ? historyEntries.map(function(e) { return '<div class="flow-entry">' + escapeHtml(e) + '</div>'; }).join('') : '<div class="empty">No history yet</div>') + '</div>' +
+'      <div class="flow-history">' + (historyEntries.length > 0 ? historyEntries.map(function(e) { return '<div class="flow-entry">' + escapeHtml(e) + '</div>'; }).join('') : '<div class="empty">No history recorded yet. History will appear when documents are submitted via email.</div>') + '</div>' +
 '    </div>' +
 '    <div class="view-notice">Status changes are managed by the voice assistant</div>' +
 '  </div>' +
