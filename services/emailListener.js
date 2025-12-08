@@ -1280,32 +1280,28 @@ async function processEmail(message) {
       }
     }
 
-    // CRITICAL FIX: If pdfParser detected calibrations, we have a Revv Report
-    // This catches Revv PDFs even when filename detection fails
+    // If calibrations were detected but no revv_report_pdf was set,
+    // ONLY look for actual revv_report type or VIN-named uploads
+    // DO NOT fallback to grabbing any random upload - that causes the bug where
+    // estimate PDFs get stored in the revv_report_pdf column
     if (mergedData.requiredCalibrationsText && !mergedData.revvReportPdf) {
-      console.log(`${LOG_TAG} Calibrations detected but no Revv PDF link - searching uploads...`);
+      console.log(`${LOG_TAG} Calibrations detected but no Revv PDF link - searching for VIN-named uploads only...`);
 
       for (const upload of uploadResults.uploads) {
         const nameWithoutExt = upload.filename.replace(/\.pdf$/i, '');
         const isVinFilename = /^[A-HJ-NPR-Z0-9]{17}$/i.test(nameWithoutExt);
 
-        // Match by type or VIN filename
+        // ONLY match by type 'revv_report' or VIN filename pattern
+        // NO FALLBACK - if neither matches, leave revvReportPdf empty
         if (upload.type === 'revv_report' || isVinFilename) {
           mergedData.revvReportPdf = upload.webViewLink;
-          console.log(`${LOG_TAG} *** MATCHED Revv PDF: ${upload.webViewLink}`);
+          console.log(`${LOG_TAG} *** MATCHED Revv PDF (strict): ${upload.webViewLink}`);
           break;
         }
       }
 
-      // Fallback: first non-estimate/invoice/scan if still not found
       if (!mergedData.revvReportPdf) {
-        const fallback = uploadResults.uploads.find(u =>
-          !['estimate', 'shop_estimate', 'invoice', 'scan_report'].includes(u.type)
-        );
-        if (fallback) {
-          mergedData.revvReportPdf = fallback.webViewLink;
-          console.log(`${LOG_TAG} *** FALLBACK Revv PDF: ${fallback.webViewLink}`);
-        }
+        console.log(`${LOG_TAG} No VIN-named or revv_report type upload found - leaving revvReportPdf empty`);
       }
     }
 
