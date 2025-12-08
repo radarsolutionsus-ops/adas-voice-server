@@ -528,7 +528,17 @@ export async function upsertScheduleRowByRO(roPo, dataObject) {
   // Build from parts, filtering empty values
   const vehicleParts = [vehicleYear, vehicleMake, vehicleModel, vehicleTrim].filter(p => p && p.trim());
   const builtVehicle = vehicleParts.join(' ');
-  const vehicleStr = dataObject.vehicle || builtVehicle || '';
+
+  // CRITICAL FIX: If dataObject.vehicle exists but is missing make, rebuild it
+  // This handles cases where estimate parsing extracted incomplete vehicle info
+  let vehicleStr = dataObject.vehicle || builtVehicle || '';
+
+  // If we have separate make info but it's missing from vehicle string, rebuild
+  if (vehicleMake && vehicleStr && !vehicleStr.toLowerCase().includes(vehicleMake.toLowerCase())) {
+    // Existing vehicle string is missing the make - use built version instead
+    console.log(`${LOG_TAG} Vehicle string "${vehicleStr}" missing make "${vehicleMake}" - rebuilding`);
+    vehicleStr = builtVehicle || vehicleStr;
+  }
 
   console.log(`${LOG_TAG} Vehicle parts: year="${vehicleYear}", make="${vehicleMake}", model="${vehicleModel}", built="${builtVehicle}", final="${vehicleStr}"`);
 

@@ -1393,12 +1393,9 @@ function installSelectionTrigger() {
 
 /**
  * Get currently selected row (for sidebar polling)
+ * ALWAYS return live active cell - don't rely on stored property
  */
 function getSelectedRow() {
-  const stored = PropertiesService.getScriptProperties().getProperty('SELECTED_ROW');
-  if (stored) {
-    return parseInt(stored, 10);
-  }
   const sheet = SpreadsheetApp.getActive().getSheetByName(SCHEDULE_SHEET);
   if (sheet) {
     return sheet.getActiveCell().getRow();
