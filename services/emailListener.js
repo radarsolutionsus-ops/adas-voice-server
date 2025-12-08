@@ -417,12 +417,14 @@ async function ensureLabels() {
 function extractRoFromText(text) {
   if (!text) return null;
 
-  // Pattern 1: Explicit RO/PO prefixes
-  const explicitMatch = text.match(/(?:RO|R\.O\.|PO|P\.O\.|Repair\s*Order|Estimate)[\s#\-:]*([A-Z0-9\-]{3,})/i);
+  // Pattern 1: Explicit RO/PO prefixes - MUST be word boundaries to avoid matching "POLICY" → "LICY"
+  // Using (?:^|[\s\n]) to ensure we're at start of word, not middle of "POLICY"
+  // Also require at least a space/colon/# after prefix to avoid partial word matches
+  const explicitMatch = text.match(/(?:^|[\s\n])(?:RO|R\.O\.|PO|P\.O\.|Repair\s*Order|Estimate)[\s#\-:]+([A-Z0-9\-]{3,})/i);
   if (explicitMatch) return explicitMatch[1].toUpperCase();
 
-  // Pattern 2: Invoice/Work Order numbers
-  const invoiceMatch = text.match(/(?:Invoice|Work\s*Order|WO)[\s#\-:]*([A-Z0-9\-]{3,})/i);
+  // Pattern 2: Invoice/Work Order numbers - also require word boundary
+  const invoiceMatch = text.match(/(?:^|[\s\n])(?:Invoice|Work\s*Order|WO)[\s#\-:]+([A-Z0-9\-]{3,})/i);
   if (invoiceMatch) return invoiceMatch[1].toUpperCase();
 
   // Pattern 3: Standalone 4-6 digit number at start of text or on its own line
@@ -448,9 +450,10 @@ function extractRoFromFilename(filename) {
     return name;
   }
 
-  // Pattern 2: RO/PO prefix in filename
-  const prefixMatch = name.match(/(?:RO|PO|WO)[\s_\-]*(\d{3,})/i);
-  if (prefixMatch) return prefixMatch[1];
+  // Pattern 2: RO/PO/WO prefix in filename - capture full RO including suffix
+  // e.g., "PO 11999-PM" → "11999-PM", "RO 24806-GEICO" → "24806-GEICO"
+  const prefixMatch = name.match(/(?:RO|PO|WO)[\s_\-]*(\d+[\-]?[A-Z0-9]*)/i);
+  if (prefixMatch) return prefixMatch[1].toUpperCase();
 
   // Pattern 3: Number at start or end of filename
   const numberMatch = name.match(/(?:^|[\s_\-])(\d{4,6})(?:[\s_\-]|$)/);
@@ -934,14 +937,29 @@ async function processEmail(message) {
     }
 
     // === RO/PO EXTRACTION CHAIN ===
-    // Priority: PDF content > Email subject > Email body > Filename > Synthetic
-    // This ensures RO from estimate/RevvADAS PDFs takes precedence over subject line
+    // Priority: Explicit filename (PO/RO prefix) > PDF content > Email subject > Email body > Any filename > Synthetic
+    // Explicit filename patterns (like "PO 11999-PM.pdf") are most reliable
     let roPo = null;
     let roSource = null;
     let isSyntheticRo = false;
 
-    // 1. Try PDF text content FIRST (primary source - from estimate or RevvADAS)
-    if (pdfs.length > 0) {
+    // 1. FIRST: Check for explicit RO/PO/WO prefix in filenames (highest priority)
+    // Filenames like "PO 11999-PM.pdf", "RO 24806.pdf" are intentionally named and most reliable
+    for (const pdf of pdfs) {
+      const filename = pdf.filename || '';
+      const nameWithoutExt = filename.replace(/\.pdf$/i, '');
+      // Check for explicit PO/RO/WO prefix pattern
+      const explicitMatch = nameWithoutExt.match(/^(?:PO|RO|WO)[\s_\-]*(\d+[\-]?[A-Z0-9]*)/i);
+      if (explicitMatch) {
+        roPo = explicitMatch[1].toUpperCase();
+        roSource = `filename_explicit:${pdf.filename}`;
+        console.log(`${LOG_TAG} Extracted RO from explicit filename pattern: ${roPo} (${pdf.filename})`);
+        break;
+      }
+    }
+
+    // 2. Try PDF text content (from estimate or RevvADAS)
+    if (!roPo && pdfs.length > 0) {
       try {
         const pdfParse = await import('pdf-parse');
         // Check all PDFs for RO, prioritizing estimates
@@ -962,7 +980,7 @@ async function processEmail(message) {
       }
     }
 
-    // 2. Try email subject as fallback
+    // 3. Try email subject as fallback
     if (!roPo) {
       const subjectResult = parseEmailSubject(subject);
       if (subjectResult.roPo) {
@@ -972,7 +990,7 @@ async function processEmail(message) {
       }
     }
 
-    // 3. If not in subject, try email body
+    // 4. If not in subject, try email body
     if (!roPo) {
       console.log(`${LOG_TAG} No RO found in subject — attempting extraction from body`);
       const bodyRo = extractRoFromText(body);
@@ -983,7 +1001,7 @@ async function processEmail(message) {
       }
     }
 
-    // 4. Try PDF filenames
+    // 5. Try any PDF filename pattern (less reliable - just numeric patterns)
     if (!roPo) {
       for (const pdf of pdfs) {
         const filenameRo = extractRoFromFilename(pdf.filename);
@@ -996,7 +1014,7 @@ async function processEmail(message) {
       }
     }
 
-    // 5. Generate synthetic RO if nothing found
+    // 6. Generate synthetic RO if nothing found
     if (!roPo) {
       roPo = generateSyntheticRo(message.id);
       roSource = 'synthetic';
