@@ -97,6 +97,41 @@ const STATUS_CONFIG = {
 };
 
 /**
+ * Check if a VIN looks valid (not a false positive like ALLDATA reference)
+ * @param {string} vin - The VIN to validate
+ * @returns {boolean} - True if VIN appears valid
+ */
+function isValidVinFormat(vin) {
+  if (!vin || typeof vin !== 'string') return false;
+  vin = vin.toUpperCase().trim();
+  if (vin.length !== 17) return false;
+
+  // Check for common false positives - estimate system reference numbers
+  // ALLDATA, AUDATEX, CCC, etc. reference numbers often start with these
+  if (/^(ALL|AUD|CCM|CCC|EST|REF|INV|DAT|DOC|PDF|IMG|RPT)/i.test(vin)) {
+    Logger.log('VIN validation: Rejected false positive (estimate system ref): ' + vin);
+    return false;
+  }
+
+  // Valid WMI (World Manufacturer Identifier) - first character must be valid
+  // 1-5: North America, J: Japan, K: Korea, S: UK, W: Germany, etc.
+  const validFirstChar = /^[1-5JKLMNSTUVWXYZ]/;
+  if (!validFirstChar.test(vin)) {
+    Logger.log('VIN validation: Rejected invalid WMI: ' + vin);
+    return false;
+  }
+
+  // Position 9 is the check digit (0-9 or X)
+  const checkDigit = vin.charAt(8);
+  if (!/^[0-9X]$/.test(checkDigit)) {
+    Logger.log('VIN validation: Rejected invalid check digit: ' + vin);
+    return false;
+  }
+
+  return true;
+}
+
+/**
  * Normalize status to valid values, migrating deprecated statuses
  * @param {string} status - Raw status value
  * @returns {string} - Normalized valid status
@@ -412,6 +447,15 @@ function createNewRow(sheet, data, roPo) {
   const shopName = data.shop_name || data.shopName || data.shop || '';
   const vin = data.vin || '';
 
+  // Log VIN validation status on new row creation
+  if (vin) {
+    if (!isValidVinFormat(vin)) {
+      Logger.log('⚠️ NEW ROW: VIN may be invalid (false positive?): ' + vin);
+    } else {
+      Logger.log('NEW ROW: Valid VIN: ' + vin);
+    }
+  }
+
   // Initialize Flow History with creation entry (Column T)
   const initialFlowEntry = timestamp + '  NEW          Row created';
   const flowHistory = data.flow_history || data.flowHistory || initialFlowEntry;
@@ -473,10 +517,37 @@ function updateExistingRow(sheet, rowNum, data) {
   const newShopName = data.shop_name || data.shopName || data.shop || '';
   const shopName = existingShopName || newShopName;
 
-  // PRESERVE existing VIN - only set if currently empty
+  // VIN HANDLING: Allow update from Revv Report if existing VIN is invalid
+  // This fixes the bug where garbage VINs (like ALLDATA ref numbers) block correct VINs
   const existingVin = curr[COL.VIN] || '';
   const newVin = data.vin || '';
-  const vin = existingVin || newVin;
+  let vin = existingVin;
+
+  // Check if we should update the VIN
+  const hasRevvReport = data.revv_report_pdf || data.revvReportPdf || data.isRevvReport;
+  const existingVinValid = isValidVinFormat(existingVin);
+  const newVinValid = isValidVinFormat(newVin);
+
+  if (newVin && newVinValid) {
+    if (!existingVin) {
+      // No existing VIN - use new one
+      vin = newVin;
+      Logger.log('VIN set (was empty): ' + newVin);
+    } else if (!existingVinValid) {
+      // Existing VIN is garbage (false positive like ALLDATA ref) - replace it
+      vin = newVin;
+      Logger.log('VIN UPDATED (existing was invalid): "' + existingVin + '" → "' + newVin + '"');
+    } else if (hasRevvReport && data.updateVINFromRevv) {
+      // Explicit flag to update VIN from Revv Report
+      vin = newVin;
+      Logger.log('VIN UPDATED (explicit Revv flag): "' + existingVin + '" → "' + newVin + '"');
+    }
+    // else: keep existing valid VIN
+  } else if (!existingVin && newVin) {
+    // Even if new VIN is invalid, use it if nothing else available
+    vin = newVin;
+    Logger.log('VIN set (new may be invalid): ' + newVin);
+  }
 
   // PRESERVE existing vehicle - only set if currently empty
   const existingVehicle = curr[COL.VEHICLE] || '';
@@ -1790,10 +1861,12 @@ function buildSidebarHtml(row) {
 '      <div class="field"><div class="field-label">Scheduled</div><div class="field-value">' + (scheduledDate ? escapeHtml(scheduledDate) + (scheduledTime ? ' at ' + escapeHtml(scheduledTime) : '') : '<span class="empty">Not scheduled</span>') + '</div></div>' +
 '    </div>' +
 '    <div class="section">' +
-'      <div class="section-title"><span class="material-icons">build</span>Calibrations (' + calibrationList.length + ')</div>' +
-       (calibrationList.length > 0
-         ? calibrationList.map(function(c) { return '<div class="cal-item">' + escapeHtml(c) + '</div>'; }).join('')
-         : '<div class="empty">Awaiting Revv Report</div>') +
+'      <div class="section-title"><span class="material-icons">build</span>Calibrations' + (status === 'No Cal' ? '' : ' (' + calibrationList.length + ')') + '</div>' +
+       (status === 'No Cal'
+         ? '<div style="background:#e9ecef;color:#6c757d;padding:12px;border-radius:6px;text-align:center;"><strong>⊘ No calibration required per Revv Report</strong></div>'
+         : (calibrationList.length > 0
+           ? calibrationList.map(function(c) { return '<div class="cal-item">' + escapeHtml(c) + '</div>'; }).join('')
+           : '<div class="empty">Awaiting Revv Report</div>')) +
 '    </div>' +
 '    <div class="section">' +
 '      <div class="section-title"><span class="material-icons">folder</span>Documents</div>' +
@@ -1873,10 +1946,11 @@ function applyStatusColorFormatting() {
   // Define the status column range (F2:F1000)
   const statusRange = sheet.getRange('F2:F1000');
 
-  // Status color configurations (FINALIZED December 2024 - 6 statuses)
+  // Status color configurations (FINALIZED December 2024 - 7 statuses)
   const statusColors = [
     { text: 'New', background: '#e8f0fe', fontColor: '#1a73e8' },
     { text: 'Ready', background: '#e6f4ea', fontColor: '#137333' },
+    { text: 'No Cal', background: '#e9ecef', fontColor: '#6c757d' },  // Gray - No calibration required
     { text: 'Scheduled', background: '#f3e8fd', fontColor: '#7c3aed' },
     { text: 'Rescheduled', background: '#fff3e0', fontColor: '#e65100' },
     { text: 'Completed', background: '#d2e3fc', fontColor: '#1967d2' },
@@ -1905,6 +1979,7 @@ function applyStatusColorFormatting() {
     'The following colors are now active:\n\n' +
     '🔵 New = Blue\n' +
     '🟢 Ready = Green\n' +
+    '⚪ No Cal = Gray\n' +
     '🟣 Scheduled = Purple\n' +
     '🟠 Rescheduled = Orange\n' +
     '🔵 Completed = Dark Blue\n' +

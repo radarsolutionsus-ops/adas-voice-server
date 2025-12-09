@@ -36,6 +36,42 @@ import { getESTTimestamp, getESTISOTimestamp, formatToEST } from '../utils/timez
 const LOG_TAG = '[EMAIL_PIPELINE]';
 
 /**
+ * Check if a VIN candidate is likely valid (not a false positive)
+ * Rejects common false positives like ALLDATA reference numbers
+ * @param {string} vin - 17-character string to validate
+ * @returns {boolean} - True if VIN looks valid
+ */
+function isValidVinCandidate(vin) {
+  if (!vin || vin.length !== 17) return false;
+
+  const upperVin = vin.toUpperCase();
+
+  // Skip common false positives - reference numbers from estimate systems
+  // ALLDATA, AUDATEX, CCC, etc. reference numbers often start with these
+  if (/^(ALL|AUD|CCM|CCC|EST|REF|INV|DAT|DOC|PDF|IMG|RPT)/i.test(upperVin)) {
+    console.log(`${LOG_TAG} ⚠️ Rejecting VIN (estimate system reference): ${upperVin}`);
+    return false;
+  }
+
+  // WMI (World Manufacturer Identifier) - first character must be valid
+  // 1-5: North America, J: Japan, K: Korea, S: UK, W: Germany, etc.
+  const validFirstChar = /^[1-5JKLMNSTUVWXYZ]/;
+  if (!validFirstChar.test(upperVin)) {
+    console.log(`${LOG_TAG} ⚠️ Rejecting VIN (invalid WMI): ${upperVin}`);
+    return false;
+  }
+
+  // Position 9 is the check digit (0-9 or X)
+  const checkDigit = upperVin.charAt(8);
+  if (!/^[0-9X]$/.test(checkDigit)) {
+    console.log(`${LOG_TAG} ⚠️ Rejecting VIN (invalid check digit): ${upperVin}`);
+    return false;
+  }
+
+  return true;
+}
+
+/**
  * Make name mapping - convert abbreviated/truncated make names to full names
  * VIN decoders sometimes return abbreviated versions
  */
@@ -474,20 +510,45 @@ function extractVehicleFromEstimate(estimateText) {
   const result = {};
 
   // VIN patterns - 17 character alphanumeric (excluding I, O, Q)
+  // Ordered from most specific (near VIN label) to generic (standalone)
   const vinPatterns = [
     /VIN[\s:]*([A-HJ-NPR-Z0-9]{17})/i,
     /V\.I\.N\.[\s:]*([A-HJ-NPR-Z0-9]{17})/i,
     /Vehicle\s*ID[\s:]*([A-HJ-NPR-Z0-9]{17})/i,
-    // Standalone 17-char VIN pattern
-    /\b([A-HJ-NPR-Z0-9]{17})\b/
+    // Standalone 17-char VIN pattern (more likely to catch false positives)
+    /\b([A-HJ-NPR-Z0-9]{17})\b/g
   ];
 
+  // For each pattern, find all matches and pick the best valid one
   for (const pattern of vinPatterns) {
-    const match = estimateText.match(pattern);
-    if (match && match[1]) {
-      result.vin = match[1].toUpperCase();
-      console.log(`${LOG_TAG} Extracted VIN from estimate: ${result.vin}`);
-      break;
+    // Reset lastIndex for global patterns
+    pattern.lastIndex = 0;
+
+    // For global patterns, collect all matches
+    if (pattern.global) {
+      let match;
+      while ((match = pattern.exec(estimateText)) !== null) {
+        const candidate = match[1].toUpperCase();
+        if (isValidVinCandidate(candidate)) {
+          result.vin = candidate;
+          console.log(`${LOG_TAG} Extracted valid VIN from estimate: ${result.vin}`);
+          break;
+        }
+      }
+      if (result.vin) break;
+    } else {
+      // Non-global pattern - single match
+      const match = estimateText.match(pattern);
+      if (match && match[1]) {
+        const candidate = match[1].toUpperCase();
+        if (isValidVinCandidate(candidate)) {
+          result.vin = candidate;
+          console.log(`${LOG_TAG} Extracted valid VIN from estimate: ${result.vin}`);
+          break;
+        } else {
+          console.log(`${LOG_TAG} Skipped invalid VIN candidate near label: ${candidate}`);
+        }
+      }
     }
   }
 
@@ -1551,6 +1612,9 @@ async function processEmail(message) {
     const scheduleResult = await sheetWriter.upsertScheduleRowByRO(roPo, {
       ...mergedData,
       status,
+      // Flag for GAS: indicates this data came from a Revv Report
+      // Allows VIN update if existing VIN was invalid (false positive from estimate)
+      isRevvReport: hasRevvReportPdf,
       // Format timestamp to MM/DD/YYYY HH:mm
       timestampCreated: formatTimestamp(new Date())
     });

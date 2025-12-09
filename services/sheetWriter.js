@@ -664,12 +664,16 @@ export async function upsertScheduleRowByRO(roPo, dataObject) {
     // Column U: OEM Position Statement links
     oem_position: dataObject.oemPosition || dataObject.oem_position || dataObject.oemLinks || '',
     // Column V: Estimate PDF link
-    estimate_pdf: dataObject.estimatePdf || dataObject.estimate_pdf || ''
+    estimate_pdf: dataObject.estimatePdf || dataObject.estimate_pdf || '',
+    // Flag indicating this update came from a Revv Report (for VIN validation logic)
+    isRevvReport: dataObject.isRevvReport || false
   };
 
-  // Remove empty string values (but keep roPo)
+  // Remove empty string values (but keep roPo and isRevvReport flag)
   const cleanedData = Object.fromEntries(
-    Object.entries(normalizedData).filter(([k, v]) => k === 'roPo' || v !== '')
+    Object.entries(normalizedData).filter(([k, v]) =>
+      k === 'roPo' || k === 'isRevvReport' || v !== ''
+    )
   );
 
   // DEBUG: Log critical fields

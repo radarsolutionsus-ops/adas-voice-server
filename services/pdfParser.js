@@ -103,6 +103,83 @@ function getBrandFromVIN(vin) {
 }
 
 /**
+ * Check if a VIN candidate is likely valid (not a false positive)
+ * Rejects common false positives like ALLDATA reference numbers
+ * @param {string} vin - 17-character string to validate
+ * @returns {boolean} - True if VIN looks valid
+ */
+function isValidVinCandidate(vin) {
+  if (!vin || vin.length !== 17) return false;
+
+  const upperVin = vin.toUpperCase();
+
+  // Skip common false positives - reference numbers from estimate systems
+  // ALLDATA, AUDATEX, CCC, etc. reference numbers often start with these
+  if (/^(ALL|AUD|CCM|CCC|EST|REF|INV|DAT|DOC|PDF|IMG|RPT)/i.test(upperVin)) {
+    console.log(`${LOG_TAG} Rejecting false positive VIN (estimate system reference): ${upperVin}`);
+    return false;
+  }
+
+  // WMI (World Manufacturer Identifier) - first 3 characters
+  // Valid WMIs for North America/Europe start with specific patterns:
+  // 1-5: North America, J: Japan, K: Korea, S: UK, W: Germany, etc.
+  const wmi = upperVin.substring(0, 3);
+  const validWMIFirst = /^[1-5JKLMNSTUVWXYZ]/;
+  if (!validWMIFirst.test(wmi)) {
+    console.log(`${LOG_TAG} Rejecting invalid WMI in VIN: ${upperVin} (first char: ${wmi[0]})`);
+    return false;
+  }
+
+  // Position 9 is the check digit (0-9 or X)
+  const checkDigit = upperVin.charAt(8);
+  if (!/^[0-9X]$/.test(checkDigit)) {
+    console.log(`${LOG_TAG} Rejecting VIN with invalid check digit: ${upperVin} (pos 9: ${checkDigit})`);
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Extract the best VIN candidate from text
+ * Uses scoring to prefer VINs near "VIN" label
+ * @param {string} text - Text to search for VINs
+ * @returns {string|null} - Best VIN candidate or null
+ */
+function extractBestVinFromText(text) {
+  if (!text) return null;
+
+  const vinPattern = /\b([A-HJ-NPR-Z0-9]{17})\b/gi;
+  const candidates = [];
+  let match;
+
+  while ((match = vinPattern.exec(text)) !== null) {
+    const candidate = match[1].toUpperCase();
+
+    // Skip obvious false positives
+    if (!isValidVinCandidate(candidate)) continue;
+
+    // Score the candidate
+    const nearVinLabel = text.substring(Math.max(0, match.index - 50), match.index)
+                          .toLowerCase().includes('vin');
+    const positionScore = 1 - (match.index / text.length);
+
+    candidates.push({ vin: candidate, nearVinLabel, positionScore });
+  }
+
+  if (candidates.length === 0) return null;
+
+  // Sort by quality: near VIN label > position
+  candidates.sort((a, b) => {
+    if (a.nearVinLabel !== b.nearVinLabel) return b.nearVinLabel - a.nearVinLabel;
+    return b.positionScore - a.positionScore;
+  });
+
+  console.log(`${LOG_TAG} VIN candidates: ${candidates.length}, selected: ${candidates[0].vin}`);
+  return candidates[0].vin;
+}
+
+/**
  * List of strings that should NOT be extracted as shop names
  * These are common REVV report headers that are not actual shop names
  */
@@ -720,9 +797,9 @@ export async function parsePDF(pdfBuffer, filename, roPo = null) {
     if (pdfType === PDF_TYPES.ESTIMATE || pdfType === PDF_TYPES.SHOP_ESTIMATE) {
       console.log(`${LOG_TAG} Estimate detected (${pdfType}), extracting basic info only`);
 
-      // Extract VIN from text
-      const vinMatch = textContent.match(/\b([A-HJ-NPR-Z0-9]{17})\b/i);
-      const extractedVin = vinMatch ? vinMatch[1].toUpperCase() : null;
+      // Extract VIN from text using improved validation
+      // This prevents false positives like ALLDATA reference numbers
+      const extractedVin = extractBestVinFromText(textContent);
 
       // Get brand from VIN if possible
       let extractedBrand = null;

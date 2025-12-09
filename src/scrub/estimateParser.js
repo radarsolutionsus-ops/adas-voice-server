@@ -902,6 +902,85 @@ export function parseEstimate(estimateText) {
 }
 
 /**
+ * Check if a VIN candidate is likely valid (not a false positive)
+ * @param {string} vin - 17-character string to validate
+ * @returns {boolean} - True if VIN looks valid
+ */
+function isValidVinCandidate(vin) {
+  if (!vin || vin.length !== 17) return false;
+
+  const upperVin = vin.toUpperCase();
+
+  // Skip common false positives - reference numbers from estimate systems
+  // ALLDATA, AUDATEX, CCC, etc. reference numbers often start with these
+  if (/^(ALL|AUD|CCM|CCC|EST|REF|INV|DAT|DOC|PDF|IMG|RPT)/i.test(upperVin)) {
+    return false;
+  }
+
+  // WMI (World Manufacturer Identifier) - first 3 characters
+  // Valid WMIs for North America/Europe start with specific patterns:
+  // 1-5: North America, J: Japan, K: Korea, S: UK, W: Germany, etc.
+  const wmi = upperVin.substring(0, 3);
+  const validWMIFirst = /^[1-5JKLMNSTUVWXYZ]/;
+  if (!validWMIFirst.test(wmi)) {
+    return false;
+  }
+
+  // Position 9 is the check digit (0-9 or X)
+  const checkDigit = upperVin.charAt(8);
+  if (!/^[0-9X]$/.test(checkDigit)) {
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Extract the best VIN candidate from estimate text
+ * Uses multiple strategies and scoring to avoid false positives
+ * @param {string} estimateText - Full estimate text
+ * @returns {string|null} - Best VIN candidate or null
+ */
+function extractVinFromEstimate(estimateText) {
+  const vinPattern = /\b([A-HJ-NPR-Z0-9]{17})\b/gi;
+  const candidates = [];
+  let match;
+
+  while ((match = vinPattern.exec(estimateText)) !== null) {
+    const candidate = match[1].toUpperCase();
+
+    // Skip obvious false positives
+    if (!isValidVinCandidate(candidate)) {
+      console.log(`${LOG_TAG} Skipping invalid VIN candidate: ${candidate}`);
+      continue;
+    }
+
+    // Score the candidate
+    const score = {
+      vin: candidate,
+      // Check if near "VIN" label in text (strong indicator)
+      nearVinLabel: estimateText.substring(Math.max(0, match.index - 50), match.index)
+                     .toLowerCase().includes('vin'),
+      // Position bonus (VINs usually appear in header/top of estimates)
+      positionScore: 1 - (match.index / estimateText.length)
+    };
+
+    candidates.push(score);
+  }
+
+  if (candidates.length === 0) return null;
+
+  // Sort by quality: near VIN label > position
+  candidates.sort((a, b) => {
+    if (a.nearVinLabel !== b.nearVinLabel) return b.nearVinLabel - a.nearVinLabel;
+    return b.positionScore - a.positionScore;
+  });
+
+  console.log(`${LOG_TAG} VIN candidates found: ${candidates.length}, selected: ${candidates[0].vin}`);
+  return candidates[0].vin;
+}
+
+/**
  * Extract vehicle information from estimate text
  * @param {string} estimateText - Full estimate text
  * @returns {Object} - Vehicle information
@@ -916,11 +995,8 @@ export function extractVehicleInfo(estimateText) {
     vin: null
   };
 
-  // Extract VIN (17 characters, alphanumeric except I, O, Q)
-  const vinMatch = estimateText.match(/\b([A-HJ-NPR-Z0-9]{17})\b/i);
-  if (vinMatch) {
-    vehicle.vin = vinMatch[1].toUpperCase();
-  }
+  // Extract VIN using improved extraction with validation
+  vehicle.vin = extractVinFromEstimate(estimateText);
 
   // Extract year (4 digit number between 1990 and current year + 2)
   const currentYear = new Date().getFullYear();
