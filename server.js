@@ -2843,6 +2843,14 @@ wss.on("connection", (twilioWs, req) => {
   let transferRequested = false;
   let loggedROs = new Set();
 
+  // Response state tracking - prevents "conversation_already_has_active_response" errors
+  let isResponseInProgress = false;
+  let lastResponseId = null;
+
+  // Function call deduplication - prevents duplicate function calls
+  const recentFunctionCalls = new Map(); // key: "functionName:roPo", value: timestamp
+  const FUNCTION_CALL_DEBOUNCE_MS = 3000; // 3 second debounce
+
   // Session state to persist data across multiple vehicles in same call
   let sessionState = {
     shop: null,        // Persist shop name across vehicles
@@ -3077,6 +3085,43 @@ wss.on("connection", (twilioWs, req) => {
     }
   );
 
+  // Helper to safely send response.create without overlapping responses
+  function safeCreateResponse(responseConfig, context = "") {
+    if (isResponseInProgress) {
+      console.log(`⏳ Skipping response.create (${context}) - response already in progress: ${lastResponseId}`);
+      return false;
+    }
+
+    console.log(`📤 Sending response.create (${context})`);
+    openaiWs.send(JSON.stringify({
+      type: "response.create",
+      ...responseConfig
+    }));
+    return true;
+  }
+
+  // Helper to cancel existing response before creating new one (for forced responses)
+  function forceCreateResponse(responseConfig, context = "") {
+    if (isResponseInProgress) {
+      console.log(`🔄 Cancelling existing response before new one (${context})`);
+      openaiWs.send(JSON.stringify({ type: "response.cancel" }));
+      // Small delay to allow cancellation to process
+      setTimeout(() => {
+        openaiWs.send(JSON.stringify({
+          type: "response.create",
+          ...responseConfig
+        }));
+      }, 50);
+      return true;
+    }
+
+    openaiWs.send(JSON.stringify({
+      type: "response.create",
+      ...responseConfig
+    }));
+    return true;
+  }
+
   openaiWs.on("open", () => {
     console.log("✅ OpenAI connected");
 
@@ -3096,9 +3141,9 @@ wss.on("connection", (twilioWs, req) => {
         input_audio_transcription: { model: "whisper-1" },
         turn_detection: {
           type: "server_vad",
-          threshold: 0.7,
-          prefix_padding_ms: 500,
-          silence_duration_ms: 700,
+          threshold: 0.85,           // INCREASED from 0.7 - less sensitive to noise on speakerphone
+          prefix_padding_ms: 400,    // Slightly reduced
+          silence_duration_ms: 1000, // INCREASED from 700 - wait longer before responding
           create_response: true
         },
         temperature: 0.7,
@@ -3137,6 +3182,25 @@ wss.on("connection", (twilioWs, req) => {
           }, 250);
           break;
 
+        // Track response lifecycle to prevent "conversation_already_has_active_response" errors
+        case "response.created":
+          isResponseInProgress = true;
+          lastResponseId = event.response?.id || null;
+          console.log(`🎯 Response started: ${lastResponseId}`);
+          break;
+
+        case "response.done":
+          isResponseInProgress = false;
+          console.log(`✅ Response completed: ${lastResponseId}`);
+          lastResponseId = null;
+          break;
+
+        case "response.cancelled":
+          isResponseInProgress = false;
+          console.log(`🚫 Response cancelled: ${lastResponseId}`);
+          lastResponseId = null;
+          break;
+
         case "response.audio.delta":
           if (event.delta && streamSid && isCallActive && !transferRequested) {
             twilioWs.send(JSON.stringify({
@@ -3154,6 +3218,43 @@ wss.on("connection", (twilioWs, req) => {
             try {
               const args = JSON.parse(event.arguments);
               const isSpanish = assistantType === "ops" ? sessionState.language === "es" : false;
+
+              // DUPLICATE FUNCTION CALL PREVENTION
+              // For set_schedule, prevent rapid duplicate calls to the same RO
+              if (event.name === "set_schedule" && args.roPo) {
+                const dedupKey = `${event.name}:${args.roPo}`;
+                const lastCallTime = recentFunctionCalls.get(dedupKey);
+                const now = Date.now();
+
+                if (lastCallTime && (now - lastCallTime) < FUNCTION_CALL_DEBOUNCE_MS) {
+                  console.log(`🚫 Suppressing duplicate ${event.name} for ${args.roPo} (called ${now - lastCallTime}ms ago)`);
+                  // Still need to send function result to avoid hanging
+                  openaiWs.send(JSON.stringify({
+                    type: "conversation.item.create",
+                    item: {
+                      type: "function_call_output",
+                      call_id: event.call_id,
+                      output: JSON.stringify({
+                        success: true,
+                        message: "Already processed",
+                        deduplicated: true
+                      })
+                    }
+                  }));
+                  openaiWs.send(JSON.stringify({ type: "response.create" }));
+                  break; // Skip the rest of the function handling
+                }
+
+                // Record this call
+                recentFunctionCalls.set(dedupKey, now);
+
+                // Clean up old entries periodically
+                if (recentFunctionCalls.size > 20) {
+                  for (const [key, time] of recentFunctionCalls) {
+                    if (now - time > 30000) recentFunctionCalls.delete(key);
+                  }
+                }
+              }
 
               // FIX: Announce scheduling before processing (same pattern as get_ro_summary)
               if (assistantType === "ops" && event.name === "set_schedule" && args.roPo) {
@@ -3262,10 +3363,26 @@ wss.on("connection", (twilioWs, req) => {
                 }
               }));
 
-              // Trigger a response so the assistant can speak the result
-              openaiWs.send(JSON.stringify({
-                type: "response.create"
-              }));
+              // POST-SCHEDULING FOLLOW-UP: Ensure assistant responds after successful scheduling
+              // This prevents silence after scheduling by adding explicit instruction
+              if (event.name === "set_schedule" && result.success) {
+                const followUpInstruction = isSpanish
+                  ? "El vehículo ha sido programado exitosamente. Confirma los detalles de la cita y pregunta si hay algo más en lo que puedas ayudar."
+                  : "The vehicle has been scheduled successfully. Confirm the appointment details and ask if there's anything else you can help with.";
+
+                openaiWs.send(JSON.stringify({
+                  type: "response.create",
+                  response: {
+                    modalities: ["text", "audio"],
+                    instructions: followUpInstruction
+                  }
+                }));
+              } else {
+                // Trigger a response so the assistant can speak the result
+                openaiWs.send(JSON.stringify({
+                  type: "response.create"
+                }));
+              }
             } catch (err) {
               console.error(`🔧 Function call error:`, err);
               openaiWs.send(JSON.stringify({
