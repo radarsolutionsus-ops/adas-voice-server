@@ -605,13 +605,17 @@ function techUpdateRow(data) {
   const curr = range.getValues()[0];
 
   // ONLY update allowed columns - preserve protected fields
+  // Accept status from either 'status' or 'status_from_tech' field
+  const newStatus = data.status || data.status_from_tech || '';
+  const normalizedStatus = newStatus ? normalizeStatus(newStatus) : curr[COL.STATUS];
+
   const updatedRow = [
     curr[COL.TIMESTAMP],                                          // A: KEEP
     curr[COL.SHOP_NAME],                                          // B: PROTECTED - KEEP
     curr[COL.RO_PO],                                              // C: KEEP
     curr[COL.VIN],                                                // D: PROTECTED - KEEP
     curr[COL.VEHICLE],                                            // E: PROTECTED - KEEP
-    data.status || curr[COL.STATUS],                              // F: Can update
+    normalizedStatus,                                             // F: Can update (normalized)
     curr[COL.SCHEDULED_DATE],                                     // G: KEEP
     curr[COL.SCHEDULED_TIME],                                     // H: KEEP
     data.technician || curr[COL.TECHNICIAN],                      // I: Can update
@@ -632,11 +636,17 @@ function techUpdateRow(data) {
 
   range.setValues([updatedRow]);
 
+  // Log status update for debugging
+  if (newStatus) {
+    Logger.log('Status updated: ' + newStatus + ' -> ' + normalizedStatus);
+  }
+
   return {
     success: true,
     message: 'Tech update applied',
     roPo: roPo,
     rowNumber: rowNum,
+    statusUpdated: newStatus ? normalizedStatus : null,
     flowHistoryUpdated: !!(data.flowHistory || data.flow_history)
   };
 }
@@ -2010,11 +2020,13 @@ function openUnifiedSidebar() {
     ? requiredCals.split(/[;,]/).map(function(c) { return c.trim(); }).filter(function(c) { return c.length > 0; })
     : [];
 
-  // Determine status color (FINALIZED December 2024 - 5 statuses only)
+  // Determine status color (FINALIZED December 2024 - 7 statuses)
   const statusColors = {
     'New': '#1a73e8',
     'Ready': '#137333',
+    'No Cal': '#666666',
     'Scheduled': '#7c3aed',
+    'Rescheduled': '#e65100',
     'Completed': '#1967d2',
     'Cancelled': '#5f6368'
   };
@@ -2043,6 +2055,8 @@ function openUnifiedSidebar() {
     .btn { display: block; width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; margin-bottom: 8px; transition: background 0.2s; }
     .btn-ready { background: #34a853; color: white; }
     .btn-ready:hover { background: #2e9348; }
+    .btn-nocal { background: #666666; color: white; }
+    .btn-nocal:hover { background: #555555; }
     .btn-attention { background: #ea4335; color: white; }
     .btn-attention:hover { background: #d93025; }
     .btn-completed { background: #1a73e8; color: white; }
@@ -2089,10 +2103,12 @@ function openUnifiedSidebar() {
 
   <!-- Calibrations Section -->
   <div class="section">
-    <div class="section-title"><span class="icon">🔧</span> Required Calibrations (${calibrationList.length})</div>
-    ${calibrationList.length > 0
-      ? '<ul class="cal-list">' + calibrationList.map(function(c) { return '<li>' + escapeHtml(c) + '</li>'; }).join('') + '</ul>'
-      : '<div class="empty">No calibrations required</div>'}
+    <div class="section-title"><span class="icon">🔧</span> Required Calibrations ${status === 'No Cal' ? '' : '(' + calibrationList.length + ')'}</div>
+    ${status === 'No Cal'
+      ? '<div style="background: #f5f5f5; border-left: 4px solid #666666; padding: 15px; border-radius: 0 4px 4px 0; text-align: center;"><strong style="color: #666666;">⊘ No calibration required for this repair</strong><p style="margin: 8px 0 0; font-size: 12px; color: #888;">Revv Report confirmed no ADAS calibration is needed.</p></div>'
+      : (calibrationList.length > 0
+        ? '<ul class="cal-list">' + calibrationList.map(function(c) { return '<li>' + escapeHtml(c) + '</li>'; }).join('') + '</ul>'
+        : '<div class="empty">Awaiting Revv Report</div>')}
     ${completedCals ? '<div class="field" style="margin-top:12px;"><div class="field-label">Completed</div><div class="field-value">' + escapeHtml(completedCals) + '</div></div>' : ''}
   </div>
 
@@ -2124,6 +2140,7 @@ function openUnifiedSidebar() {
     <div class="section-title"><span class="icon">⚡</span> Update Status</div>
     <button class="btn btn-secondary" onclick="setStatus('New')">📋 New</button>
     <button class="btn btn-ready" onclick="setStatus('Ready')">✓ Ready</button>
+    <button class="btn btn-nocal" onclick="setStatus('No Cal')">⊘ No Cal</button>
     <button class="btn btn-scheduled" onclick="setStatus('Scheduled')">📅 Scheduled</button>
     <button class="btn btn-rescheduled" onclick="setStatus('Rescheduled')">🔄 Rescheduled</button>
     <button class="btn btn-completed" onclick="setStatus('Completed')">✓ Completed</button>
