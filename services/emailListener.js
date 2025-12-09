@@ -910,6 +910,18 @@ async function processEmail(message) {
     console.log(`${LOG_TAG} From: ${from}`);
     console.log(`${LOG_TAG} Date: ${date}`);
 
+    // CRITICAL: Skip our own outgoing emails to prevent infinite loop
+    if (from.includes('radarsolutionsus@gmail.com') ||
+        from.includes('ADAS F1RST') ||
+        subject.includes('Calibration Required') ||
+        subject.includes('Calibration Confirmed') ||
+        subject.includes('Job Complete') ||
+        subject.includes('ADAS Calibration Notice')) {
+      console.log(`${LOG_TAG} Skipping own outgoing email: ${subject}`);
+      await markAsProcessed(message.id);
+      return { success: true, skipped: true, reason: 'own_outgoing_email', messageId: message.id };
+    }
+
     // Get email body for notes
     const body = getEmailBody(fullMessage.data);
     const bodyInfo = parseEmailBody(body);
