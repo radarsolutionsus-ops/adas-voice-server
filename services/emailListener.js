@@ -958,6 +958,23 @@ async function processEmail(message) {
       }
     }
 
+    // 1b. Check for Revv Report filename pattern: RO_revv_report_DATE_VIN.pdf
+    // e.g., "11999-PM_revv_report_2025-12-08_KMTG34SC1SU153228.pdf" → "11999-PM"
+    if (!roPo) {
+      for (const pdf of pdfs) {
+        const filename = pdf.filename || '';
+        const nameWithoutExt = filename.replace(/\.pdf$/i, '');
+        // Match RO at start followed by _revv_report
+        const revvFilenameMatch = nameWithoutExt.match(/^(\d+[\-]?[A-Z0-9]*)_revv_report/i);
+        if (revvFilenameMatch) {
+          roPo = revvFilenameMatch[1].toUpperCase();
+          roSource = `filename_revv:${pdf.filename}`;
+          console.log(`${LOG_TAG} Extracted RO from Revv Report filename: ${roPo} (${pdf.filename})`);
+          break;
+        }
+      }
+    }
+
     // 2. Try PDF text content (from estimate or RevvADAS)
     if (!roPo && pdfs.length > 0) {
       try {
@@ -1560,6 +1577,14 @@ async function processEmail(message) {
     const hasCompletionDocs = postScanPdfBuffer && invoicePdfBuffer;
     const hasRevvReportForNotification = revvPdfBuffer && mergedData.shopName;
 
+    // DEBUG: Log email notification decision factors
+    console.log(`${LOG_TAG} === EMAIL NOTIFICATION CHECK ===`);
+    console.log(`${LOG_TAG}   revvPdfBuffer: ${revvPdfBuffer ? 'YES' : 'NO'}`);
+    console.log(`${LOG_TAG}   mergedData.shopName: "${mergedData.shopName || '(empty)'}"`);
+    console.log(`${LOG_TAG}   hasRevvReportForNotification: ${hasRevvReportForNotification ? 'YES' : 'NO'}`);
+    console.log(`${LOG_TAG}   isSyntheticRo: ${isSyntheticRo ? 'YES' : 'NO'}`);
+    console.log(`${LOG_TAG}   hasCompletionDocs: ${hasCompletionDocs ? 'YES' : 'NO'}`);
+
     // Step 6a: COMPLETION EMAIL - Send when technician provides final docs
     // (Completion emails always go to shop - no verification needed)
     if (hasCompletionDocs && mergedData.shopName && !isSyntheticRo) {
@@ -1606,7 +1631,11 @@ async function processEmail(message) {
         .map(cal => ({ name: cal.trim(), type: 'Static' }));
 
       // Try to send shop notification that job is ready
-      const shopEmail = await getShopEmailByName(mergedData.shopName);
+      const shopLookup = await getShopEmailByName(mergedData.shopName);
+      // Ensure shopEmail is always a string (defensive against object returns)
+      const shopEmail = typeof shopLookup?.email === 'string' ? shopLookup.email :
+                        (typeof shopLookup === 'string' ? shopLookup : null);
+      console.log(`${LOG_TAG} Shop lookup result: ${JSON.stringify(shopLookup)}, extracted email: ${shopEmail}`);
       if (shopEmail) {
         const notifyResult = await emailResponder.sendCalibrationConfirmation({
           shopName: mergedData.shopName,
