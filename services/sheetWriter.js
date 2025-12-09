@@ -1295,13 +1295,26 @@ export async function getShopEmailByName(shopNameFromEstimate) {
       result = redirectResponse.data;
     }
 
-    if (result.success && result.found && result.data) {
+    // Ensure result is a valid JSON object (not HTML or string)
+    if (typeof result === 'string') {
+      console.log(`${LOG_TAG} Got string response, trying to parse: ${result.substring(0, 100)}`);
+      try {
+        result = JSON.parse(result);
+      } catch {
+        console.log(`${LOG_TAG} Could not parse response as JSON`);
+        return null;
+      }
+    }
+
+    if (result && result.success && result.found && result.data) {
       const shopData = result.data;
-      console.log(`${LOG_TAG} Found shop: ${shopData.name}, email: ${shopData.email}`);
+      // Ensure email is a string, not an object
+      const email = typeof shopData.email === 'string' ? shopData.email : '';
+      console.log(`${LOG_TAG} Found shop: ${shopData.name}, email: ${email}`);
       return {
-        shopName: shopData.name,
-        email: shopData.email || '',
-        billingCc: shopData.billing_cc || '',
+        shopName: shopData.name || '',
+        email: email,
+        billingCc: typeof shopData.billing_cc === 'string' ? shopData.billing_cc : '',
         matched: `GAS webhook: "${shopNameFromEstimate}" → "${shopData.name}"`
       };
     }
@@ -1354,14 +1367,26 @@ export async function getShopInfo(shopName) {
       result = redirectResponse.data;
     }
 
-    if (result.success && result.found && result.data) {
+    // Ensure result is a valid JSON object (not HTML or string)
+    if (typeof result === 'string') {
+      try {
+        result = JSON.parse(result);
+      } catch {
+        console.log(`${LOG_TAG} Could not parse response as JSON`);
+        return null;
+      }
+    }
+
+    if (result && result.success && result.found && result.data) {
       const shopData = result.data;
-      console.log(`${LOG_TAG} Found shop: ${shopData.name}`);
+      // Ensure all fields are strings
+      const email = typeof shopData.email === 'string' ? shopData.email : '';
+      console.log(`${LOG_TAG} Found shop: ${shopData.name}, email: ${email}`);
       return {
-        shopName: shopData.name,
-        email: shopData.email || '',
-        billingCc: shopData.billing_cc || '',
-        notes: shopData.notes || ''
+        shopName: shopData.name || '',
+        email: email,
+        billingCc: typeof shopData.billing_cc === 'string' ? shopData.billing_cc : '',
+        notes: typeof shopData.notes === 'string' ? shopData.notes : ''
       };
     }
 
