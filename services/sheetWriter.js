@@ -1257,77 +1257,58 @@ export function normalizeShopNameForLookup(name) {
 }
 
 /**
- * Get shop email by name using smart matching
- * Handles aliases, abbreviations, and common variations
+ * Get shop email by name using GAS webhook
+ * Uses the get_shop action which has access to the Shops sheet
  * @param {string} shopNameFromEstimate - Shop name as it appears in estimate
  * @returns {Promise<{shopName: string, email: string, billingCc: string, matched: string}|null>}
  */
 export async function getShopEmailByName(shopNameFromEstimate) {
   console.log(`${LOG_TAG} Smart shop lookup for: "${shopNameFromEstimate}"`);
 
-  if (!shopNameFromEstimate) {
-    console.log(`${LOG_TAG} No shop name provided`);
+  if (!shopNameFromEstimate || shopNameFromEstimate.trim().length === 0) {
+    console.log(`${LOG_TAG} Empty shop name - skipping lookup`);
     return null;
   }
 
   try {
-    const rows = await readSheetData(SHOPS_SHEET_NAME, 'A:D');
-
-    if (rows.length <= 1) {
-      console.log(`${LOG_TAG} No shops in Shops tab`);
+    if (!GAS_WEBHOOK_URL) {
+      console.error(`${LOG_TAG} GAS_WEBHOOK_URL not configured`);
       return null;
     }
 
-    const normalizedInput = normalizeShopNameForLookup(shopNameFromEstimate);
-    console.log(`${LOG_TAG} Normalized input: "${shopNameFromEstimate}" → "${normalizedInput}"`);
+    const response = await axios.post(GAS_WEBHOOK_URL, {
+      token: GAS_TOKEN || 'adasfirst-secure-2025',
+      action: 'get_shop',
+      data: { shop_name: shopNameFromEstimate }
+    }, {
+      headers: { 'Content-Type': 'application/json' },
+      maxRedirects: 0,
+      validateStatus: (status) => status >= 200 && status < 400,
+      timeout: 30000
+    });
 
-    // Skip header row
-    const dataRows = rows.slice(1);
-
-    // First pass: exact normalized match
-    for (const row of dataRows) {
-      if (!row || !row[SHOPS_COLUMNS.SHOP_NAME]) continue;
-
-      const rowShopName = row[SHOPS_COLUMNS.SHOP_NAME];
-      const normalizedRow = normalizeShopNameForLookup(rowShopName);
-
-      if (normalizedInput === normalizedRow) {
-        const result = {
-          shopName: rowShopName,
-          email: row[SHOPS_COLUMNS.EMAIL] || '',
-          billingCc: row[SHOPS_COLUMNS.BILLING_CC] || '',
-          matched: `exact: "${shopNameFromEstimate}" → "${rowShopName}"`
-        };
-        console.log(`${LOG_TAG} ✓ Matched "${shopNameFromEstimate}" → "${rowShopName}" → ${result.email}`);
-        return result;
-      }
+    // Follow redirect if needed (GAS returns 302)
+    let result = response.data;
+    if (response.status === 302 && response.headers.location) {
+      console.log(`${LOG_TAG} Following redirect for shop lookup...`);
+      const redirectResponse = await axios.get(response.headers.location, { timeout: 30000 });
+      result = redirectResponse.data;
     }
 
-    // Second pass: partial/contains match
-    for (const row of dataRows) {
-      if (!row || !row[SHOPS_COLUMNS.SHOP_NAME]) continue;
-
-      const rowShopName = row[SHOPS_COLUMNS.SHOP_NAME];
-      const normalizedRow = normalizeShopNameForLookup(rowShopName);
-
-      // Check if one contains the other (for partial matches like "JMD" matching "JMD Body Shop")
-      if (normalizedInput.includes(normalizedRow) || normalizedRow.includes(normalizedInput)) {
-        // Require at least 3 characters to avoid false matches
-        if (normalizedInput.length >= 3 && normalizedRow.length >= 3) {
-          const result = {
-            shopName: rowShopName,
-            email: row[SHOPS_COLUMNS.EMAIL] || '',
-            billingCc: row[SHOPS_COLUMNS.BILLING_CC] || '',
-            matched: `partial: "${shopNameFromEstimate}" → "${rowShopName}"`
-          };
-          console.log(`${LOG_TAG} ✓ Matched (partial) "${shopNameFromEstimate}" → "${rowShopName}" → ${result.email}`);
-          return result;
-        }
-      }
+    if (result.success && result.found && result.data) {
+      const shopData = result.data;
+      console.log(`${LOG_TAG} Found shop: ${shopData.name}, email: ${shopData.email}`);
+      return {
+        shopName: shopData.name,
+        email: shopData.email || '',
+        billingCc: shopData.billing_cc || '',
+        matched: `GAS webhook: "${shopNameFromEstimate}" → "${shopData.name}"`
+      };
     }
 
-    console.log(`${LOG_TAG} ✗ No match found for "${shopNameFromEstimate}" (normalized: "${normalizedInput}")`);
+    console.log(`${LOG_TAG} Shop not found via GAS webhook: ${shopNameFromEstimate}`);
     return null;
+
   } catch (err) {
     console.error(`${LOG_TAG} getShopEmailByName failed:`, err.message);
     return null;
@@ -1335,37 +1316,53 @@ export async function getShopEmailByName(shopNameFromEstimate) {
 }
 
 /**
- * Get shop information from the Shops tab using direct Sheets API
+ * Get shop information from the Shops tab using GAS webhook
+ * Uses the get_shop action which has access to the Shops sheet
  * @param {string} shopName - Name of the shop
  * @returns {Promise<Object|null>} - Shop info with email, billingCc, notes or null
  */
 export async function getShopInfo(shopName) {
   console.log(`${LOG_TAG} Looking up shop info for: ${shopName}`);
 
-  try {
-    const rows = await readSheetData(SHOPS_SHEET_NAME, 'A:D');
+  if (!shopName || shopName.trim().length === 0) {
+    console.log(`${LOG_TAG} Empty shop name - skipping lookup`);
+    return null;
+  }
 
-    if (rows.length <= 1) {
-      console.log(`${LOG_TAG} No data rows found in ${SHOPS_SHEET_NAME}`);
+  try {
+    if (!GAS_WEBHOOK_URL) {
+      console.error(`${LOG_TAG} GAS_WEBHOOK_URL not configured`);
       return null;
     }
 
-    // Skip header row (index 0)
-    const dataRows = rows.slice(1);
+    const response = await axios.post(GAS_WEBHOOK_URL, {
+      token: GAS_TOKEN || 'adasfirst-secure-2025',
+      action: 'get_shop',
+      data: { shop_name: shopName }
+    }, {
+      headers: { 'Content-Type': 'application/json' },
+      maxRedirects: 0,
+      validateStatus: (status) => status >= 200 && status < 400,
+      timeout: 30000
+    });
 
-    for (let i = 0; i < dataRows.length; i++) {
-      const row = dataRows[i];
-      if (!row || row.length === 0) continue;
+    // Follow redirect if needed (GAS returns 302)
+    let result = response.data;
+    if (response.status === 302 && response.headers.location) {
+      console.log(`${LOG_TAG} Following redirect for shop info lookup...`);
+      const redirectResponse = await axios.get(response.headers.location, { timeout: 30000 });
+      result = redirectResponse.data;
+    }
 
-      const rowShopName = row[SHOPS_COLUMNS.SHOP_NAME] || '';
-
-      // Case-insensitive partial match
-      if (rowShopName.toLowerCase().includes(shopName.toLowerCase()) ||
-          shopName.toLowerCase().includes(rowShopName.toLowerCase())) {
-        const shopInfo = shopsRowToObject(row, i);
-        console.log(`${LOG_TAG} Found shop: ${shopInfo.shopName}`);
-        return shopInfo;
-      }
+    if (result.success && result.found && result.data) {
+      const shopData = result.data;
+      console.log(`${LOG_TAG} Found shop: ${shopData.name}`);
+      return {
+        shopName: shopData.name,
+        email: shopData.email || '',
+        billingCc: shopData.billing_cc || '',
+        notes: shopData.notes || ''
+      };
     }
 
     console.log(`${LOG_TAG} Shop not found: ${shopName}`);
