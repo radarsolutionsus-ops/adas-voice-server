@@ -24,6 +24,7 @@ import { google } from 'googleapis';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import axios from 'axios';
 import sheetWriter, { getGmailTokenFromSheets, saveGmailTokenToSheets } from './sheetWriter.js';
 import { getESTTimestamp, getESTISOTimestamp } from '../utils/timezone.js';
 
@@ -549,6 +550,29 @@ This is an automated response. Please review the attached report for complete de
 
   if (result.success) {
     console.log(`${LOG_TAG} Calibration confirmation sent to ${shopEmail} for RO ${roPo}`);
+
+    // Update flow history to record email was sent
+    const now = new Date();
+    const timestamp = now.toLocaleString('en-US', {
+      month: '2-digit',
+      day: '2-digit',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: 'America/New_York'
+    }).replace(',', '').toLowerCase();
+
+    const flowEntry = `${timestamp}  READY       Email confirmation sent to ${shopEmail}`;
+
+    await axios.post(process.env.GAS_WEBHOOK_URL, {
+      token: process.env.GAS_TOKEN || 'adasfirst-secure-2025',
+      action: 'append_flow_history',
+      data: { roPo: roPo, flow_entry: flowEntry }
+    }, { maxRedirects: 5, timeout: 30000 }).catch(err => {
+      console.error(`${LOG_TAG} Failed to update flow history:`, err.message);
+    });
+
+    console.log(`${LOG_TAG} Flow history updated: ${flowEntry}`);
   }
 
   return result;

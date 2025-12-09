@@ -192,6 +192,10 @@ function doPost(e) {
         result = lookupByVIN(data.vin);
         break;
 
+      case 'append_flow_history':
+        result = appendFlowHistory(data.roPo, data.flow_entry);
+        break;
+
       default:
         result = { success: false, error: `Unknown action: ${action}` };
     }
@@ -761,6 +765,33 @@ function lookupByVIN(vin) {
   }
 
   return { success: true, found: false };
+}
+
+/**
+ * Append a single entry to the Flow History column for a given RO
+ * Used by email responder to log when confirmations are sent
+ * @param {string} roPo - The RO/PO number
+ * @param {string} flowEntry - The flow history entry to append
+ * @returns {Object} - { success, message } or { success: false, error }
+ */
+function appendFlowHistory(roPo, flowEntry) {
+  const ss = SpreadsheetApp.getActive();
+  const sheet = ss.getSheetByName(SCHEDULE_SHEET);
+
+  if (!sheet || !roPo) {
+    return { success: false, error: 'Sheet not found or RO missing' };
+  }
+
+  const rowNum = findRowByRO(sheet, roPo);
+  if (rowNum === 0) {
+    return { success: false, error: 'RO not found: ' + roPo };
+  }
+
+  const currentHistory = sheet.getRange(rowNum, COL.FLOW_HISTORY + 1).getValue() || '';
+  const newHistory = currentHistory ? currentHistory + '\n' + flowEntry : flowEntry;
+  sheet.getRange(rowNum, COL.FLOW_HISTORY + 1).setValue(newHistory);
+
+  return { success: true, message: 'Flow history updated', roPo: roPo };
 }
 
 /**
