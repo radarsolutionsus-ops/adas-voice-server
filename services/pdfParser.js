@@ -576,28 +576,22 @@ Return a JSON object with these fields (use null for missing values):
 
     case PDF_TYPES.REVV_REPORT:
       systemPrompt = `You are a data extraction assistant specializing in ADAS calibration reports.
-Extract ALL calibration requirements from a RevvADAS report. This is CRITICAL - do NOT return 0 calibrations unless the document truly has none.
 
-COMMON CALIBRATIONS TO LOOK FOR (include ANY that appear):
-- Forward/Front Camera calibration (static and/or dynamic)
-- Front Radar / ACC Radar calibration
-- Rear Radar calibration
-- Blind Spot Monitor (BSM) calibration - left and/or right
-- Lane Change Assist / Lane Departure Warning calibration
-- Steering Angle Sensor (SAS) reset/calibration
-- Parking Sensor calibration (front and/or rear)
-- Surround View / 360 Camera calibration
-- Rear Cross Traffic Alert (RCTA) calibration
-- Adaptive Headlight / AFS calibration
-- Night Vision camera calibration
-- ANY line item showing "calibration", "cal", "reset", "initialization", or "aiming"
+CRITICAL: RevvADAS reports have TWO DIFFERENT sections - you MUST distinguish between them:
 
-EXTRACTION RULES:
-1. Count EVERY calibration mentioned, even if listed multiple times (e.g., BSM Left + BSM Right = 2)
-2. If a PDF mentions "X operations required", the calibrationCount MUST match X
-3. Look for tables, bullet points, and line items - each line may be a separate calibration
-4. Extract the calibration type (Static, Dynamic, Both) if mentioned
-5. If you see "ADAS Operations: X" or similar header, extract all X items
+1. "ADAS Systems" or "ADAS Systems (Optional)" - This lists what EQUIPMENT the vehicle HAS.
+   These are just features the vehicle is equipped with. NOT calibration requirements!
+   Examples: "Lane Keeping Assistant", "Adaptive Cruise Control", "Blind Spot Detection"
+
+2. "Required Calibrations" or "Calibration Operations" - This lists ACTUAL WORK needed.
+   Look for phrases like:
+   - "Static calibration required"
+   - "Dynamic calibration required"
+   - "Reset required"
+   - Numbered calibration procedure steps (1. 2. 3.)
+   - "calibration" or "reset" explicitly stated with the system name
+
+IMPORTANT: If the report ONLY shows equipment under "ADAS Systems" with NO explicit calibration requirements section, NO calibration statements, and NO numbered procedures, then calibrationRequired = false and requiredCalibrations = [].
 
 Return a JSON object with these fields (use null for missing values):
 {
@@ -607,6 +601,7 @@ Return a JSON object with these fields (use null for missing values):
   "vehicleMake": "string",
   "vehicleModel": "string",
   "shopName": "string (shop or business name if visible in header)",
+  "calibrationRequired": "boolean - true ONLY if explicit calibration requirements are stated",
   "requiredCalibrations": [
     {
       "system": "string (e.g., 'Front Radar', 'Front Camera', 'BSM Left')",
@@ -614,6 +609,9 @@ Return a JSON object with these fields (use null for missing values):
       "description": "string",
       "reason": "string (why calibration is needed)"
     }
+  ],
+  "equipmentList": [
+    "string - ADAS systems the vehicle HAS (from ADAS Systems section)"
   ],
   "completedCalibrations": [
     {
@@ -624,12 +622,15 @@ Return a JSON object with these fields (use null for missing values):
   ],
   "reportType": "string (initial assessment or final report)",
   "technician": "string (if present)",
-  "calibrationCount": "number - MUST equal the length of requiredCalibrations array"
+  "calibrationCount": "number - MUST equal the length of requiredCalibrations array (0 if none required)"
 }
 
-CRITICAL: Be THOROUGH. If the document shows "7 ADAS Operations Required", you MUST return 7 items in requiredCalibrations.
-Do NOT return 0 unless the document explicitly states no calibrations are needed.`;
-      userPrompt = `Extract ALL calibration data from this RevvADAS report. Be THOROUGH - count EVERY calibration mentioned. If it says "X operations", return X items:\n\n${textContent.substring(0, 12000)}`;
+RULES:
+- calibrationRequired = true ONLY if there are explicit phrases like "calibration required", "reset required", or numbered calibration steps
+- calibrationRequired = false if the report only lists equipment without stating any calibration needs
+- equipmentList should contain ADAS features the vehicle HAS
+- requiredCalibrations should ONLY contain items that explicitly state calibration/reset is needed`;
+      userPrompt = `Extract data from this RevvADAS report. IMPORTANT: Distinguish between "ADAS Systems" (equipment list - what the vehicle HAS) and "Required Calibrations" (actual work needed). Only set calibrationRequired=true if calibrations are explicitly required:\n\n${textContent.substring(0, 12000)}`;
       break;
 
     default:
@@ -976,11 +977,28 @@ export async function parseAndMergePDFs(pdfs, roPo = null) {
         break;
 
       case PDF_TYPES.REVV_REPORT:
+        // Track whether calibration is actually required (new field from updated prompt)
+        // Default to true for backwards compatibility, but use explicit flag if present
+        mergedData.calibrationRequired = data.calibrationRequired !== false;
+        console.log(`${LOG_TAG} Revv Report calibrationRequired flag: ${mergedData.calibrationRequired}`);
+
         if (data.requiredCalibrations && data.requiredCalibrations.length > 0) {
           mergedData.requiredCalibrationsText = data.requiredCalibrations
             .map(cal => `${cal.system} (${cal.calibrationType})`)
             .join('; ');
+          console.log(`${LOG_TAG} Revv Report required calibrations: ${mergedData.requiredCalibrationsText}`);
+        } else if (mergedData.calibrationRequired === false) {
+          // Explicitly no calibrations required - clear any previous text
+          mergedData.requiredCalibrationsText = '';
+          console.log(`${LOG_TAG} Revv Report: No calibrations required`);
         }
+
+        // Store equipment list separately (what the vehicle HAS, not what needs calibration)
+        if (data.equipmentList && data.equipmentList.length > 0) {
+          mergedData.equipmentList = data.equipmentList.join('; ');
+          console.log(`${LOG_TAG} Revv Report equipment list: ${mergedData.equipmentList}`);
+        }
+
         if (data.completedCalibrations && data.completedCalibrations.length > 0) {
           const completedSummary = data.completedCalibrations
             .map(cal => `${cal.system} (${cal.calibrationType}): ${cal.status}`)

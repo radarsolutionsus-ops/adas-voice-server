@@ -1452,21 +1452,33 @@ async function processEmail(message) {
     // 1. We have a Revv Report PDF (vehicle ADAS systems info)
     // 2. BUT no actual calibration operations are required
     //
-    // A Revv Report with no required calibrations will NOT have:
-    // - "Static calibration required", "Dynamic calibration required", "Reset required"
-    // - Numbered calibration steps
-    // The requiredCalibrationsText will be empty or very minimal (just equipment listing)
+    // The parser now sets calibrationRequired flag:
+    // - calibrationRequired = true means actual calibrations are needed
+    // - calibrationRequired = false means only equipment listing, no work needed
     const calibrationText = mergedData.requiredCalibrationsText || '';
     const calibrationTextLower = calibrationText.toLowerCase();
 
-    // Check if we have actual calibration requirements (not just equipment info)
-    const hasActualCalibrations = calibrationText.trim() !== '' &&
-      !calibrationTextLower.includes('no calibration') &&
-      (calibrationTextLower.includes('static') ||
-       calibrationTextLower.includes('dynamic') ||
-       calibrationTextLower.includes('reset') ||
-       calibrationTextLower.includes('required') ||
-       calibrationTextLower.includes('calibration'));
+    // Check if we have actual calibration requirements
+    // Priority: Use explicit calibrationRequired flag from parser if available
+    // Fallback: Check for calibration keywords in the text
+    let hasActualCalibrations = false;
+
+    if (mergedData.calibrationRequired !== undefined) {
+      // Parser provided explicit flag - use it
+      hasActualCalibrations = mergedData.calibrationRequired === true &&
+        calibrationText.trim() !== '';
+      console.log(`${LOG_TAG} Using parser calibrationRequired flag: ${mergedData.calibrationRequired}`);
+    } else {
+      // Fallback to keyword detection (legacy behavior)
+      hasActualCalibrations = calibrationText.trim() !== '' &&
+        !calibrationTextLower.includes('no calibration') &&
+        (calibrationTextLower.includes('static') ||
+         calibrationTextLower.includes('dynamic') ||
+         calibrationTextLower.includes('reset') ||
+         calibrationTextLower.includes('required') ||
+         calibrationTextLower.includes('calibration'));
+      console.log(`${LOG_TAG} Using fallback keyword detection for calibrations`);
+    }
 
     // No Cal: Revv Report PDF present but no actual calibration operations
     const isNoCalibrationRequired = hasRevvReportPdf && !hasActualCalibrations;
@@ -1474,6 +1486,7 @@ async function processEmail(message) {
     console.log(`${LOG_TAG} hasRevvReport: ${hasRevvReport}, hasRevvReportPdf: ${hasRevvReportPdf}, hasEstimateOnly: ${hasEstimateOnly}, hasAdasInvoice: ${hasAdasInvoice}`);
     console.log(`${LOG_TAG} hasActualCalibrations: ${hasActualCalibrations}, isNoCalibrationRequired: ${isNoCalibrationRequired}`);
     console.log(`${LOG_TAG} calibrationText: "${calibrationText.substring(0, 100)}${calibrationText.length > 100 ? '...' : ''}"`);
+    console.log(`${LOG_TAG} equipmentList: "${(mergedData.equipmentList || '').substring(0, 100)}"`);
 
     // Determine status and statusChangeNote based on document type hierarchy
     let status = 'New';  // Default for new estimates
