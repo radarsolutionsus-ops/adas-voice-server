@@ -878,6 +878,16 @@ function isAlreadyProcessed(messageId, labelIds) {
 async function processEmail(message) {
   console.log(`${LOG_TAG} Processing email: ${message.id}`);
 
+  // CRITICAL: Immediately mark as in-progress to prevent duplicate processing
+  // This prevents the polling loop from picking up the same email while we're still processing it
+  if (processedMessageIds.has(message.id)) {
+    console.log(`${LOG_TAG} Message ${message.id} already in processing queue, skipping`);
+    return { success: false, error: 'Already in processing queue' };
+  }
+  processedMessageIds.add(message.id);
+  saveProcessedIds(); // Persist immediately to prevent duplicates even across restarts
+  console.log(`${LOG_TAG} Locked message ${message.id} for processing`);
+
   try {
     const gmail = gmailClient;
 
@@ -888,9 +898,9 @@ async function processEmail(message) {
       format: 'full'
     });
 
-    // Double-check it hasn't been processed
-    if (isAlreadyProcessed(message.id, fullMessage.data.labelIds)) {
-      console.log(`${LOG_TAG} Message ${message.id} already processed, skipping`);
+    // Double-check it hasn't been processed via Gmail label
+    if (processedLabelId && fullMessage.data.labelIds?.includes(processedLabelId)) {
+      console.log(`${LOG_TAG} Message ${message.id} already has processed label, skipping`);
       return { success: false, error: 'Already processed' };
     }
 
