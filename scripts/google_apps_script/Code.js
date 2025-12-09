@@ -184,6 +184,7 @@ function doPost(e) {
         break;
 
       case 'update_ro_status':
+      case 'update_status':  // Alias for simpler status-only updates
         result = updateROStatus(data);
         break;
 
@@ -333,20 +334,24 @@ function findRowByVIN(sheet, vin) {
 function normalizeRO(ro) {
   if (!ro) return '';
   let normalized = String(ro).trim();
-  // Remove common suffixes: -1, -A, _REV, -REV, etc.
-  // Pattern handles: 12345-1, 12345-A, 12345_REV, 12345-REV1, etc.
-  normalized = normalized.replace(/[-_]?(REV|rev)?\d*$/, '');
-  normalized = normalized.replace(/[-_]?[A-Za-z]$/, '');
+  // Remove common suffixes: -PM, -1, -A, _REV, -REV, -FINAL, etc.
+  // Pattern handles: 12345-PM, 12345-1, 12345-A, 12345_REV, 12345-REV1, etc.
+  normalized = normalized.replace(/[-_]?(REV|rev|PM|pm|FINAL|final)?\d*$/i, '');
+  normalized = normalized.replace(/[-_]?[A-Za-z]{1,3}$/i, '');  // Up to 3 letter suffix
   return normalized.trim();
 }
 
 /**
  * Find row number by RO/PO (returns 0 if not found)
- * First tries exact match, then falls back to fuzzy/normalized match
+ * First tries exact match, then falls back to fuzzy/normalized match,
+ * then numeric prefix match for partial RO numbers.
  */
 function findRowByRO(sheet, roPo) {
   const data = sheet.getDataRange().getValues();
   const roPoStr = String(roPo).trim().toLowerCase();
+
+  // Extract just the numeric portion from input
+  const numericInput = String(roPo).replace(/[^0-9]/g, '');
 
   // First pass: exact match
   for (let i = 1; i < data.length; i++) {
@@ -363,6 +368,22 @@ function findRowByRO(sheet, roPo) {
       if (normalizedExisting === normalizedIncoming) {
         Logger.log('Fuzzy RO match: "' + roPo + '" matched existing "' + data[i][COL.RO_PO] + '"');
         return i + 1; // 1-based row number
+      }
+    }
+  }
+
+  // Third pass: numeric prefix match (for cases like "11999" matching "11999-PM")
+  if (numericInput && numericInput.length >= 4) {
+    for (let i = 1; i < data.length; i++) {
+      const existingRO = String(data[i][COL.RO_PO]).trim();
+      const existingNumeric = existingRO.replace(/[^0-9]/g, '');
+
+      // Check if the existing RO STARTS WITH the numeric input
+      // e.g., "11999-PM" starts with numeric "11999"
+      if (existingRO.toLowerCase().startsWith(numericInput.toLowerCase()) ||
+          existingNumeric === numericInput) {
+        Logger.log('Numeric prefix match: "' + roPo + '" matched existing "' + existingRO + '"');
+        return i + 1;
       }
     }
   }
@@ -636,9 +657,13 @@ function techUpdateRow(data) {
 
   range.setValues([updatedRow]);
 
-  // Log status update for debugging
+  // EXPLICIT STATUS WRITE - Belt and suspenders approach
+  // Write status directly to Column F (index 5, so +1 = column 6) to ensure it's set
   if (newStatus) {
-    Logger.log('Status updated: ' + newStatus + ' -> ' + normalizedStatus);
+    Logger.log('techUpdateRow: Setting status to: ' + normalizedStatus + ' in row ' + rowNum + ' (Column F)');
+    sheet.getRange(rowNum, COL.STATUS + 1).setValue(normalizedStatus);
+    SpreadsheetApp.flush();  // Force write to sheet immediately
+    Logger.log('techUpdateRow: Status write complete for RO ' + roPo);
   }
 
   return {
@@ -647,6 +672,7 @@ function techUpdateRow(data) {
     roPo: roPo,
     rowNumber: rowNum,
     statusUpdated: newStatus ? normalizedStatus : null,
+    previousStatus: curr[COL.STATUS] || 'unknown',
     flowHistoryUpdated: !!(data.flowHistory || data.flow_history)
   };
 }

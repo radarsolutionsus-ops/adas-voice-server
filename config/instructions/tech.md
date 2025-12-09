@@ -31,6 +31,14 @@ When tech calls:
 2. Look up with tech_get_ro
 3. Confirm: "[Shop], [vehicle]. What do you need?"
 
+3b. PARTIAL MATCH CONFIRMATION:
+   - If tech_get_ro returns wasPartialMatch = true:
+     * English: "Found RO [actualRoPo] - [vehicle] for [shop]. That the one?"
+     * Spanish: "Encontré el RO [actualRoPo] - [vehicle] para [shop]. ¿Es ese?"
+   - Wait for tech confirmation before proceeding
+   - If yes: continue with actualRoPo
+   - If no: ask for correct RO number
+
 Common requests:
 - "What calibrations are needed?" → Read from Column J (Required Calibrations)
 - "Add a note" → Use tech_update_notes

@@ -343,7 +343,14 @@ async function handleOpsToolCall(toolName, args) {
       case "get_ro_summary": {
         const row = await sheetWriter.getScheduleRowByRO(args.roPo);
         if (row) {
-          return dispatcher.getROSummary(row);
+          const summary = dispatcher.getROSummary(row);
+          // Include the actual RO stored in sheet for partial match detection
+          const actualRoPo = row.ro_po || row.roPo || args.roPo;
+          const wasPartialMatch = actualRoPo.toLowerCase() !== args.roPo.toLowerCase();
+          summary.actualRoPo = actualRoPo;
+          summary.searchedRoPo = args.roPo;
+          summary.wasPartialMatch = wasPartialMatch;
+          return summary;
         }
         return { found: false, message: `RO ${args.roPo} not found in system` };
       }
@@ -601,9 +608,15 @@ async function handleTechToolCall(toolName, args) {
       case "tech_get_ro": {
         const row = await sheetWriter.getScheduleRowByRO(args.roPo);
         if (row) {
+          // Include the actual RO stored in sheet for partial match detection
+          const actualRoPo = row.ro_po || row.roPo || args.roPo;
+          const wasPartialMatch = actualRoPo.toLowerCase() !== args.roPo.toLowerCase();
           return {
             found: true,
-            roPo: args.roPo,
+            roPo: actualRoPo,
+            actualRoPo: actualRoPo,
+            searchedRoPo: args.roPo,
+            wasPartialMatch: wasPartialMatch,
             shopName: row.shop_name || row.shopName,
             vehicle: row.vehicle,
             vin: row.vin,
