@@ -554,6 +554,165 @@ ADAS Assistant
 }
 
 /**
+ * Send "No Calibration Required" email to shop
+ * Used when Revv Report shows no calibrations are needed for the repair
+ *
+ * @param {Object} roData - RO information
+ * @param {string} roData.roPo - RO/PO number
+ * @param {string} roData.shopName - Shop name (for lookup)
+ * @param {string} roData.vehicle - Vehicle description
+ * @param {string} roData.vin - VIN
+ * @param {Buffer} roData.revvPdfBuffer - RevvADAS PDF attachment
+ */
+export async function sendNoCalibrationEmail(roData) {
+  const {
+    roPo,
+    shopName,
+    vehicle,
+    vin,
+    revvPdfBuffer,
+    ccEmail
+  } = roData;
+
+  console.log(`${LOG_TAG} Sending "No Calibration Required" email to shop: ${shopName} for RO ${roPo}`);
+
+  // Look up shop email using smart matching
+  const shopInfo = await getShopEmailByName(shopName);
+
+  if (!shopInfo || !shopInfo.email) {
+    console.log(`${LOG_TAG} No email found for shop "${shopName}" - skipping no-cal email`);
+    return {
+      success: false,
+      sent: false,
+      error: `No email configured for shop: ${shopName}`
+    };
+  }
+
+  const shopEmail = shopInfo.email;
+
+  const subject = `RO ${roPo} - No Calibration Required - ${vehicle}`;
+
+  // HTML email body
+  const htmlBody = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+    .container { max-width: 600px; margin: 0 auto; }
+    .header { background: linear-gradient(135deg, #1a365d 0%, #2c5282 100%); color: white; padding: 25px; text-align: center; }
+    .header h1 { margin: 0; font-size: 24px; }
+    .content { padding: 25px; background: #fff; }
+    .status-box { background: #f5f5f5; border-left: 4px solid #666666; padding: 15px; margin: 20px 0; border-radius: 0 4px 4px 0; }
+    .status-box strong { color: #333; }
+    .details { background: #f7fafc; padding: 15px; border-radius: 6px; margin: 20px 0; }
+    .info-box { background: #e8f5e9; border: 1px solid #a5d6a7; border-radius: 6px; padding: 15px; margin: 20px 0; }
+    .footer { background: #f7fafc; padding: 20px; text-align: center; font-size: 12px; color: #718096; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>ADAS F1RST</h1>
+      <p>Calibration Assessment Complete</p>
+    </div>
+    <div class="content">
+      <p>Hello ${shopInfo.shopName || shopName},</p>
+      <p>We have reviewed the estimate and Revv Report for <strong>RO ${roPo}</strong>.</p>
+
+      <div class="details">
+        <p><strong>Vehicle:</strong> ${vehicle || 'See attached report'}</p>
+        <p><strong>VIN:</strong> ${vin || 'See attached report'}</p>
+        <p><strong>RO/PO:</strong> ${roPo}</p>
+      </div>
+
+      <div class="status-box">
+        <strong>NO ADAS CALIBRATION REQUIRED</strong>
+        <p style="margin: 10px 0 0; font-size: 14px;">Based on the repair operations and vehicle ADAS equipment, no calibration is needed for this repair.</p>
+      </div>
+
+      <div class="info-box">
+        <h4 style="margin: 0 0 10px; color: #2e7d32;">What This Means:</h4>
+        <ul style="margin: 0; padding-left: 20px; font-size: 14px;">
+          <li>The repairs do not affect any ADAS sensors or cameras</li>
+          <li>No post-repair calibration procedures are necessary</li>
+          <li>The vehicle can be returned to the customer after repairs</li>
+        </ul>
+      </div>
+
+      <p>The attached Revv Report provides details on the vehicle's ADAS equipment for your reference.</p>
+
+      <p>If you have any questions or believe calibration may still be needed, please reply to this email.</p>
+      <p>Best regards,<br><strong>ADAS F1RST Team</strong></p>
+    </div>
+    <div class="footer">
+      <p>ADAS F1RST | Miami, FL | Professional ADAS Calibration Services</p>
+      <p style="font-size: 11px; color: #999;">Sent: ${getESTTimestamp()}</p>
+    </div>
+  </div>
+</body>
+</html>`.trim();
+
+  // Plain text version
+  const textBody = `
+Hello ${shopInfo.shopName || shopName},
+
+We have reviewed the estimate and Revv Report for RO ${roPo}.
+
+Vehicle: ${vehicle || 'See attached report'}
+VIN: ${vin || 'See attached report'}
+RO/PO: ${roPo}
+
+NO ADAS CALIBRATION REQUIRED
+
+Based on the repair operations and vehicle ADAS equipment, no calibration is needed for this repair.
+
+What This Means:
+- The repairs do not affect any ADAS sensors or cameras
+- No post-repair calibration procedures are necessary
+- The vehicle can be returned to the customer after repairs
+
+The attached Revv Report provides details on the vehicle's ADAS equipment for your reference.
+
+If you have any questions or believe calibration may still be needed, please reply to this email.
+
+Best regards,
+ADAS F1RST Team
+`.trim();
+
+  // Prepare attachments
+  const attachments = [];
+  if (revvPdfBuffer) {
+    attachments.push({
+      filename: `RevvADAS_Report_${roPo}.pdf`,
+      content: revvPdfBuffer,
+      mimeType: 'application/pdf'
+    });
+  }
+
+  const result = await sendEmail({
+    to: shopEmail,
+    cc: ccEmail || shopInfo.billingCc,
+    subject,
+    htmlBody,
+    textBody,
+    attachments
+  });
+
+  if (result.success) {
+    console.log(`${LOG_TAG} "No Calibration Required" email sent to ${shopEmail} for RO ${roPo}`);
+  }
+
+  return {
+    ...result,
+    sent: result.success,
+    shopEmail,
+    matched: shopInfo.matched
+  };
+}
+
+/**
  * Process scrub result and send appropriate email
  *
  * @param {Object} llmResult - Result from analyzeEstimateWithLLM
@@ -616,6 +775,7 @@ export async function processAndSendEmail(llmResult, revvCalibrations = [], opti
 export default {
   sendShopConfirmationEmail,
   sendTechReviewEmail,
+  sendNoCalibrationEmail,
   processAndSendEmail,
   initializeGmailClient
 };

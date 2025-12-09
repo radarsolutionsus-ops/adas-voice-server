@@ -30,6 +30,7 @@ import billingMailer from './billingMailer.js';
 import jobState from '../data/jobState.js';
 import shopNotifier from './shopNotifier.js';
 import emailResponder from './emailResponder.js';
+import { sendNoCalibrationEmail } from './emailSender.js';
 import { getESTTimestamp, getESTISOTimestamp, formatToEST } from '../utils/timezone.js';
 
 const LOG_TAG = '[EMAIL_PIPELINE]';
@@ -1432,9 +1433,11 @@ async function processEmail(message) {
     console.log(`${LOG_TAG} mergedData.revvReportPdf: ${mergedData.revvReportPdf || 'NOT SET'}`);
     console.log(`${LOG_TAG} uploadResults.uploads:`, JSON.stringify(uploadResults.uploads.map(u => ({ filename: u.filename, type: u.type })), null, 2));
 
-    const hasRevvReport = mergedData.revvReportPdf ||
-      mergedData.requiredCalibrationsText ||  // Calibrations = Revv was parsed
+    // Check if Revv Report is present (as PDF or via parsed data)
+    const hasRevvReportPdf = mergedData.revvReportPdf ||
       uploadResults.uploads.some(u => u.type === 'revv_report');
+    const hasRevvReport = hasRevvReportPdf || mergedData.requiredCalibrationsText;
+
     const hasEstimateOnly = (mergedData.estimatePdf || uploadResults.uploads.some(u =>
       u.type === 'shop_estimate' || u.type === 'estimate'
     )) && !hasRevvReport;
@@ -1443,7 +1446,34 @@ async function processEmail(message) {
       u.type === 'scan_report' && (u.filename?.toLowerCase().includes('post') || u.filename?.toLowerCase().includes('final'))
     );
 
-    console.log(`${LOG_TAG} hasRevvReport: ${hasRevvReport}, hasEstimateOnly: ${hasEstimateOnly}, hasAdasInvoice: ${hasAdasInvoice}`);
+    // === NO CALIBRATION DETECTION ===
+    // Detect if a Revv Report shows NO calibrations are required
+    // This happens when:
+    // 1. We have a Revv Report PDF (vehicle ADAS systems info)
+    // 2. BUT no actual calibration operations are required
+    //
+    // A Revv Report with no required calibrations will NOT have:
+    // - "Static calibration required", "Dynamic calibration required", "Reset required"
+    // - Numbered calibration steps
+    // The requiredCalibrationsText will be empty or very minimal (just equipment listing)
+    const calibrationText = mergedData.requiredCalibrationsText || '';
+    const calibrationTextLower = calibrationText.toLowerCase();
+
+    // Check if we have actual calibration requirements (not just equipment info)
+    const hasActualCalibrations = calibrationText.trim() !== '' &&
+      !calibrationTextLower.includes('no calibration') &&
+      (calibrationTextLower.includes('static') ||
+       calibrationTextLower.includes('dynamic') ||
+       calibrationTextLower.includes('reset') ||
+       calibrationTextLower.includes('required') ||
+       calibrationTextLower.includes('calibration'));
+
+    // No Cal: Revv Report PDF present but no actual calibration operations
+    const isNoCalibrationRequired = hasRevvReportPdf && !hasActualCalibrations;
+
+    console.log(`${LOG_TAG} hasRevvReport: ${hasRevvReport}, hasRevvReportPdf: ${hasRevvReportPdf}, hasEstimateOnly: ${hasEstimateOnly}, hasAdasInvoice: ${hasAdasInvoice}`);
+    console.log(`${LOG_TAG} hasActualCalibrations: ${hasActualCalibrations}, isNoCalibrationRequired: ${isNoCalibrationRequired}`);
+    console.log(`${LOG_TAG} calibrationText: "${calibrationText.substring(0, 100)}${calibrationText.length > 100 ? '...' : ''}"`);
 
     // Determine status and statusChangeNote based on document type hierarchy
     let status = 'New';  // Default for new estimates
@@ -1452,10 +1482,12 @@ async function processEmail(message) {
     if (hasAdasInvoice) {
       status = 'Completed';  // Invoice received means job is billed and complete
       statusChangeNote = 'Invoice received';
-    } else if (hasRevvReport) {
-      status = 'Ready';  // Revv Report means tech has reviewed, ready for calibration
-      const calCount = mergedData.requiredCalibrationsText ?
-        mergedData.requiredCalibrationsText.split(/[,;]/).filter(c => c.trim()).length : 0;
+    } else if (isNoCalibrationRequired) {
+      status = 'No Cal';  // Revv Report shows no calibration needed
+      statusChangeNote = 'No calibration required - Revv Report confirmed';
+    } else if (hasRevvReport && hasActualCalibrations) {
+      status = 'Ready';  // Revv Report with calibrations means ready for calibration
+      const calCount = calibrationText.split(/[,;]/).filter(c => c.trim()).length;
       statusChangeNote = `Revv Report received (${calCount} calibrations)`;
     } else if (hasEstimateOnly) {
       status = 'New';  // Estimate only - waiting for tech review in RevvADAS
@@ -1465,13 +1497,15 @@ async function processEmail(message) {
     console.log(`${LOG_TAG} === STATUS DECISION: ${status} (${statusChangeNote}) ===`);
 
     // === STATUS PROTECTION: Prevent downgrade from higher-priority statuses ===
-    // Status hierarchy: Completed > Scheduled > Rescheduled > Ready > New
+    // Status hierarchy: Completed > Scheduled > Rescheduled > Ready > No Cal > New
     // Only allow status to go UP, never DOWN (except Cancelled can override anything)
+    // Note: "No Cal" is a terminal state similar to Ready - once set, don't downgrade
     const STATUS_PRIORITY = {
-      'Completed': 5,
-      'Scheduled': 4,
-      'Rescheduled': 3,
-      'Ready': 2,
+      'Completed': 6,
+      'Scheduled': 5,
+      'Rescheduled': 4,
+      'Ready': 3,
+      'No Cal': 2,
       'New': 1,
       '': 0
     };
@@ -1589,12 +1623,15 @@ async function processEmail(message) {
     //
     // WORKFLOW:
     // 1. Shop sends estimate → Status: "New" (waiting for tech to review in RevvADAS)
-    // 2. Tech completes Revv Report → Status: "Ready" (ready for calibration)
+    // 2. Tech completes Revv Report →
+    //    a) If calibrations required → Status: "Ready" (ready for calibration)
+    //    b) If NO calibrations required → Status: "No Cal" (no calibration needed)
     // 3. Tech sends post-scan + invoice → Status: "Completed"
     //
-    // TWO EMAIL TYPES:
+    // THREE EMAIL TYPES:
     // - COMPLETION: Has post-scan + invoice → Send job completion to SHOP
-    // - INITIAL: Has RevvADAS report → Send confirmation to SHOP (Ready status)
+    // - READY: Has RevvADAS report WITH calibrations → Send confirmation to SHOP
+    // - NO CAL: Has RevvADAS report WITHOUT calibrations → Send "no calibration needed" to SHOP
 
     const hasCompletionDocs = postScanPdfBuffer && invoicePdfBuffer;
     const hasRevvReportForNotification = revvPdfBuffer && mergedData.shopName;
@@ -1606,6 +1643,7 @@ async function processEmail(message) {
     console.log(`${LOG_TAG}   hasRevvReportForNotification: ${hasRevvReportForNotification ? 'YES' : 'NO'}`);
     console.log(`${LOG_TAG}   isSyntheticRo: ${isSyntheticRo ? 'YES' : 'NO'}`);
     console.log(`${LOG_TAG}   hasCompletionDocs: ${hasCompletionDocs ? 'YES' : 'NO'}`);
+    console.log(`${LOG_TAG}   isNoCalibrationRequired: ${isNoCalibrationRequired ? 'YES' : 'NO'}`);
 
     // Step 6a: COMPLETION EMAIL - Send when technician provides final docs
     // (Completion emails always go to shop - no verification needed)
@@ -1636,9 +1674,33 @@ async function processEmail(message) {
         console.log(`${LOG_TAG} Completion email not sent: ${completionResult.error}`);
       }
     }
-    // Step 6b: INITIAL EMAIL - Send "Ready" notification when Revv Report is received
-    // (No scrub verification - just notify shop that the job is ready)
-    else if (hasRevvReportForNotification && !isSyntheticRo) {
+    // Step 6b: NO CALIBRATION EMAIL - Send when Revv Report shows no calibration needed
+    else if (hasRevvReportForNotification && isNoCalibrationRequired && !isSyntheticRo) {
+      console.log(`${LOG_TAG} No calibration required for RO: ${roPo} - sending No Cal notification`);
+
+      // Build vehicle string for email
+      const vehicleStr = mergedData.vehicle ||
+        `${mergedData.vehicleYear || ''} ${mergedData.vehicleMake || ''} ${mergedData.vehicleModel || ''}`.trim();
+
+      // Send "No Calibration Required" email
+      const noCalResult = await sendNoCalibrationEmail({
+        shopName: mergedData.shopName,
+        roPo,
+        vehicle: vehicleStr,
+        vin: mergedData.vin,
+        revvPdfBuffer
+      });
+
+      if (noCalResult?.sent) {
+        console.log(`${LOG_TAG} ✅ RO ${roPo}: No calibration email sent to ${noCalResult.shopEmail}`);
+        const emailSentNote = `No calibration confirmation sent to ${noCalResult.shopEmail} on ${new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })}`;
+        mergedData.notes = mergedData.notes ? `${mergedData.notes} | ${emailSentNote}` : emailSentNote;
+      } else {
+        console.log(`${LOG_TAG} No Cal email not sent: ${noCalResult?.error || 'Unknown error'}`);
+      }
+    }
+    // Step 6c: READY EMAIL - Send "Ready" notification when Revv Report with calibrations is received
+    else if (hasRevvReportForNotification && hasActualCalibrations && !isSyntheticRo) {
       console.log(`${LOG_TAG} Revv Report received for RO: ${roPo} - sending Ready notification`);
 
       // Build info for shop notification

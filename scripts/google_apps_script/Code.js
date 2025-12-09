@@ -63,12 +63,14 @@ const COL = {
 };
 
 /**
- * FINALIZED STATUS VALUES - 6 STATUSES
+ * FINALIZED STATUS VALUES - 7 STATUSES
  * Added "Rescheduled" for when appointments are changed
+ * Added "No Cal" for repairs that don't require calibration
  */
 const VALID_STATUSES = [
   'New',
   'Ready',
+  'No Cal',
   'Scheduled',
   'Rescheduled',
   'Completed',
@@ -87,6 +89,7 @@ const STATUS_MIGRATION = {
 const STATUS_CONFIG = {
   'New':         { background: '#e8f0fe', fontColor: '#1a73e8', icon: 'fiber_new', btnClass: 'btn-new' },
   'Ready':       { background: '#e6f4ea', fontColor: '#137333', icon: 'check_circle', btnClass: 'btn-ready' },
+  'No Cal':      { background: '#f5f5f5', fontColor: '#666666', icon: 'check', btnClass: 'btn-nocal' },
   'Scheduled':   { background: '#f3e8fd', fontColor: '#7c3aed', icon: 'event', btnClass: 'btn-scheduled' },
   'Rescheduled': { background: '#fff3e0', fontColor: '#e65100', icon: 'update', btnClass: 'btn-rescheduled' },
   'Completed':   { background: '#d2e3fc', fontColor: '#1967d2', icon: 'done_all', btnClass: 'btn-complete' },
