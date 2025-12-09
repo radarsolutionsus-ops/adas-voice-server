@@ -1708,6 +1708,12 @@ async function processEmail(message) {
         console.log(`${LOG_TAG} ✅ RO ${roPo}: No calibration email sent to ${noCalResult.shopEmail}`);
         const emailSentNote = `No calibration confirmation sent to ${noCalResult.shopEmail} on ${new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })}`;
         mergedData.notes = mergedData.notes ? `${mergedData.notes} | ${emailSentNote}` : emailSentNote;
+
+        // Add flow history entry for email sent
+        await sheetWriter.updateScheduleRowWithFullNotes(roPo, {
+          status: 'No Cal',
+          statusChangeNote: `Email sent to ${noCalResult.shopEmail}`
+        });
       } else {
         console.log(`${LOG_TAG} No Cal email not sent: ${noCalResult?.error || 'Unknown error'}`);
       }
@@ -1748,6 +1754,12 @@ async function processEmail(message) {
           console.log(`${LOG_TAG} ✅ RO ${roPo}: Ready notification sent to ${shopEmail}`);
           const emailSentNote = `Ready notification sent to ${shopEmail} on ${new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })}`;
           mergedData.notes = mergedData.notes ? `${mergedData.notes} | ${emailSentNote}` : emailSentNote;
+
+          // Add flow history entry for email sent
+          await sheetWriter.updateScheduleRowWithFullNotes(roPo, {
+            status: 'Ready',
+            statusChangeNote: `Email sent to ${shopEmail}`
+          });
         }
       } else {
         console.log(`${LOG_TAG} No email found for shop: ${mergedData.shopName} - skipping notification`);
