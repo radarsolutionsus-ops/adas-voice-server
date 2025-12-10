@@ -39,8 +39,8 @@ import {
 import downloadPlan from "./utils/downloadPlan.js";
 import oem from "./utils/oem/index.js";
 
-// Import shop portal routes
-import { authRoutes, portalRoutes } from "./routes/index.js";
+// Import portal routes (auth, legacy portal, role-based shop/tech, notifications)
+import { authRoutes, portalRoutes, shopRoutes, techRoutes, notificationRoutes } from "./routes/index.js";
 
 // ESM equivalent of __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -66,6 +66,13 @@ app.use(express.static(path.join(__dirname, "public")));
 // Portal API routes
 app.use("/api/auth", authRoutes);
 app.use("/api/portal", portalRoutes);
+
+// Role-based portal routes
+app.use("/api/shop", shopRoutes);
+app.use("/api/tech", techRoutes);
+
+// Notification routes
+app.use("/api/notifications", notificationRoutes);
 
 // Root path - serve portal login page OR health check for non-browser requests
 app.get("/", (req, res) => {

@@ -1,0 +1,14 @@
+{
+  "name": "ADAS F1RST",
+  "tagline": "Mobile ADAS Calibration",
+  "logo": "/images/logo.png",
+  "primaryColor": "#1a365d",
+  "secondaryColor": "#4a5568",
+  "successColor": "#38a169",
+  "dangerColor": "#e53e3e",
+  "supportEmail": "support@adasfirst.com",
+  "supportPhone": "305-555-0000",
+  "timezone": "America/New_York",
+  "dateFormat": "MM/DD/YYYY",
+  "timeFormat": "h:mm A"
+}

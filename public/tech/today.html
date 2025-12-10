@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Today's Jobs - ADAS F1RST Tech Portal</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <style>
+    .navbar { background: #2d3748; }
+    .job-card { background: white; border-radius: var(--radius); box-shadow: var(--shadow-sm); margin-bottom: 1rem; overflow: hidden; }
+    .job-card-header { padding: 1rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    .job-card-header h3 { margin: 0; font-size: 1rem; }
+    .job-card-body { padding: 1rem; }
+    .job-card-footer { padding: 0.75rem 1rem; background: var(--bg); display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .job-time { font-size: 1.25rem; font-weight: 600; color: var(--primary); }
+    .job-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.75rem; }
+    .job-meta-item { display: flex; flex-direction: column; }
+    .job-meta-item label { font-size: 0.7rem; text-transform: uppercase; color: var(--text-light); }
+    .job-meta-item span { font-size: 0.9rem; }
+    .toggle-group { display: flex; gap: 0; }
+    .toggle-btn { padding: 0.5rem 1rem; border: 1px solid var(--border); background: white; cursor: pointer; font-size: 0.85rem; }
+    .toggle-btn:first-child { border-radius: var(--radius) 0 0 var(--radius); }
+    .toggle-btn:last-child { border-radius: 0 var(--radius) var(--radius) 0; margin-left: -1px; }
+    .toggle-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+    .date-display { font-size: 1.25rem; font-weight: 600; color: var(--primary); margin-bottom: 1rem; }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <h1>ADAS F1RST</h1>
+      <span id="tech-name" class="shop-badge"></span>
+    </div>
+    <div class="navbar-menu">
+      <a href="/tech/dashboard.html" class="nav-link">Dashboard</a>
+      <a href="/tech/today.html" class="nav-link active">Today's Jobs</a>
+      <button id="logout-btn" class="btn btn-outline btn-sm">Logout</button>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+      <div>
+        <h2>Today's Schedule</h2>
+        <p class="date-display" id="today-date"></p>
+      </div>
+      <div class="toggle-group">
+        <button class="toggle-btn active" data-filter="all">All Jobs</button>
+        <button class="toggle-btn" data-filter="mine">My Jobs</button>
+      </div>
+    </div>
+
+    <!-- Jobs List -->
+    <div id="jobs-container">
+      <div class="loading-state">
+        <div class="loading-spinner"></div>
+        <p>Loading today's schedule...</p>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div id="empty-state" class="empty-state hidden">
+      <h3>No jobs scheduled for today</h3>
+      <p>Check back later or view all vehicles in the dashboard.</p>
+      <a href="/tech/dashboard.html" class="btn btn-primary">Go to Dashboard</a>
+    </div>
+  </main>
+
+  <!-- Status Change Modal -->
+  <div id="status-modal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content modal-sm">
+      <div class="modal-header">
+        <h2>Change Status</h2>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>RO: <strong id="status-modal-ro"></strong></p>
+        <div class="form-group">
+          <label for="new-status">New Status</label>
+          <select id="new-status">
+            <option value="En Route">En Route</option>
+            <option value="On Site">On Site</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Completed">Completed</option>
+            <option value="On Hold">On Hold</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="status-notes">Notes (optional)</label>
+          <textarea id="status-notes" rows="2" placeholder="Add a note..."></textarea>
+        </div>
+        <input type="hidden" id="status-change-ro">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary modal-close-btn">Cancel</button>
+        <button id="confirm-status-btn" class="btn btn-primary">Update Status</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="/tech/js/auth.js"></script>
+  <script src="/tech/js/api.js"></script>
+  <script src="/tech/js/today.js"></script>
+</body>
+</html>

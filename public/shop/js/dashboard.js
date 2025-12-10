@@ -1,9 +1,9 @@
 /**
- * dashboard.js - Dashboard page logic
+ * dashboard.js - Shop dashboard page logic
  */
 
 // Require authentication
-Auth.requireAuth();
+ShopAuth.requireAuth();
 
 // State
 let vehicles = [];
@@ -20,13 +20,14 @@ const refreshBtn = document.getElementById('refresh-btn');
 const emptyState = document.getElementById('empty-state');
 const tableContainer = document.querySelector('.table-container');
 const vehicleModal = document.getElementById('vehicle-modal');
+const cancelModal = document.getElementById('cancel-modal');
 
 // Init
 async function init() {
   // Set shop name
-  const shop = Auth.getShop();
-  if (shop) {
-    shopNameEl.textContent = shop.name;
+  const user = ShopAuth.getUser();
+  if (user) {
+    shopNameEl.textContent = user.shopName || user.name || '';
   }
 
   // Load data
@@ -39,7 +40,7 @@ async function init() {
 // Load stats
 async function loadStats() {
   try {
-    const stats = await API.getStats();
+    const stats = await ShopAPI.getStats();
     document.getElementById('stat-total').textContent = stats.total || 0;
     document.getElementById('stat-new').textContent = stats.new || 0;
     document.getElementById('stat-ready').textContent = stats.ready || 0;
@@ -47,7 +48,6 @@ async function loadStats() {
     document.getElementById('stat-progress').textContent = stats.inProgress || 0;
     document.getElementById('stat-completed').textContent = stats.completed || 0;
 
-    // Add attention animation to New stats card if there are new vehicles
     const newCard = document.getElementById('stat-card-new');
     if (newCard) {
       if ((stats.new || 0) > 0) {
@@ -66,7 +66,7 @@ async function loadVehicles() {
   showLoading();
 
   try {
-    vehicles = await API.getVehicles({
+    vehicles = await ShopAPI.getVehicles({
       status: currentStatus !== 'all' ? currentStatus : undefined,
       search: currentSearch || undefined
     });
@@ -113,6 +113,7 @@ function renderVehicles() {
     const status = v.status || 'New';
     const isNew = status.toLowerCase() === 'new';
     const newBadge = isNew ? '<span class="new-indicator">NEW</span>' : '';
+    const canCancel = ['scheduled', 'rescheduled'].includes(status.toLowerCase());
 
     return `
     <tr data-ro="${escapeHtml(v.roPo)}" data-status="${escapeHtml(status)}">
@@ -124,22 +125,29 @@ function renderVehicles() {
       <td>${formatSchedule(v.scheduledDate, v.scheduledTime)}</td>
       <td>
         <button class="btn btn-sm btn-secondary view-btn" data-ro="${escapeHtml(v.roPo)}">View</button>
-        <a href="/schedule.html?ro=${encodeURIComponent(v.roPo)}" class="btn btn-sm btn-primary">Schedule</a>
+        <a href="/shop/schedule.html?ro=${encodeURIComponent(v.roPo)}" class="btn btn-sm btn-primary">Schedule</a>
+        ${canCancel ? `<button class="btn btn-sm btn-secondary cancel-btn" data-ro="${escapeHtml(v.roPo)}" style="background: var(--danger);">Cancel</button>` : ''}
       </td>
     </tr>
   `;
   }).join('');
 
-  // Add click handlers for view buttons
+  // Add click handlers
   document.querySelectorAll('.view-btn').forEach(btn => {
     btn.addEventListener('click', () => showVehicleModal(btn.dataset.ro));
   });
 
-  // Add row click handlers
+  document.querySelectorAll('.cancel-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      showCancelModal(btn.dataset.ro);
+    });
+  });
+
+  // Row click
   document.querySelectorAll('#vehicles-tbody tr').forEach(row => {
     row.style.cursor = 'pointer';
     row.addEventListener('click', (e) => {
-      // Don't trigger if clicking a button or link
       if (e.target.tagName === 'BUTTON' || e.target.tagName === 'A') return;
       showVehicleModal(row.dataset.ro);
     });
@@ -171,20 +179,12 @@ function showVehicleModal(roPo) {
         <span class="status-badge status-${(vehicle.status || 'new').toLowerCase().replace(/\s+/g, '-')}">${escapeHtml(vehicle.status || 'New')}</span>
       </div>
       <div class="detail-item">
-        <label>Technician</label>
-        <span>${escapeHtml(vehicle.technician) || 'Not assigned'}</span>
-      </div>
-      <div class="detail-item">
         <label>Scheduled</label>
         <span>${formatSchedule(vehicle.scheduledDate, vehicle.scheduledTime)}</span>
       </div>
       <div class="detail-item full-width">
         <label>Required Calibrations</label>
-        <span>${escapeHtml(vehicle.requiredCalibrations) || 'None specified'}</span>
-      </div>
-      <div class="detail-item full-width">
-        <label>DTCs</label>
-        <span>${escapeHtml(vehicle.dtcs) || 'None'}</span>
+        <span>${escapeHtml(vehicle.requiredCalibrations) || 'Pending review'}</span>
       </div>
       <div class="detail-item full-width">
         <label>Notes</label>
@@ -193,14 +193,48 @@ function showVehicleModal(roPo) {
     </div>
   `;
 
-  document.getElementById('schedule-vehicle-btn').href = `/schedule.html?ro=${encodeURIComponent(vehicle.roPo)}`;
-
+  document.getElementById('schedule-vehicle-btn').href = `/shop/schedule.html?ro=${encodeURIComponent(vehicle.roPo)}`;
   vehicleModal.classList.remove('hidden');
 }
 
-// Close modal
-function closeModal() {
-  vehicleModal.classList.add('hidden');
+// Show cancel modal
+function showCancelModal(roPo) {
+  document.getElementById('cancel-ro').value = roPo;
+  document.getElementById('cancel-reason').value = '';
+  cancelModal.classList.remove('hidden');
+}
+
+// Close modals
+function closeModal(modal) {
+  modal.classList.add('hidden');
+}
+
+// Handle cancel confirmation
+async function handleCancel() {
+  const roPo = document.getElementById('cancel-ro').value;
+  const reason = document.getElementById('cancel-reason').value.trim();
+
+  if (!reason || reason.length < 10) {
+    Toast.error('Please provide a reason (minimum 10 characters)');
+    return;
+  }
+
+  const btn = document.getElementById('confirm-cancel-btn');
+  btn.disabled = true;
+  btn.textContent = 'Cancelling...';
+
+  try {
+    await ShopAPI.cancelVehicle(roPo, reason);
+    Toast.success('Appointment cancelled');
+    closeModal(cancelModal);
+    loadStats();
+    loadVehicles();
+  } catch (err) {
+    Toast.error(err.message || 'Failed to cancel');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Cancel Appointment';
+  }
 }
 
 // Setup event listeners
@@ -233,19 +267,26 @@ function setupEventListeners() {
 
   // Logout
   document.getElementById('logout-btn').addEventListener('click', () => {
-    Auth.logout();
-    window.location.href = '/';
+    ShopAuth.logout();
+    window.location.href = '/shop/';
   });
 
-  // Modal close
-  vehicleModal.querySelector('.modal-close').addEventListener('click', closeModal);
-  vehicleModal.querySelector('.modal-close-btn').addEventListener('click', closeModal);
-  vehicleModal.querySelector('.modal-backdrop').addEventListener('click', closeModal);
+  // Vehicle modal close
+  vehicleModal.querySelector('.modal-close').addEventListener('click', () => closeModal(vehicleModal));
+  vehicleModal.querySelector('.modal-close-btn').addEventListener('click', () => closeModal(vehicleModal));
+  vehicleModal.querySelector('.modal-backdrop').addEventListener('click', () => closeModal(vehicleModal));
 
-  // Close modal on Escape
+  // Cancel modal
+  cancelModal.querySelector('.modal-close').addEventListener('click', () => closeModal(cancelModal));
+  cancelModal.querySelector('.modal-close-btn').addEventListener('click', () => closeModal(cancelModal));
+  cancelModal.querySelector('.modal-backdrop').addEventListener('click', () => closeModal(cancelModal));
+  document.getElementById('confirm-cancel-btn').addEventListener('click', handleCancel);
+
+  // Escape key
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !vehicleModal.classList.contains('hidden')) {
-      closeModal();
+    if (e.key === 'Escape') {
+      if (!vehicleModal.classList.contains('hidden')) closeModal(vehicleModal);
+      if (!cancelModal.classList.contains('hidden')) closeModal(cancelModal);
     }
   });
 }
@@ -263,59 +304,39 @@ function truncate(str, len) {
   return str.length > len ? str.substring(0, len) + '...' : str;
 }
 
-/**
- * Format schedule date and time for display
- * Handles ISO strings, date strings, and filters out invalid 1899 dates
- */
 function formatSchedule(dateStr, timeStr) {
   if (!dateStr) return 'Not scheduled';
-
-  // Filter out invalid 1899 dates (Google Sheets artifact for empty/time-only cells)
   if (String(dateStr).includes('1899')) return 'Not scheduled';
 
   try {
     let date;
-
-    // Handle ISO string
     if (String(dateStr).includes('T')) {
       date = new Date(dateStr);
-    }
-    // Handle MM/DD/YYYY format
-    else if (String(dateStr).includes('/')) {
+    } else if (String(dateStr).includes('/')) {
       const parts = String(dateStr).match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
       if (parts) {
         date = new Date(parts[3], parts[1] - 1, parts[2]);
       }
-    }
-    // Handle YYYY-MM-DD format
-    else if (String(dateStr).includes('-')) {
+    } else if (String(dateStr).includes('-')) {
       date = new Date(dateStr + 'T12:00:00');
     }
 
     if (!date || isNaN(date.getTime())) return 'Not scheduled';
 
-    // Format date as "Dec 11, 2025"
     const options = { month: 'short', day: 'numeric', year: 'numeric' };
     let formatted = date.toLocaleDateString('en-US', options);
 
-    // Add time if available
     if (timeStr) {
       let timeFormatted = null;
-
-      // If timeStr is ISO format (includes 'T')
       if (String(timeStr).includes('T')) {
         const timeDate = new Date(timeStr);
         if (!isNaN(timeDate.getTime())) {
-          // Extract just the time portion - this works even for 1899 dates
-          // (Google Sheets uses 1899-12-30 as base date for time-only values)
           const timeOptions = { hour: 'numeric', minute: '2-digit', hour12: true };
           timeFormatted = timeDate.toLocaleTimeString('en-US', timeOptions);
         }
       } else if (!String(timeStr).includes('1899')) {
-        // If it's already a time string like "10:00 AM"
         timeFormatted = timeStr;
       }
-
       if (timeFormatted) {
         formatted += ' ' + timeFormatted;
       }

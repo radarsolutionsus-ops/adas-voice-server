@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Schedule - ADAS F1RST Shop Portal</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <h1>ADAS F1RST</h1>
+      <span id="shop-name" class="shop-badge"></span>
+    </div>
+    <div class="navbar-menu">
+      <a href="/shop/dashboard.html" class="nav-link">Dashboard</a>
+      <a href="/shop/submit.html" class="nav-link">Submit Vehicle</a>
+      <button id="logout-btn" class="btn btn-outline btn-sm">Logout</button>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <div class="page-header">
+      <a href="/shop/dashboard.html" class="back-link">&larr; Back to Dashboard</a>
+      <h2>Schedule Appointment</h2>
+    </div>
+
+    <!-- Vehicle Info Card -->
+    <div class="info-card" id="vehicle-info-card">
+      <div class="info-card-header">
+        <h3>Vehicle Information</h3>
+        <span class="status-badge" id="vehicle-status">Loading...</span>
+      </div>
+      <div class="info-card-body">
+        <div class="detail-grid">
+          <div class="detail-item">
+            <label>RO/PO</label>
+            <span id="detail-ro">-</span>
+          </div>
+          <div class="detail-item">
+            <label>VIN</label>
+            <span id="detail-vin">-</span>
+          </div>
+          <div class="detail-item">
+            <label>Vehicle</label>
+            <span id="detail-vehicle">-</span>
+          </div>
+          <div class="detail-item">
+            <label>Required Calibrations</label>
+            <span id="detail-cals">-</span>
+          </div>
+        </div>
+
+        <!-- Current Schedule Display -->
+        <div class="current-schedule hidden" id="current-schedule">
+          <p><strong>Currently Scheduled:</strong> <span id="current-schedule-date">-</span></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Schedule Form -->
+    <form id="schedule-form" class="schedule-form">
+      <h3>Select Date & Time</h3>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="schedule-date">Date *</label>
+          <input type="date" id="schedule-date" name="date" required>
+        </div>
+        <div class="form-group">
+          <label for="schedule-time">Preferred Time</label>
+          <select id="schedule-time" name="time">
+            <option value="">Any time</option>
+            <option value="08:00">8:00 AM</option>
+            <option value="09:00">9:00 AM</option>
+            <option value="10:00">10:00 AM</option>
+            <option value="11:00">11:00 AM</option>
+            <option value="12:00">12:00 PM</option>
+            <option value="13:00">1:00 PM</option>
+            <option value="14:00">2:00 PM</option>
+            <option value="15:00">3:00 PM</option>
+            <option value="16:00">4:00 PM</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="schedule-notes">Notes (optional)</label>
+        <textarea id="schedule-notes" name="notes" rows="3" placeholder="Any special instructions or notes..."></textarea>
+      </div>
+
+      <div id="form-error" class="error-message hidden"></div>
+
+      <div class="form-actions">
+        <a href="/shop/dashboard.html" class="btn btn-secondary">Cancel</a>
+        <button type="submit" id="schedule-btn" class="btn btn-primary">
+          <span class="btn-text">Schedule Appointment</span>
+          <span class="btn-spinner hidden"></span>
+        </button>
+      </div>
+    </form>
+  </main>
+
+  <!-- Success Modal -->
+  <div id="success-modal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content modal-sm">
+      <div class="modal-body text-center">
+        <div class="success-icon">&#10003;</div>
+        <h2>Appointment Scheduled!</h2>
+        <p>Your appointment has been scheduled for:</p>
+        <p><strong id="success-datetime">-</strong></p>
+      </div>
+      <div class="modal-footer">
+        <a href="/shop/dashboard.html" class="btn btn-primary btn-block">Go to Dashboard</a>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="/shop/js/auth.js"></script>
+  <script src="/shop/js/api.js"></script>
+  <script src="/shop/js/schedule.js"></script>
+</body>
+</html>

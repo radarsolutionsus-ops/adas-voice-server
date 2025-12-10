@@ -1,0 +1,103 @@
+{
+  "users": [
+    {
+      "id": "jmd",
+      "role": "shop",
+      "name": "JMD Auto Body Collision",
+      "sheetName": "JMD AUTO BODY COLLISION",
+      "username": "jmd",
+      "passwordHash": "$2b$10$M69x1Ec9XmNsZ3Rlwg86PuwTuG7XyEIQDs3NAv.Vsu93oH2H.iN7K",
+      "email": "",
+      "phone": ""
+    },
+    {
+      "id": "autosport",
+      "role": "shop",
+      "name": "Autosport International",
+      "sheetName": "AUTOSPORT INTERNATIONAL",
+      "username": "autosport",
+      "passwordHash": "$2b$10$/lU2hKqFWkx2hdDSJ8ju/uKPWQ7yrKH1MF8FL3CXDz7cQbg8fRUmm",
+      "email": "",
+      "phone": ""
+    },
+    {
+      "id": "ccnm",
+      "role": "shop",
+      "name": "Collision Center Of North Miami",
+      "sheetName": "Collision Center Of North Miami",
+      "username": "ccnm",
+      "passwordHash": "$2b$10$1m7jmD..NnuooPo/pndpYu3Gg/08grI1Ingkt16tq/vMJFn15.fAq",
+      "email": "",
+      "phone": ""
+    },
+    {
+      "id": "reinaldo",
+      "role": "shop",
+      "name": "Reinaldo Paint & Body Shop",
+      "sheetName": "Reinaldo Paint & Body Shop Inc.",
+      "username": "reinaldo",
+      "passwordHash": "$2b$10$Gztvtdex5UKrvrNel6Trt.HkSZTGVblEiM.bz1dfDgNOYnvlAZq1O",
+      "email": "",
+      "phone": ""
+    },
+    {
+      "id": "paintmax",
+      "role": "shop",
+      "name": "Paint Max Inc",
+      "sheetName": "PAINT MAX INC",
+      "username": "paintmax",
+      "passwordHash": "$2b$10$sONNTs0hpi0EyM9SfSM0SOzFJqUsTMprEp5F3DYfPPnJMiMiLBXcq",
+      "email": "",
+      "phone": ""
+    },
+    {
+      "id": "paintmax1",
+      "role": "shop",
+      "name": "Paint Max 1",
+      "sheetName": "PAINT MAX 1",
+      "username": "paintmax1",
+      "passwordHash": "$2b$10$MdXySgfixxUSkQBTuhL7zu6k19Z6dqYd8aTeauDADL6/TvK8TUf7K",
+      "email": "",
+      "phone": ""
+    },
+    {
+      "id": "felipe",
+      "role": "tech",
+      "name": "Felipe",
+      "username": "felipe",
+      "passwordHash": "$2b$10$nwJKfpo86RxXA5cE4ag3/.42kqXrTuk.ycDqFBFFbCruQzeUZW9Aa",
+      "email": "felipe@adasfirst.com",
+      "phone": "",
+      "coverage": ["Hialeah area shops"]
+    },
+    {
+      "id": "martin",
+      "role": "tech",
+      "name": "Martin",
+      "username": "martin",
+      "passwordHash": "$2b$10$6tn5Aw1day7sZKJONcSK2eLkvAGWFl0OCejY3sUE7eEPQwzdJQXOm",
+      "email": "martin@adasfirst.com",
+      "phone": "",
+      "coverage": ["Afternoons 12:30-4 M-F", "All day Saturday"]
+    },
+    {
+      "id": "anthony",
+      "role": "tech",
+      "name": "Anthony",
+      "username": "anthony",
+      "passwordHash": "$2b$10$WriGjiK3hEc.43fZQODMROrp218gWU0/zmWNZ7iGFPSjumr9/4RsS",
+      "email": "anthony@adasfirst.com",
+      "phone": "",
+      "coverage": ["CCNM primary"]
+    },
+    {
+      "id": "randy",
+      "role": "admin",
+      "name": "Randy",
+      "username": "randy",
+      "passwordHash": "$2b$10$hruI3nm.JpZ/2851Xbz0kO9814OkgsaJvsnusaKU7QhTyNRGGXKGm",
+      "email": "randy@adasfirst.com",
+      "phone": ""
+    }
+  ]
+}

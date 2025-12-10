@@ -1,7 +1,7 @@
 /**
- * authController.js - Authentication controller for shop portal
+ * authController.js - Authentication controller for portal (shops, techs, admin)
  *
- * Handles login, logout, token refresh
+ * Handles login, logout, token refresh with role-based access
  */
 
 import bcrypt from 'bcryptjs';
@@ -9,47 +9,59 @@ import jwt from 'jsonwebtoken';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { ROLES } from '../config/roles.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const LOG_TAG = '[AUTH_CTRL]';
 
-// Load shop config
-function loadShops() {
+// Load users config (shops + techs + admin)
+function loadUsers() {
   try {
-    const configPath = path.join(__dirname, '../config/shops.json');
+    const configPath = path.join(__dirname, '../config/users.json');
     const data = fs.readFileSync(configPath, 'utf8');
-    return JSON.parse(data).shops || [];
+    return JSON.parse(data).users || [];
   } catch (err) {
-    console.error(`${LOG_TAG} Failed to load shops config:`, err.message);
+    console.error(`${LOG_TAG} Failed to load users config:`, err.message);
     return [];
   }
 }
 
-// Generate access token
-function generateAccessToken(shop) {
+// Generate access token with role information
+function generateAccessToken(user) {
   const jwtSecret = process.env.JWT_SECRET;
   const expiresIn = process.env.JWT_EXPIRES_IN || '24h';
 
-  return jwt.sign(
-    {
-      shopId: shop.id,
-      shopName: shop.name,
-      sheetName: shop.sheetName
-    },
-    jwtSecret,
-    { expiresIn }
-  );
+  const payload = {
+    userId: user.id,
+    username: user.username,
+    role: user.role,
+    name: user.name
+  };
+
+  // Add shop-specific fields for shop users
+  if (user.role === ROLES.SHOP) {
+    payload.sheetName = user.sheetName;
+    payload.shopName = user.name;
+  }
+
+  // Add tech-specific fields for tech users
+  if (user.role === ROLES.TECH) {
+    payload.techName = user.name;
+    payload.coverage = user.coverage;
+  }
+
+  return jwt.sign(payload, jwtSecret, { expiresIn });
 }
 
 // Generate refresh token (longer expiry)
-function generateRefreshToken(shop) {
+function generateRefreshToken(user) {
   const jwtSecret = process.env.JWT_SECRET;
 
   return jwt.sign(
     {
-      shopId: shop.id,
+      userId: user.id,
       type: 'refresh'
     },
     jwtSecret,
@@ -60,6 +72,7 @@ function generateRefreshToken(shop) {
 /**
  * POST /api/auth/login
  * Login with username and password
+ * Returns role for frontend routing
  */
 export async function login(req, res) {
   try {
@@ -81,11 +94,11 @@ export async function login(req, res) {
       });
     }
 
-    // Find shop by username
-    const shops = loadShops();
-    const shop = shops.find(s => s.username.toLowerCase() === username.toLowerCase());
+    // Find user by username
+    const users = loadUsers();
+    const user = users.find(u => u.username.toLowerCase() === username.toLowerCase());
 
-    if (!shop) {
+    if (!user) {
       console.log(`${LOG_TAG} Login attempt for unknown user: ${username}`);
       return res.status(401).json({
         success: false,
@@ -94,7 +107,7 @@ export async function login(req, res) {
     }
 
     // Verify password
-    const passwordValid = await bcrypt.compare(password, shop.passwordHash);
+    const passwordValid = await bcrypt.compare(password, user.passwordHash);
 
     if (!passwordValid) {
       console.log(`${LOG_TAG} Invalid password for user: ${username}`);
@@ -105,20 +118,30 @@ export async function login(req, res) {
     }
 
     // Generate tokens
-    const accessToken = generateAccessToken(shop);
-    const refreshToken = generateRefreshToken(shop);
+    const accessToken = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user);
 
-    console.log(`${LOG_TAG} Login successful: ${shop.name}`);
+    // Determine redirect based on role
+    let redirectTo = '/shop/dashboard.html';
+    if (user.role === ROLES.TECH) {
+      redirectTo = '/tech/dashboard.html';
+    } else if (user.role === ROLES.ADMIN) {
+      redirectTo = '/tech/dashboard.html'; // Admin uses tech portal for now
+    }
+
+    console.log(`${LOG_TAG} Login successful: ${user.name} (${user.role})`);
 
     res.json({
       success: true,
       accessToken,
       refreshToken,
-      shop: {
-        id: shop.id,
-        name: shop.name,
-        email: shop.email
-      }
+      user: {
+        id: user.id,
+        name: user.name,
+        role: user.role,
+        email: user.email
+      },
+      redirectTo
     });
   } catch (err) {
     console.error(`${LOG_TAG} Login error:`, err.message);
@@ -169,29 +192,30 @@ export async function refresh(req, res) {
         });
       }
 
-      // Find shop
-      const shops = loadShops();
-      const shop = shops.find(s => s.id === decoded.shopId);
+      // Find user
+      const users = loadUsers();
+      const user = users.find(u => u.id === decoded.userId);
 
-      if (!shop) {
+      if (!user) {
         return res.status(403).json({
           success: false,
-          error: 'Shop not found'
+          error: 'User not found'
         });
       }
 
       // Generate new access token
-      const accessToken = generateAccessToken(shop);
+      const accessToken = generateAccessToken(user);
 
-      console.log(`${LOG_TAG} Token refreshed for: ${shop.name}`);
+      console.log(`${LOG_TAG} Token refreshed for: ${user.name}`);
 
       res.json({
         success: true,
         accessToken,
-        shop: {
-          id: shop.id,
-          name: shop.name,
-          email: shop.email
+        user: {
+          id: user.id,
+          name: user.name,
+          role: user.role,
+          email: user.email
         }
       });
     });
@@ -211,7 +235,7 @@ export async function refresh(req, res) {
 export async function logout(req, res) {
   // JWT is stateless, so we just acknowledge the logout
   // Client should delete their tokens
-  console.log(`${LOG_TAG} Logout: ${req.shop?.name || 'unknown'}`);
+  console.log(`${LOG_TAG} Logout: ${req.user?.name || 'unknown'}`);
 
   res.json({
     success: true,
@@ -221,10 +245,10 @@ export async function logout(req, res) {
 
 /**
  * GET /api/auth/me
- * Get current authenticated shop info
+ * Get current authenticated user info
  */
 export async function getMe(req, res) {
-  if (!req.shop) {
+  if (!req.user) {
     return res.status(401).json({
       success: false,
       error: 'Not authenticated'
@@ -233,7 +257,13 @@ export async function getMe(req, res) {
 
   res.json({
     success: true,
-    shop: req.shop
+    user: {
+      id: req.user.userId,
+      name: req.user.name,
+      role: req.user.role,
+      ...(req.user.role === ROLES.SHOP && { shopName: req.user.shopName }),
+      ...(req.user.role === ROLES.TECH && { techName: req.user.techName })
+    }
   });
 }
 

@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - ADAS F1RST Tech Portal</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <style>
+    .navbar { background: #2d3748; }
+    .tab-nav { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+    .tab-btn { padding: 0.5rem 1rem; border: none; background: var(--bg); border-radius: var(--radius) var(--radius) 0 0; cursor: pointer; font-weight: 500; color: var(--text-light); }
+    .tab-btn.active { background: white; color: var(--primary); border-bottom: 2px solid var(--primary); }
+    .quick-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .quick-action-btn { padding: 0.4rem 0.75rem; font-size: 0.8rem; border-radius: var(--radius); border: 1px solid var(--border); background: white; cursor: pointer; transition: all 0.2s; }
+    .quick-action-btn:hover { border-color: var(--primary); color: var(--primary); }
+    .quick-action-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <h1>ADAS F1RST</h1>
+      <span id="tech-name" class="shop-badge"></span>
+    </div>
+    <div class="navbar-menu">
+      <a href="/tech/dashboard.html" class="nav-link active">Dashboard</a>
+      <a href="/tech/today.html" class="nav-link">Today's Jobs</a>
+      <button id="logout-btn" class="btn btn-outline btn-sm">Logout</button>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <!-- Stats Cards -->
+    <div class="stats-grid">
+      <div class="stat-card stat-scheduled">
+        <div class="stat-value" id="stat-today">-</div>
+        <div class="stat-label">Today's Jobs</div>
+      </div>
+      <div class="stat-card stat-progress">
+        <div class="stat-value" id="stat-my-jobs">-</div>
+        <div class="stat-label">My Assigned</div>
+      </div>
+      <div class="stat-card stat-new">
+        <div class="stat-value" id="stat-new">-</div>
+        <div class="stat-label">New</div>
+      </div>
+      <div class="stat-card stat-ready">
+        <div class="stat-value" id="stat-ready">-</div>
+        <div class="stat-label">Ready</div>
+      </div>
+      <div class="stat-card stat-scheduled">
+        <div class="stat-value" id="stat-scheduled">-</div>
+        <div class="stat-label">Scheduled</div>
+      </div>
+      <div class="stat-card stat-completed">
+        <div class="stat-value" id="stat-completed">-</div>
+        <div class="stat-label">Completed</div>
+      </div>
+    </div>
+
+    <!-- View Tabs -->
+    <div class="tab-nav">
+      <button class="tab-btn active" data-tab="all">All Vehicles</button>
+      <button class="tab-btn" data-tab="mine">My Assigned</button>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters-bar">
+      <div class="filter-group">
+        <label for="status-filter">Status:</label>
+        <select id="status-filter" class="filter-select">
+          <option value="all">All</option>
+          <option value="new">New</option>
+          <option value="ready">Ready</option>
+          <option value="scheduled">Scheduled</option>
+          <option value="en route">En Route</option>
+          <option value="on site">On Site</option>
+          <option value="in progress">In Progress</option>
+          <option value="completed">Completed</option>
+          <option value="no cal">No Cal</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label for="shop-filter">Shop:</label>
+        <input type="text" id="shop-filter" class="search-input" placeholder="Filter by shop..." style="width: 150px;">
+      </div>
+      <div class="filter-group search-group">
+        <input type="text" id="search-input" class="search-input" placeholder="Search RO, VIN, Vehicle...">
+        <button id="search-btn" class="btn btn-secondary btn-sm">Search</button>
+      </div>
+      <button id="refresh-btn" class="btn btn-secondary btn-sm">Refresh</button>
+    </div>
+
+    <!-- Vehicles Table -->
+    <div class="table-container">
+      <table class="data-table" id="vehicles-table">
+        <thead>
+          <tr>
+            <th>RO/PO</th>
+            <th>Shop</th>
+            <th>Vehicle</th>
+            <th>Calibrations</th>
+            <th>Status</th>
+            <th>Scheduled</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="vehicles-tbody">
+          <tr class="loading-row">
+            <td colspan="7">
+              <div class="loading-spinner"></div>
+              <span>Loading vehicles...</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Empty State -->
+    <div id="empty-state" class="empty-state hidden">
+      <h3>No vehicles found</h3>
+      <p>No vehicles match your current filters.</p>
+    </div>
+  </main>
+
+  <!-- Vehicle Detail Modal -->
+  <div id="vehicle-modal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Vehicle Details</h2>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body" id="vehicle-detail-content">
+        <!-- Populated by JS -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary modal-close-btn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status Change Modal -->
+  <div id="status-modal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content modal-sm">
+      <div class="modal-header">
+        <h2>Change Status</h2>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>RO: <strong id="status-modal-ro"></strong></p>
+        <div class="form-group">
+          <label for="new-status">New Status</label>
+          <select id="new-status">
+            <option value="New">New</option>
+            <option value="Ready">Ready</option>
+            <option value="Scheduled">Scheduled</option>
+            <option value="En Route">En Route</option>
+            <option value="On Site">On Site</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Completed">Completed</option>
+            <option value="No Cal">No Cal</option>
+            <option value="On Hold">On Hold</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="status-notes">Notes (optional)</label>
+          <textarea id="status-notes" rows="2" placeholder="Add a note..."></textarea>
+        </div>
+        <input type="hidden" id="status-change-ro">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary modal-close-btn">Cancel</button>
+        <button id="confirm-status-btn" class="btn btn-primary">Update Status</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Complete Job Modal -->
+  <div id="complete-modal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content modal-sm">
+      <div class="modal-header">
+        <h2>Complete Job</h2>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>RO: <strong id="complete-modal-ro"></strong></p>
+        <div class="form-group">
+          <label for="completed-cals">Completed Calibrations</label>
+          <textarea id="completed-cals" rows="2" placeholder="List calibrations performed..."></textarea>
+        </div>
+        <div class="form-group">
+          <label for="complete-notes">Completion Notes</label>
+          <textarea id="complete-notes" rows="2" placeholder="Any notes..."></textarea>
+        </div>
+        <input type="hidden" id="complete-change-ro">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary modal-close-btn">Cancel</button>
+        <button id="confirm-complete-btn" class="btn btn-primary" style="background: var(--success);">Mark Complete</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="/tech/js/auth.js"></script>
+  <script src="/tech/js/api.js"></script>
+  <script src="/tech/js/dashboard.js"></script>
+</body>
+</html>

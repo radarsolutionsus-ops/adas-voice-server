@@ -1,33 +1,25 @@
 /**
- * authMiddleware.js - JWT authentication middleware for shop portal
+ * authMiddleware.js - JWT authentication middleware
  *
- * Verifies JWT tokens and attaches shop info to request
+ * Verifies JWT tokens and attaches user info to request
+ * Supports all roles: shop, tech, admin
  */
 
 import jwt from 'jsonwebtoken';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const LOG_TAG = '[AUTH_MW]';
 
-// Load shop config
-function loadShops() {
-  try {
-    const configPath = path.join(__dirname, '../config/shops.json');
-    const data = fs.readFileSync(configPath, 'utf8');
-    return JSON.parse(data).shops || [];
-  } catch (err) {
-    console.error(`${LOG_TAG} Failed to load shops config:`, err.message);
-    return [];
-  }
-}
-
 /**
- * Verify JWT token and attach shop info to request
+ * Verify JWT token and attach user info to request
+ *
+ * req.user will contain:
+ *   - userId: string
+ *   - username: string
+ *   - role: 'shop' | 'tech' | 'admin'
+ *   - name: string
+ *   - sheetName: string (for shops)
+ *   - shopName: string (for shops)
+ *   - techName: string (for techs)
  */
 export function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
@@ -45,39 +37,35 @@ export function authenticateToken(req, res, next) {
 
   jwt.verify(token, jwtSecret, (err, decoded) => {
     if (err) {
-      console.log(`${LOG_TAG} Token verification failed:`, err.message);
+      // Only log non-expiry errors to reduce noise
+      if (err.name !== 'TokenExpiredError') {
+        console.log(`${LOG_TAG} Token verification failed:`, err.message);
+      }
       if (err.name === 'TokenExpiredError') {
         return res.status(401).json({ success: false, error: 'Token expired', code: 'TOKEN_EXPIRED' });
       }
       return res.status(403).json({ success: false, error: 'Invalid token' });
     }
 
-    // Find shop in config
-    const shops = loadShops();
-    const shop = shops.find(s => s.id === decoded.shopId);
-
-    if (!shop) {
-      console.log(`${LOG_TAG} Shop not found: ${decoded.shopId}`);
-      return res.status(403).json({ success: false, error: 'Shop not found' });
-    }
-
-    // Attach shop info to request
-    req.shop = {
-      id: shop.id,
-      name: shop.name,
-      sheetName: shop.sheetName,
-      email: shop.email,
-      phone: shop.phone
+    // Attach user info from token to request
+    req.user = {
+      userId: decoded.userId,
+      username: decoded.username,
+      role: decoded.role,
+      name: decoded.name,
+      sheetName: decoded.sheetName,
+      shopName: decoded.shopName,
+      techName: decoded.techName,
+      coverage: decoded.coverage
     };
 
-    console.log(`${LOG_TAG} Authenticated: ${shop.name}`);
     next();
   });
 }
 
 /**
  * Optional authentication - allows both authenticated and unauthenticated requests
- * If token present and valid, attaches shop info; otherwise continues without
+ * If token present and valid, attaches user info; otherwise continues without
  */
 export function optionalAuth(req, res, next) {
   const authHeader = req.headers['authorization'];
@@ -94,17 +82,16 @@ export function optionalAuth(req, res, next) {
 
   jwt.verify(token, jwtSecret, (err, decoded) => {
     if (!err && decoded) {
-      const shops = loadShops();
-      const shop = shops.find(s => s.id === decoded.shopId);
-      if (shop) {
-        req.shop = {
-          id: shop.id,
-          name: shop.name,
-          sheetName: shop.sheetName,
-          email: shop.email,
-          phone: shop.phone
-        };
-      }
+      req.user = {
+        userId: decoded.userId,
+        username: decoded.username,
+        role: decoded.role,
+        name: decoded.name,
+        sheetName: decoded.sheetName,
+        shopName: decoded.shopName,
+        techName: decoded.techName,
+        coverage: decoded.coverage
+      };
     }
     next();
   });

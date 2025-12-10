@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Submit Vehicle - ADAS F1RST Shop Portal</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <h1>ADAS F1RST</h1>
+      <span id="shop-name" class="shop-badge"></span>
+    </div>
+    <div class="navbar-menu">
+      <a href="/shop/dashboard.html" class="nav-link">Dashboard</a>
+      <a href="/shop/submit.html" class="nav-link active">Submit Vehicle</a>
+      <button id="logout-btn" class="btn btn-outline btn-sm">Logout</button>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <div class="page-header">
+      <a href="/shop/dashboard.html" class="back-link">&larr; Back to Dashboard</a>
+      <h2>Submit New Vehicle</h2>
+    </div>
+
+    <form id="submit-form" class="submit-form">
+      <!-- Vehicle Info Section -->
+      <div class="form-section">
+        <h3>Vehicle Information</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="ro-po">RO/PO Number *</label>
+            <input type="text" id="ro-po" name="roPo" required placeholder="Enter RO or PO number">
+          </div>
+          <div class="form-group">
+            <label for="vin">VIN (17 characters) *</label>
+            <input type="text" id="vin" name="vin" required maxlength="17" placeholder="Enter full VIN">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="year">Year *</label>
+            <input type="number" id="year" name="year" required min="1990" max="2030" placeholder="YYYY">
+          </div>
+          <div class="form-group">
+            <label for="make">Make *</label>
+            <input type="text" id="make" name="make" required placeholder="e.g., Toyota">
+          </div>
+          <div class="form-group">
+            <label for="model">Model *</label>
+            <input type="text" id="model" name="model" required placeholder="e.g., Camry">
+          </div>
+        </div>
+      </div>
+
+      <!-- Documents Section -->
+      <div class="form-section">
+        <h3>Required Documents</h3>
+
+        <div class="form-group">
+          <label for="estimate-pdf">Estimate PDF *</label>
+          <div class="file-upload-container">
+            <input type="file" id="estimate-pdf" accept=".pdf" required>
+            <div class="file-upload-info">
+              <span class="file-name" id="estimate-file-name">No file selected</span>
+              <span class="file-size" id="estimate-file-size"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="prescan-pdf">Pre-Scan PDF</label>
+          <div class="file-upload-container">
+            <input type="file" id="prescan-pdf" accept=".pdf">
+            <div class="file-upload-info">
+              <span class="file-name" id="prescan-file-name">No file selected</span>
+              <span class="file-size" id="prescan-file-size"></span>
+            </div>
+          </div>
+          <div class="prescan-checkbox">
+            <label>
+              <input type="checkbox" id="no-prescan-confirm">
+              I confirm there are no active DTC codes for this vehicle
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notes Section -->
+      <div class="form-section">
+        <h3>Additional Notes</h3>
+        <div class="form-group">
+          <label for="notes">Notes (optional)</label>
+          <textarea id="notes" name="notes" rows="4" placeholder="Enter any additional information about the vehicle or service needed..."></textarea>
+        </div>
+      </div>
+
+      <div id="form-error" class="error-message hidden"></div>
+
+      <div class="form-actions">
+        <a href="/shop/dashboard.html" class="btn btn-secondary">Cancel</a>
+        <button type="submit" id="submit-btn" class="btn btn-primary">
+          <span class="btn-text">Submit Vehicle</span>
+          <span class="btn-spinner hidden"></span>
+        </button>
+      </div>
+    </form>
+  </main>
+
+  <!-- Success Modal -->
+  <div id="success-modal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content modal-sm">
+      <div class="modal-body text-center">
+        <div class="success-icon">&#10003;</div>
+        <h2>Vehicle Submitted!</h2>
+        <p>Your vehicle has been submitted successfully.</p>
+        <p><strong>RO/PO:</strong> <span id="success-ro"></span></p>
+      </div>
+      <div class="modal-footer">
+        <a href="/shop/dashboard.html" class="btn btn-primary btn-block">Go to Dashboard</a>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="/shop/js/auth.js"></script>
+  <script src="/shop/js/api.js"></script>
+  <script src="/shop/js/submit.js"></script>
+</body>
+</html>
