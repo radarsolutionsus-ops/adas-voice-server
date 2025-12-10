@@ -5,27 +5,54 @@
       "name": "JMD Body Shop",
       "sheetName": "JMD Body Shop",
       "username": "jmd",
-      "passwordHash": "$2b$10$nb3f0UP0.k.XO/.A.EeJRuIZwd0kXhnUcWm3ccmFEyBjm6jrT5.Ha",
-      "email": "jmd@example.com",
-      "phone": "305-555-0001"
+      "passwordHash": "$2b$10$qBd1y2tT9DaXSKCulyRLfOBgRpKCHaP/f3qnK.kpG6N2x5233QaVS",
+      "email": "",
+      "phone": ""
     },
     {
       "id": "autosport",
       "name": "AutoSport",
       "sheetName": "AutoSport",
       "username": "autosport",
-      "passwordHash": "$2b$10$nb3f0UP0.k.XO/.A.EeJRuIZwd0kXhnUcWm3ccmFEyBjm6jrT5.Ha",
-      "email": "autosport@example.com",
-      "phone": "305-555-0002"
+      "passwordHash": "$2b$10$78ch45MbyfGqCay8Ft.X4.WezwcC5tiCc5BMANRusluYV/pd.pPZS",
+      "email": "",
+      "phone": ""
     },
     {
-      "id": "demo",
-      "name": "Demo Shop",
-      "sheetName": "Demo Shop",
-      "username": "demo",
-      "passwordHash": "$2b$10$nb3f0UP0.k.XO/.A.EeJRuIZwd0kXhnUcWm3ccmFEyBjm6jrT5.Ha",
-      "email": "demo@example.com",
-      "phone": "305-555-0000"
+      "id": "paintmax",
+      "name": "PaintMax",
+      "sheetName": "PaintMax",
+      "username": "paintmax",
+      "passwordHash": "$2b$10$IlHn6Sljyp2TcrVKSf2KGeVhSRPUCV19oANvUYa.YYb38z.8PE4Ly",
+      "email": "",
+      "phone": ""
+    },
+    {
+      "id": "reinaldo",
+      "name": "Reinaldo Body Shop",
+      "sheetName": "Reinaldo Body Shop",
+      "username": "reinaldo",
+      "passwordHash": "$2b$10$qUreqDs7tD8bxqLBbAWR7e/l30MxoxgkF1YHrxfIaHD9rIONoXkbu",
+      "email": "",
+      "phone": ""
+    },
+    {
+      "id": "ccnm",
+      "name": "Collision Center of North Miami",
+      "sheetName": "Collision Center of North Miami",
+      "username": "ccnm",
+      "passwordHash": "$2b$10$B4xpzMweEQ1723XjwTJ3x.VpOZFSaGuxUAE4rR21rx5GOb7NoMhvS",
+      "email": "",
+      "phone": ""
+    },
+    {
+      "id": "daniels",
+      "name": "Daniels Paint and Body Shop",
+      "sheetName": "Daniels Paint and Body Shop",
+      "username": "daniels",
+      "passwordHash": "$2b$10$gCSwguLvIRZgKXKzuWvABOWQScaDoDRAhVUrHWSXq43QvSdz3tPCK",
+      "email": "",
+      "phone": ""
     }
   ]
 }
