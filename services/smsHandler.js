@@ -73,16 +73,21 @@ export async function handleIncomingSMS(req, res) {
 
     convo.history.push({ role: "assistant", content: response });
 
-    // Send response via TwiML
-    const twiml = `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Message>${escapeXml(response)}</Message>
-</Response>`;
+    // Send response via Twilio API (instead of TwiML to work around A2P 10DLC)
+    try {
+      await twilioClient.messages.create({
+        body: response,
+        from: TWILIO_PHONE_NUMBER,
+        to: from
+      });
+      console.log(`[SMS] Sent reply to ${from}`);
+    } catch (sendErr) {
+      console.error(`[SMS] Failed to send reply:`, sendErr.message);
+    }
 
-    console.log(`[SMS] Sending TwiML response`);
-
+    // Return empty TwiML (acknowledge receipt but don't send via TwiML)
     res.type("text/xml");
-    res.send(twiml);
+    res.send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
 
   } catch (err) {
     console.error("[SMS] Error processing message:", err);
