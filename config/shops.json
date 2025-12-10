@@ -1,0 +1,31 @@
+{
+  "shops": [
+    {
+      "id": "jmd",
+      "name": "JMD Body Shop",
+      "sheetName": "JMD Body Shop",
+      "username": "jmd",
+      "passwordHash": "$2b$10$nb3f0UP0.k.XO/.A.EeJRuIZwd0kXhnUcWm3ccmFEyBjm6jrT5.Ha",
+      "email": "jmd@example.com",
+      "phone": "305-555-0001"
+    },
+    {
+      "id": "autosport",
+      "name": "AutoSport",
+      "sheetName": "AutoSport",
+      "username": "autosport",
+      "passwordHash": "$2b$10$nb3f0UP0.k.XO/.A.EeJRuIZwd0kXhnUcWm3ccmFEyBjm6jrT5.Ha",
+      "email": "autosport@example.com",
+      "phone": "305-555-0002"
+    },
+    {
+      "id": "demo",
+      "name": "Demo Shop",
+      "sheetName": "Demo Shop",
+      "username": "demo",
+      "passwordHash": "$2b$10$nb3f0UP0.k.XO/.A.EeJRuIZwd0kXhnUcWm3ccmFEyBjm6jrT5.Ha",
+      "email": "demo@example.com",
+      "phone": "305-555-0000"
+    }
+  ]
+}

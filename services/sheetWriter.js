@@ -1640,8 +1640,45 @@ function extractModelFromVehicleInfo(vehicleInfo) {
   return null;
 }
 
+/**
+ * Get all schedule rows from the sheet
+ * Used by shop portal to fetch all vehicles for filtering
+ * @returns {Promise<{success: boolean, rows?: Array, error?: string}>}
+ */
+export async function getAllScheduleRows() {
+  console.log(`${LOG_TAG} Getting all schedule rows via direct Sheets API`);
+
+  try {
+    const rows = await readSheetData(SCHEDULE_SHEET_NAME, 'A:U');
+
+    if (rows.length <= 1) {
+      console.log(`${LOG_TAG} No data rows found in ${SCHEDULE_SHEET_NAME}`);
+      return { success: true, rows: [] };
+    }
+
+    // Skip header row (index 0), convert to objects
+    const dataRows = rows.slice(1);
+    const results = [];
+
+    for (let i = 0; i < dataRows.length; i++) {
+      const row = dataRows[i];
+      if (!row || row.length === 0) continue;
+      // Skip rows without RO/PO
+      if (!row[SCHEDULE_COLUMNS.RO_PO]) continue;
+      results.push(scheduleRowToObject(row, i));
+    }
+
+    console.log(`${LOG_TAG} Retrieved ${results.length} schedule rows`);
+    return { success: true, rows: results };
+  } catch (err) {
+    console.error(`${LOG_TAG} Failed to get all schedule rows:`, err.message);
+    return { success: false, error: err.message };
+  }
+}
+
 export default {
   getScheduleRowByRO,
+  getAllScheduleRows,  // Shop portal: get all rows for filtering
   lookupByVIN,  // VIN lookup fallback for shop name retrieval
   upsertScheduleRowByRO,
   updateScheduleRow,

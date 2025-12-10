@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ADAS F1RST - Shop Portal Login</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body class="login-page">
+  <div class="login-container">
+    <div class="login-header">
+      <h1>ADAS F1RST</h1>
+      <p>Shop Portal</p>
+    </div>
+
+    <form id="login-form" class="login-form">
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" required autocomplete="username" placeholder="Enter your username">
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="Enter your password">
+      </div>
+
+      <div id="login-error" class="error-message hidden"></div>
+
+      <button type="submit" id="login-btn" class="btn btn-primary btn-block">
+        <span class="btn-text">Sign In</span>
+        <span class="btn-spinner hidden"></span>
+      </button>
+    </form>
+
+    <div class="login-footer">
+      <p>Need help? Contact <a href="mailto:support@adasfirst.com">support@adasfirst.com</a></p>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="/js/auth.js"></script>
+  <script>
+    // Check if already logged in
+    if (Auth.isAuthenticated()) {
+      window.location.href = '/dashboard.html';
+    }
+
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+      const loginBtn = document.getElementById('login-btn');
+      const errorDiv = document.getElementById('login-error');
+
+      // Show loading
+      loginBtn.disabled = true;
+      loginBtn.querySelector('.btn-text').textContent = 'Signing in...';
+      loginBtn.querySelector('.btn-spinner').classList.remove('hidden');
+      errorDiv.classList.add('hidden');
+
+      try {
+        await Auth.login(username, password);
+        window.location.href = '/dashboard.html';
+      } catch (err) {
+        errorDiv.textContent = err.message || 'Login failed';
+        errorDiv.classList.remove('hidden');
+      } finally {
+        loginBtn.disabled = false;
+        loginBtn.querySelector('.btn-text').textContent = 'Sign In';
+        loginBtn.querySelector('.btn-spinner').classList.add('hidden');
+      }
+    });
+  </script>
+</body>
+</html>

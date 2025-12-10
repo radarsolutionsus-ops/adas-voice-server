@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - ADAS F1RST Shop Portal</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <h1>ADAS F1RST</h1>
+      <span id="shop-name" class="shop-badge"></span>
+    </div>
+    <div class="navbar-menu">
+      <a href="/dashboard.html" class="nav-link active">Dashboard</a>
+      <a href="/submit.html" class="nav-link">Submit Vehicle</a>
+      <button id="logout-btn" class="btn btn-outline btn-sm">Logout</button>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <!-- Stats Cards -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value" id="stat-total">-</div>
+        <div class="stat-label">Total Vehicles</div>
+      </div>
+      <div class="stat-card stat-new">
+        <div class="stat-value" id="stat-new">-</div>
+        <div class="stat-label">New</div>
+      </div>
+      <div class="stat-card stat-ready">
+        <div class="stat-value" id="stat-ready">-</div>
+        <div class="stat-label">Ready</div>
+      </div>
+      <div class="stat-card stat-scheduled">
+        <div class="stat-value" id="stat-scheduled">-</div>
+        <div class="stat-label">Scheduled</div>
+      </div>
+      <div class="stat-card stat-progress">
+        <div class="stat-value" id="stat-progress">-</div>
+        <div class="stat-label">In Progress</div>
+      </div>
+      <div class="stat-card stat-completed">
+        <div class="stat-value" id="stat-completed">-</div>
+        <div class="stat-label">Completed</div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters-bar">
+      <div class="filter-group">
+        <label for="status-filter">Status:</label>
+        <select id="status-filter" class="filter-select">
+          <option value="all">All</option>
+          <option value="new">New</option>
+          <option value="ready">Ready</option>
+          <option value="scheduled">Scheduled</option>
+          <option value="in progress">In Progress</option>
+          <option value="completed">Completed</option>
+          <option value="needs attention">Needs Attention</option>
+        </select>
+      </div>
+      <div class="filter-group search-group">
+        <input type="text" id="search-input" class="search-input" placeholder="Search RO, VIN, or Vehicle...">
+        <button id="search-btn" class="btn btn-secondary btn-sm">Search</button>
+      </div>
+      <button id="refresh-btn" class="btn btn-secondary btn-sm">Refresh</button>
+    </div>
+
+    <!-- Vehicles Table -->
+    <div class="table-container">
+      <table class="data-table" id="vehicles-table">
+        <thead>
+          <tr>
+            <th>RO/PO</th>
+            <th>VIN</th>
+            <th>Vehicle</th>
+            <th>Calibrations</th>
+            <th>Status</th>
+            <th>Scheduled</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="vehicles-tbody">
+          <tr class="loading-row">
+            <td colspan="7">
+              <div class="loading-spinner"></div>
+              <span>Loading vehicles...</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Empty State -->
+    <div id="empty-state" class="empty-state hidden">
+      <h3>No vehicles found</h3>
+      <p>No vehicles match your current filters.</p>
+      <a href="/submit.html" class="btn btn-primary">Submit a Vehicle</a>
+    </div>
+  </main>
+
+  <!-- Vehicle Detail Modal -->
+  <div id="vehicle-modal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Vehicle Details</h2>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body" id="vehicle-detail-content">
+        <!-- Populated by JS -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary modal-close-btn">Close</button>
+        <a href="#" id="schedule-vehicle-btn" class="btn btn-primary">Schedule</a>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="/js/auth.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/dashboard.js"></script>
+</body>
+</html>

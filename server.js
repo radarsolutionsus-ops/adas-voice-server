@@ -39,6 +39,9 @@ import {
 import downloadPlan from "./utils/downloadPlan.js";
 import oem from "./utils/oem/index.js";
 
+// Import shop portal routes
+import { authRoutes, portalRoutes } from "./routes/index.js";
+
 // ESM equivalent of __dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -53,8 +56,25 @@ app.get("/health", (req, res) => {
   res.status(200).send("OK");
 });
 
-// Root path also returns health for Railway compatibility
+// ============================================================
+// SHOP PORTAL - Static files and API routes
+// ============================================================
+
+// Serve static files from public directory
+app.use(express.static(path.join(__dirname, "public")));
+
+// Portal API routes
+app.use("/api/auth", authRoutes);
+app.use("/api/portal", portalRoutes);
+
+// Root path - serve portal login page OR health check for non-browser requests
 app.get("/", (req, res) => {
+  // If request accepts HTML (browser), serve portal login
+  const acceptsHtml = req.headers.accept && req.headers.accept.includes("text/html");
+  if (acceptsHtml) {
+    return res.sendFile(path.join(__dirname, "public", "index.html"));
+  }
+  // Otherwise return JSON health check (for Railway, APIs, etc.)
   res.status(200).json({ status: "ok", service: "adas-voice-server" });
 });
 
@@ -4965,6 +4985,10 @@ console.log(`   Send:     POST /billing/send/:roPo`);
 console.log(`   Shop:     GET  /billing/shop/:shopName`);
 console.log(`📱 SMS Scheduling:`);
 console.log(`   Webhook:  POST /sms (Twilio)`);
+console.log(`🌐 Shop Portal:`);
+console.log(`   Login:    https://${NGROK}/`);
+console.log(`   API Auth: /api/auth/login, /api/auth/refresh`);
+console.log(`   API:      /api/portal/vehicles, /api/portal/schedule`);
 
 // Auto-start email listener if configured
 if (process.env.AUTO_START_EMAIL_LISTENER === "true") {

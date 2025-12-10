@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vehicle Details - ADAS F1RST Shop Portal</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <h1>ADAS F1RST</h1>
+      <span id="shop-name" class="shop-badge"></span>
+    </div>
+    <div class="navbar-menu">
+      <a href="/dashboard.html" class="nav-link">Dashboard</a>
+      <a href="/submit.html" class="nav-link">Submit Vehicle</a>
+      <button id="logout-btn" class="btn btn-outline btn-sm">Logout</button>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <div class="page-header">
+      <a href="/dashboard.html" class="back-link">&larr; Back to Dashboard</a>
+      <h2 id="page-title">Vehicle Details</h2>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loading-state" class="loading-state">
+      <div class="loading-spinner"></div>
+      <span>Loading vehicle details...</span>
+    </div>
+
+    <!-- Vehicle Details -->
+    <div id="vehicle-details" class="vehicle-details hidden">
+      <!-- Main Info Card -->
+      <div class="detail-card">
+        <div class="detail-card-header">
+          <h3>Vehicle Information</h3>
+          <span id="detail-status" class="status-badge"></span>
+        </div>
+        <div class="detail-card-body">
+          <div class="detail-grid">
+            <div class="detail-item">
+              <label>RO/PO</label>
+              <span id="detail-ro"></span>
+            </div>
+            <div class="detail-item">
+              <label>VIN</label>
+              <span id="detail-vin"></span>
+            </div>
+            <div class="detail-item">
+              <label>Vehicle</label>
+              <span id="detail-vehicle"></span>
+            </div>
+            <div class="detail-item">
+              <label>Technician</label>
+              <span id="detail-tech"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Schedule Info -->
+      <div class="detail-card">
+        <div class="detail-card-header">
+          <h3>Schedule</h3>
+        </div>
+        <div class="detail-card-body">
+          <div class="detail-grid">
+            <div class="detail-item">
+              <label>Scheduled Date</label>
+              <span id="detail-date"></span>
+            </div>
+            <div class="detail-item">
+              <label>Scheduled Time</label>
+              <span id="detail-time"></span>
+            </div>
+          </div>
+          <div class="detail-actions">
+            <a id="schedule-btn" href="#" class="btn btn-primary">Schedule / Reschedule</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Calibrations -->
+      <div class="detail-card">
+        <div class="detail-card-header">
+          <h3>Calibrations</h3>
+        </div>
+        <div class="detail-card-body">
+          <div class="detail-grid">
+            <div class="detail-item full-width">
+              <label>Required Calibrations</label>
+              <span id="detail-required-cals"></span>
+            </div>
+            <div class="detail-item full-width">
+              <label>Completed Calibrations</label>
+              <span id="detail-completed-cals"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DTCs -->
+      <div class="detail-card" id="dtcs-card">
+        <div class="detail-card-header">
+          <h3>Diagnostic Trouble Codes</h3>
+        </div>
+        <div class="detail-card-body">
+          <div class="detail-item full-width">
+            <span id="detail-dtcs" class="dtcs-display"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Documents -->
+      <div class="detail-card">
+        <div class="detail-card-header">
+          <h3>Documents</h3>
+        </div>
+        <div class="detail-card-body">
+          <div class="document-links" id="document-links">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Notes -->
+      <div class="detail-card">
+        <div class="detail-card-header">
+          <h3>Notes & History</h3>
+        </div>
+        <div class="detail-card-body">
+          <pre id="detail-notes" class="notes-display"></pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- Error State -->
+    <div id="error-state" class="error-state hidden">
+      <h3>Vehicle Not Found</h3>
+      <p id="error-message">The requested vehicle could not be found.</p>
+      <a href="/dashboard.html" class="btn btn-primary">Back to Dashboard</a>
+    </div>
+  </main>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="/js/auth.js"></script>
+  <script src="/js/api.js"></script>
+  <script>
+    // Initialize
+    Auth.requireAuth();
+
+    // Get RO from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const roPo = urlParams.get('ro');
+
+    if (!roPo) {
+      window.location.href = '/dashboard.html';
+    }
+
+    // Load vehicle details
+    async function loadVehicle() {
+      try {
+        const vehicle = await API.getVehicle(roPo);
+        displayVehicle(vehicle);
+      } catch (err) {
+        document.getElementById('loading-state').classList.add('hidden');
+        document.getElementById('error-state').classList.remove('hidden');
+        document.getElementById('error-message').textContent = err.message;
+      }
+    }
+
+    function displayVehicle(v) {
+      document.getElementById('loading-state').classList.add('hidden');
+      document.getElementById('vehicle-details').classList.remove('hidden');
+
+      document.getElementById('page-title').textContent = `RO ${v.roPo}`;
+      document.getElementById('detail-ro').textContent = v.roPo || '-';
+      document.getElementById('detail-vin').textContent = v.vin || '-';
+      document.getElementById('detail-vehicle').textContent = v.vehicle || '-';
+      document.getElementById('detail-tech').textContent = v.technician || 'Not assigned';
+
+      // Status badge
+      const statusBadge = document.getElementById('detail-status');
+      statusBadge.textContent = v.status || 'New';
+      statusBadge.className = 'status-badge status-' + (v.status || 'new').toLowerCase().replace(/\s+/g, '-');
+
+      // Schedule
+      document.getElementById('detail-date').textContent = v.scheduledDate || 'Not scheduled';
+      document.getElementById('detail-time').textContent = v.scheduledTime || '-';
+      document.getElementById('schedule-btn').href = `/schedule.html?ro=${v.roPo}`;
+
+      // Calibrations
+      document.getElementById('detail-required-cals').textContent = v.requiredCalibrations || 'None specified';
+      document.getElementById('detail-completed-cals').textContent = v.completedCalibrations || 'None';
+
+      // DTCs
+      const dtcsCard = document.getElementById('dtcs-card');
+      if (v.dtcs) {
+        document.getElementById('detail-dtcs').textContent = v.dtcs;
+        dtcsCard.classList.remove('hidden');
+      } else {
+        dtcsCard.classList.add('hidden');
+      }
+
+      // Documents
+      const docLinks = document.getElementById('document-links');
+      docLinks.innerHTML = '';
+
+      const docs = [
+        { url: v.revvReportPdf, label: 'Revv Report' },
+        { url: v.postScanPdf, label: 'Post Scan' },
+        { url: v.invoicePdf, label: 'Invoice' }
+      ];
+
+      docs.forEach(doc => {
+        if (doc.url) {
+          const link = document.createElement('a');
+          link.href = doc.url;
+          link.target = '_blank';
+          link.className = 'document-link';
+          link.textContent = doc.label;
+          docLinks.appendChild(link);
+        }
+      });
+
+      if (docLinks.children.length === 0) {
+        docLinks.innerHTML = '<span class="no-docs">No documents available</span>';
+      }
+
+      // Notes
+      document.getElementById('detail-notes').textContent = v.notes || v.flowHistory || 'No notes';
+    }
+
+    // Set shop name
+    const shop = Auth.getShop();
+    if (shop) {
+      document.getElementById('shop-name').textContent = shop.name;
+    }
+
+    // Logout handler
+    document.getElementById('logout-btn').addEventListener('click', () => {
+      Auth.logout();
+      window.location.href = '/';
+    });
+
+    // Load vehicle
+    loadVehicle();
+  </script>
+</body>
+</html>
