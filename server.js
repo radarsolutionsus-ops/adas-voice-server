@@ -157,7 +157,7 @@ const OPS_TOOLS = [
   {
     type: "function",
     name: "get_ro_summary",
-    description: "Look up information about an existing RO/PO. Returns shop, vehicle, status, technician, and notes.",
+    description: "Look up information about an existing RO/PO. Returns shop, vehicle, status, technician, notes, isNoCalRequired (true if no calibration needed), hasPreScanDTCs (true if pre-scan had codes), and preScanDTCsList (comma-separated list of DTCs). ALWAYS call before scheduling.",
     parameters: {
       type: "object",
       properties: {
@@ -350,6 +350,34 @@ async function handleOpsToolCall(toolName, args) {
           summary.actualRoPo = actualRoPo;
           summary.searchedRoPo = args.roPo;
           summary.wasPartialMatch = wasPartialMatch;
+
+          // Check for No Cal status
+          const status = row.status || row.Status || '';
+          summary.isNoCalRequired = status.toLowerCase() === 'no cal';
+
+          // Parse DTCs from Column L for voice assistant
+          const dtcs = row.dtcs || '';
+          let preScanDTCs = [];
+          let hasPreScanDTCs = false;
+          let preScanDTCsList = '';
+
+          if (dtcs) {
+            // Parse PRE section from "PRE: P0171, U0100 | POST: None" format
+            const preMatch = dtcs.match(/PRE:\s*([^|]+)/i);
+            if (preMatch) {
+              const prePart = preMatch[1].trim();
+              if (prePart.toLowerCase() !== 'none') {
+                // Extract individual DTC codes
+                preScanDTCs = prePart.split(',').map(d => d.trim()).filter(d => /^[PBCU][0-9A-Fa-f]{4}$/i.test(d));
+                hasPreScanDTCs = preScanDTCs.length > 0;
+                preScanDTCsList = preScanDTCs.join(', ');
+              }
+            }
+          }
+
+          summary.hasPreScanDTCs = hasPreScanDTCs;
+          summary.preScanDTCsList = preScanDTCsList;
+
           return summary;
         }
         return { found: false, message: `RO ${args.roPo} not found in system` };
@@ -429,6 +457,17 @@ async function handleOpsToolCall(toolName, args) {
           return { success: false, error: `RO ${args.roPo} not found` };
         }
 
+        // Block scheduling for "No Cal" status - vehicle doesn't need calibration
+        const currentStatus = row.status || row.Status || '';
+        if (currentStatus.toLowerCase() === 'no cal') {
+          console.log(`[OPS_TOOL] Blocked scheduling for No Cal RO: ${args.roPo}`);
+          return {
+            success: false,
+            isNoCalRequired: true,
+            error: `RO ${args.roPo} does not require ADAS calibration based on the RevvADAS report. No scheduling needed.`
+          };
+        }
+
         // Validate scheduling time is within business hours (8:30 AM - 4:00 PM)
         if (args.scheduledTime) {
           const timeValidation = dispatcher.validateSchedulingTime(args.scheduledTime);
@@ -439,7 +478,6 @@ async function handleOpsToolCall(toolName, args) {
 
         const shopName = row.shop_name || row.shopName || row.shop;
         const existingTechnician = row.technician_assigned || row.technician;
-        const currentStatus = row.status || row.Status;
 
         // Check if this is a "Needs Attention" override
         const isNeedsAttentionOverride = args.override && currentStatus === "Needs Attention";
