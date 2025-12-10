@@ -598,8 +598,9 @@ function updateExistingRow(sheet, rowNum, data) {
 
   // ========= FIXED: Allow RO update from Revv when current is garbage =========
   // Also handle newROFromRevv: when Revv has fuller RO (e.g., "3080-ENT") but we matched on base ("3080")
-  let roPo = curr[COL.RO_PO] || '';
-  const incomingRO = data.roPo || data.ro_number || '';
+  // IMPORTANT: Convert to String() because sheet may return numeric RO as number (e.g., 3080 instead of "3080")
+  let roPo = String(curr[COL.RO_PO] || '');
+  const incomingRO = String(data.roPo || data.ro_number || '');
   const newROFromRevv = data.newROFromRevv || '';  // Full RO from Revv PDF (e.g., "3080-ENT")
 
   if (incomingRO && incomingRO.trim()) {
@@ -811,28 +812,28 @@ function getScheduleByRO(roPo) {
     found: true,
     data: {
       timestamp: data[COL.TIMESTAMP],
-      shop_name: data[COL.SHOP_NAME],
-      ro_po: data[COL.RO_PO],
-      vin: data[COL.VIN],
-      vehicle: data[COL.VEHICLE],
-      status: data[COL.STATUS],
+      shop_name: String(data[COL.SHOP_NAME] || ''),
+      ro_po: String(data[COL.RO_PO] || ''),
+      vin: String(data[COL.VIN] || ''),
+      vehicle: String(data[COL.VEHICLE] || ''),
+      status: String(data[COL.STATUS] || ''),
       scheduled_date: data[COL.SCHEDULED_DATE],
       scheduled_time: data[COL.SCHEDULED_TIME],
-      technician: data[COL.TECHNICIAN],
-      required_calibrations: data[COL.REQUIRED_CALS],
-      completed_calibrations: data[COL.COMPLETED_CALS],
-      dtcs: data[COL.DTCS],
-      revv_pdf: data[COL.REVV_PDF],
-      postscan_pdf: data[COL.POSTSCAN_PDF],
-      invoice_pdf: data[COL.INVOICE_PDF],
-      invoice_number: data[COL.INVOICE_NUM],
+      technician: String(data[COL.TECHNICIAN] || ''),
+      required_calibrations: String(data[COL.REQUIRED_CALS] || ''),
+      completed_calibrations: String(data[COL.COMPLETED_CALS] || ''),
+      dtcs: String(data[COL.DTCS] || ''),
+      revv_pdf: String(data[COL.REVV_PDF] || ''),
+      postscan_pdf: String(data[COL.POSTSCAN_PDF] || ''),
+      invoice_pdf: String(data[COL.INVOICE_PDF] || ''),
+      invoice_number: String(data[COL.INVOICE_NUM] || ''),
       invoice_amount: data[COL.INVOICE_AMOUNT],
       invoice_date: data[COL.INVOICE_DATE],
-      notes: data[COL.NOTES],
-      flow_history: data[COL.FLOW_HISTORY],
-      flowHistory: data[COL.FLOW_HISTORY],
-      oem_position: data[COL.OEM_POSITION] || '',
-      estimate_pdf: data[COL.ESTIMATE_PDF] || ''
+      notes: String(data[COL.NOTES] || ''),
+      flow_history: String(data[COL.FLOW_HISTORY] || ''),
+      flowHistory: String(data[COL.FLOW_HISTORY] || ''),
+      oem_position: String(data[COL.OEM_POSITION] || ''),
+      estimate_pdf: String(data[COL.ESTIMATE_PDF] || '')
     },
     rowNumber: rowNum
   };
@@ -867,11 +868,11 @@ function lookupByVIN(vin) {
         success: true,
         found: true,
         data: {
-          shop_name: data[i][COL.SHOP_NAME] || '',
-          ro_po: data[i][COL.RO_PO] || '',
-          vin: data[i][COL.VIN] || '',
-          vehicle: data[i][COL.VEHICLE] || '',
-          status: data[i][COL.STATUS] || ''
+          shop_name: String(data[i][COL.SHOP_NAME] || ''),
+          ro_po: String(data[i][COL.RO_PO] || ''),
+          vin: String(data[i][COL.VIN] || ''),
+          vehicle: String(data[i][COL.VEHICLE] || ''),
+          status: String(data[i][COL.STATUS] || '')
         },
         rowNumber: i + 1
       };
@@ -932,11 +933,11 @@ function getRowByROOrVIN(data) {
         return {
           success: true,
           row: {
-            roPo: dataRange[i][COL.RO_PO],
-            vin: dataRange[i][COL.VIN],
-            vehicle_info: dataRange[i][COL.VEHICLE],
-            required_calibrations: dataRange[i][COL.REQUIRED_CALS],
-            shop_name: dataRange[i][COL.SHOP_NAME]
+            roPo: String(dataRange[i][COL.RO_PO] || ''),
+            vin: String(dataRange[i][COL.VIN] || ''),
+            vehicle_info: String(dataRange[i][COL.VEHICLE] || ''),
+            required_calibrations: String(dataRange[i][COL.REQUIRED_CALS] || ''),
+            shop_name: String(dataRange[i][COL.SHOP_NAME] || '')
           }
         };
       }
@@ -951,11 +952,11 @@ function getRowByROOrVIN(data) {
         return {
           success: true,
           row: {
-            roPo: dataRange[i][COL.RO_PO],
-            vin: dataRange[i][COL.VIN],
-            vehicle_info: dataRange[i][COL.VEHICLE],
-            required_calibrations: dataRange[i][COL.REQUIRED_CALS],
-            shop_name: dataRange[i][COL.SHOP_NAME]
+            roPo: String(dataRange[i][COL.RO_PO] || ''),
+            vin: String(dataRange[i][COL.VIN] || ''),
+            vehicle_info: String(dataRange[i][COL.VEHICLE] || ''),
+            required_calibrations: String(dataRange[i][COL.REQUIRED_CALS] || ''),
+            shop_name: String(dataRange[i][COL.SHOP_NAME] || '')
           }
         };
       }
@@ -972,11 +973,11 @@ function getRowByROOrVIN(data) {
         return {
           success: true,
           row: {
-            roPo: dataRange[i][COL.RO_PO],
-            vin: dataRange[i][COL.VIN],
-            vehicle_info: dataRange[i][COL.VEHICLE],
-            required_calibrations: dataRange[i][COL.REQUIRED_CALS],
-            shop_name: dataRange[i][COL.SHOP_NAME]
+            roPo: String(dataRange[i][COL.RO_PO] || ''),
+            vin: String(dataRange[i][COL.VIN] || ''),
+            vehicle_info: String(dataRange[i][COL.VEHICLE] || ''),
+            required_calibrations: String(dataRange[i][COL.REQUIRED_CALS] || ''),
+            shop_name: String(dataRange[i][COL.SHOP_NAME] || '')
           }
         };
       }

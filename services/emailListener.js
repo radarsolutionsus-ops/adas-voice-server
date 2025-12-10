@@ -1126,6 +1126,57 @@ async function processEmail(message) {
     console.log(`${LOG_TAG} Processing RO: ${roPo} (source: ${roSource})`);
     console.log(`${LOG_TAG} Found ${pdfs.length} PDF attachments for RO ${roPo}`);
 
+    // === EARLY RO NORMALIZATION: Match existing rows before proceeding ===
+    // When RO comes from PDF content (e.g., "3080-ENT"), check if a base match exists ("3080")
+    // This prevents creating duplicate rows for the same job
+    let originalRoPo = roPo;  // Keep original for later reference
+    let roNormalized = false;
+
+    if (roSource && roSource.startsWith('pdf_content')) {
+      // Helper to extract base RO number (strips -ENT, -FOX, -PM suffixes)
+      const getBaseRO = (ro) => {
+        if (!ro) return null;
+        const match = ro.match(/^(\d+)/);
+        return match ? match[1] : ro;
+      };
+
+      const baseRO = getBaseRO(roPo);
+
+      // Try exact match first
+      const exactMatch = await sheetWriter.getScheduleRowByRO(roPo);
+      if (!exactMatch && baseRO && baseRO !== roPo) {
+        // Try base number match
+        const baseMatch = await sheetWriter.getScheduleRowByRO(baseRO);
+        if (baseMatch) {
+          console.log(`${LOG_TAG} *** NORMALIZED RO: Using existing "${baseRO}" instead of "${roPo}"`);
+          roPo = baseRO;
+          roNormalized = true;
+        }
+      }
+
+      // If still no match, try VIN lookup from PDF filename (for VIN-named Revv PDFs)
+      if (!exactMatch && !roNormalized) {
+        for (const pdf of pdfs) {
+          const nameWithoutExt = pdf.filename.replace(/\.pdf$/i, '');
+          const isVinFilename = /^[A-HJ-NPR-Z0-9]{17}$/i.test(nameWithoutExt);
+          if (isVinFilename) {
+            console.log(`${LOG_TAG} *** Trying VIN lookup from filename: ${nameWithoutExt}`);
+            const vinMatch = await sheetWriter.lookupByVIN(nameWithoutExt);
+            if (vinMatch) {
+              const existingRO = vinMatch.ro_po || vinMatch.roPo || vinMatch.ro_number;
+              if (existingRO) {
+                console.log(`${LOG_TAG} *** FOUND by VIN! Using existing RO "${existingRO}" instead of "${roPo}"`);
+                originalRoPo = roPo;  // Store the Revv RO for later update
+                roPo = existingRO;
+                roNormalized = true;
+                break;
+              }
+            }
+          }
+        }
+      }
+    }
+
     // Step 1: Upload PDFs to Drive
     const uploadResults = await driveUpload.uploadMultiplePDFs(
       pdfs.map(pdf => ({
