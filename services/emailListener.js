@@ -1467,12 +1467,66 @@ async function processEmail(message) {
           if (revvRO) {
             console.log(`${LOG_TAG} *** Revv Report contains RO: ${revvRO}`);
 
-            // Set the RO from Revv and flag for forced update
-            mergedData.roPo = revvRO;
-            mergedData.ro_number = revvRO;
-            mergedData.updateROFromRevv = true;  // Flag to force RO update in updateExistingRow
+            // === RO MATCHING FIX: Handle suffix mismatches like "3080" vs "3080-ENT" ===
+            // When Revv has "3080-ENT" but sheet has "3080", we need to match them
+            // Priority: 1. Exact match, 2. Base number match, 3. VIN fallback
 
-            console.log(`${LOG_TAG} *** Set updateROFromRevv=true to force RO update`);
+            // Helper to extract base RO number (strips -ENT, -FOX, -PM suffixes)
+            const getBaseRO = (ro) => {
+              if (!ro) return null;
+              // Strip common suffixes like -ENT, -FOX, -PM, etc.
+              const match = ro.match(/^(\d+)/);
+              return match ? match[1] : ro;
+            };
+
+            const revvBaseRO = getBaseRO(revvRO);
+            let matchedExistingRO = null;
+
+            // Try exact match first
+            const exactMatch = await sheetWriter.getScheduleRowByRO(revvRO);
+            if (exactMatch) {
+              console.log(`${LOG_TAG} *** Found exact RO match: ${revvRO}`);
+              matchedExistingRO = revvRO;
+            }
+
+            // Try base number match (3080-ENT → 3080)
+            if (!matchedExistingRO && revvBaseRO && revvBaseRO !== revvRO) {
+              const baseMatch = await sheetWriter.getScheduleRowByRO(revvBaseRO);
+              if (baseMatch) {
+                console.log(`${LOG_TAG} *** Found base RO match: ${revvBaseRO} (Revv had: ${revvRO})`);
+                matchedExistingRO = revvBaseRO;
+                // Update the existing row's RO to the full Revv RO
+                mergedData.updateROFromRevv = true;
+              }
+            }
+
+            // Try VIN fallback if we have a VIN
+            if (!matchedExistingRO && mergedData.vin) {
+              console.log(`${LOG_TAG} *** Trying VIN fallback lookup: ${mergedData.vin}`);
+              const vinMatch = await sheetWriter.lookupByVIN(mergedData.vin);
+              if (vinMatch) {
+                const existingRO = vinMatch.ro_po || vinMatch.roPo || vinMatch.ro_number;
+                console.log(`${LOG_TAG} *** Found VIN match! Existing RO: ${existingRO}, Revv RO: ${revvRO}`);
+                matchedExistingRO = existingRO;
+                mergedData.updateROFromRevv = true;
+              }
+            }
+
+            // Set the RO to use for upsert
+            if (matchedExistingRO) {
+              // Use the existing RO for the upsert, but store the Revv RO for update
+              roPo = matchedExistingRO;
+              mergedData.roPo = matchedExistingRO;
+              mergedData.ro_number = matchedExistingRO;
+              mergedData.newROFromRevv = revvRO;  // Store full Revv RO for update
+              console.log(`${LOG_TAG} *** Using existing RO for upsert: ${matchedExistingRO}, will update to: ${revvRO}`);
+            } else {
+              // No existing row found - use Revv RO for new row
+              mergedData.roPo = revvRO;
+              mergedData.ro_number = revvRO;
+              console.log(`${LOG_TAG} *** No existing row found, creating new with RO: ${revvRO}`);
+            }
+
             break; // Only process first Revv Report
           }
         } catch (parseErr) {

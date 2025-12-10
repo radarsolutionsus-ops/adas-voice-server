@@ -597,8 +597,10 @@ function updateExistingRow(sheet, rowNum, data) {
   }
 
   // ========= FIXED: Allow RO update from Revv when current is garbage =========
+  // Also handle newROFromRevv: when Revv has fuller RO (e.g., "3080-ENT") but we matched on base ("3080")
   let roPo = curr[COL.RO_PO] || '';
   const incomingRO = data.roPo || data.ro_number || '';
+  const newROFromRevv = data.newROFromRevv || '';  // Full RO from Revv PDF (e.g., "3080-ENT")
 
   if (incomingRO && incomingRO.trim()) {
     const currentHasDigits = /\d/.test(roPo);
@@ -611,8 +613,10 @@ function updateExistingRow(sheet, rowNum, data) {
 
     // Update RO if current is garbage OR explicitly flagged for update from Revv
     if ((currentIsGarbage && incomingHasDigits) || data.updateROFromRevv) {
-      Logger.log('Updating RO from "' + roPo + '" to "' + incomingRO + '"');
-      roPo = incomingRO;
+      // Prefer newROFromRevv (full Revv RO like "3080-ENT") over incomingRO (matched base "3080")
+      const targetRO = (newROFromRevv && newROFromRevv.trim()) ? newROFromRevv : incomingRO;
+      Logger.log('Updating RO from "' + roPo + '" to "' + targetRO + '"' + (newROFromRevv ? ' (from Revv)' : ''));
+      roPo = targetRO;
     }
   }
   // ====================================================
