@@ -2,55 +2,55 @@
   "shops": [
     {
       "id": "jmd",
-      "name": "JMD Body Shop",
-      "sheetName": "JMD Body Shop",
+      "name": "JMD Auto Body Collision",
+      "sheetName": "JMD AUTO BODY COLLISION",
       "username": "jmd",
-      "passwordHash": "$2b$10$qBd1y2tT9DaXSKCulyRLfOBgRpKCHaP/f3qnK.kpG6N2x5233QaVS",
+      "passwordHash": "$2b$10$mtE2/w17eHub9P83rosrMOP.FB3WOX1H4ZjPM8b0wrrJM/3VrtOFy",
       "email": "",
       "phone": ""
     },
     {
       "id": "autosport",
-      "name": "AutoSport",
-      "sheetName": "AutoSport",
+      "name": "Autosport International",
+      "sheetName": "AUTOSPORT INTERNATIONAL",
       "username": "autosport",
-      "passwordHash": "$2b$10$78ch45MbyfGqCay8Ft.X4.WezwcC5tiCc5BMANRusluYV/pd.pPZS",
-      "email": "",
-      "phone": ""
-    },
-    {
-      "id": "paintmax",
-      "name": "PaintMax",
-      "sheetName": "PaintMax",
-      "username": "paintmax",
-      "passwordHash": "$2b$10$IlHn6Sljyp2TcrVKSf2KGeVhSRPUCV19oANvUYa.YYb38z.8PE4Ly",
-      "email": "",
-      "phone": ""
-    },
-    {
-      "id": "reinaldo",
-      "name": "Reinaldo Body Shop",
-      "sheetName": "Reinaldo Body Shop",
-      "username": "reinaldo",
-      "passwordHash": "$2b$10$qUreqDs7tD8bxqLBbAWR7e/l30MxoxgkF1YHrxfIaHD9rIONoXkbu",
+      "passwordHash": "$2b$10$LDv9LSExiMbMiLsSw2Jeg.xfiB/cwE5D4HVcYB9PFp3LUqUyE1ED.",
       "email": "",
       "phone": ""
     },
     {
       "id": "ccnm",
-      "name": "Collision Center of North Miami",
-      "sheetName": "Collision Center of North Miami",
+      "name": "Collision Center Of North Miami",
+      "sheetName": "Collision Center Of North Miami",
       "username": "ccnm",
-      "passwordHash": "$2b$10$B4xpzMweEQ1723XjwTJ3x.VpOZFSaGuxUAE4rR21rx5GOb7NoMhvS",
+      "passwordHash": "$2b$10$TGtpExKy4r0XHQ7Pw90WMeDHuI47sFM/vxJ3mu/D/j62Bxi/MrwiK",
       "email": "",
       "phone": ""
     },
     {
-      "id": "daniels",
-      "name": "Daniels Paint and Body Shop",
-      "sheetName": "Daniels Paint and Body Shop",
-      "username": "daniels",
-      "passwordHash": "$2b$10$gCSwguLvIRZgKXKzuWvABOWQScaDoDRAhVUrHWSXq43QvSdz3tPCK",
+      "id": "reinaldo",
+      "name": "Reinaldo Paint & Body Shop",
+      "sheetName": "Reinaldo Paint & Body Shop Inc.",
+      "username": "reinaldo",
+      "passwordHash": "$2b$10$htMtcPh6PwHEpc7UiEUl5u.2VEsZmIaZI6JjvXmzD1Bslno4oExTK",
+      "email": "",
+      "phone": ""
+    },
+    {
+      "id": "paintmax",
+      "name": "Paint Max Inc",
+      "sheetName": "PAINT MAX INC",
+      "username": "paintmax",
+      "passwordHash": "$2b$10$s36IQCkzjoQW1qsMEkLX4u3obs/m1b/AoHMR5KeuAfP8xeXk2B9V.",
+      "email": "",
+      "phone": ""
+    },
+    {
+      "id": "paintmax1",
+      "name": "Paint Max 1",
+      "sheetName": "PAINT MAX 1",
+      "username": "paintmax1",
+      "passwordHash": "$2b$10$u1lKAWaMvYhCLahajG9m5eh7XUkGbUuNXlEU5/JuSRK4WrFUrPsve",
       "email": "",
       "phone": ""
     }
