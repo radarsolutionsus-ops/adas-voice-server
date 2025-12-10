@@ -489,7 +489,12 @@ function createNewRow(sheet, data, roPo) {
     data.estimate_pdf || data.estimatePdf || ''                  // V: Estimate PDF link
   ];
 
-  sheet.appendRow(newRow);
+  // Insert at row 2 (after header) instead of appending to bottom
+  sheet.insertRowBefore(2);
+  var range = sheet.getRange(2, 1, 1, newRow.length);
+  range.setValues([newRow]);
+
+  Logger.log('Inserted new row at top (row 2) for RO: ' + roPo);
 
   // Apply Column T formatting after insert
   applyColumnTFormatting(sheet);
@@ -498,7 +503,7 @@ function createNewRow(sheet, data, roPo) {
     success: true,
     message: 'Created new schedule row',
     roPo: roPo,
-    rowNumber: sheet.getLastRow()
+    rowNumber: 2
   };
 }
 
@@ -713,8 +718,8 @@ function techUpdateRow(data) {
     curr[COL.VIN],                                                // D: PROTECTED - KEEP
     curr[COL.VEHICLE],                                            // E: PROTECTED - KEEP
     normalizedStatus,                                             // F: Can update (normalized)
-    curr[COL.SCHEDULED_DATE],                                     // G: KEEP
-    curr[COL.SCHEDULED_TIME],                                     // H: KEEP
+    data.scheduledDate || data.scheduled_date || curr[COL.SCHEDULED_DATE],  // G: Can update for reschedule
+    data.scheduledTime || data.scheduled_time || curr[COL.SCHEDULED_TIME],  // H: Can update for reschedule
     data.technician || curr[COL.TECHNICIAN],                      // I: Can update
     curr[COL.REQUIRED_CALS],                                      // J: PROTECTED - KEEP
     data.completed_calibrations || curr[COL.COMPLETED_CALS],      // K: Can update
@@ -740,6 +745,22 @@ function techUpdateRow(data) {
     sheet.getRange(rowNum, COL.STATUS + 1).setValue(normalizedStatus);
     SpreadsheetApp.flush();  // Force write to sheet immediately
     Logger.log('techUpdateRow: Status write complete for RO ' + roPo);
+  }
+
+  // EXPLICIT SCHEDULE DATE/TIME WRITE for reschedule operations
+  if (data.scheduledDate || data.scheduled_date) {
+    var schedDate = data.scheduledDate || data.scheduled_date;
+    Logger.log('techUpdateRow: Setting Scheduled Date for RO ' + roPo + ': ' + schedDate);
+    sheet.getRange(rowNum, COL.SCHEDULED_DATE + 1).setValue(schedDate);
+  }
+  if (data.scheduledTime || data.scheduled_time) {
+    var schedTime = data.scheduledTime || data.scheduled_time;
+    Logger.log('techUpdateRow: Setting Scheduled Time for RO ' + roPo + ': ' + schedTime);
+    sheet.getRange(rowNum, COL.SCHEDULED_TIME + 1).setValue(schedTime);
+  }
+  if (data.technician) {
+    Logger.log('techUpdateRow: Setting Technician for RO ' + roPo + ': ' + data.technician);
+    sheet.getRange(rowNum, COL.TECHNICIAN + 1).setValue(data.technician);
   }
 
   return {
@@ -1155,12 +1176,17 @@ function appendBillingRow(data) {
     data.notes || ''
   ];
 
-  sheet.appendRow(newRow);
+  // Insert at row 2 (after header) instead of appending to bottom
+  sheet.insertRowBefore(2);
+  var range = sheet.getRange(2, 1, 1, newRow.length);
+  range.setValues([newRow]);
+
+  Logger.log('Inserted new billing row at top (row 2) for RO: ' + (data.roPo || data.ro_number || 'unknown'));
 
   return {
     success: true,
     message: 'Billing row added',
-    rowNumber: sheet.getLastRow()
+    rowNumber: 2
   };
 }
 
@@ -1246,69 +1272,76 @@ function setScheduleDateTime(data) {
     return { success: false, error: 'Schedule sheet not found' };
   }
 
-  // Use findRowByRO for normalized matching (handles "2919" -> "2919-ENTFLEET")
-  const rowNumber = findRowByRO(sheet, roPo);
-
-  if (rowNumber === 0) {
-    return {
-      success: false,
-      error: `RO ${roPo} not found in schedule`,
-      roPo: roPo
-    };
-  }
-
-  // Get the actual RO from the sheet for logging
   const dataRange = sheet.getDataRange().getValues();
-  const actualRoPo = String(dataRange[rowNumber - 1][COL.RO_PO] || '').trim();
+  const searchRoPo = String(roPo).trim();
+  const normalizedSearch = searchRoPo.replace(/-.*$/, '');
 
-  if (actualRoPo !== String(roPo).trim()) {
-    Logger.log(`Normalized RO match: "${roPo}" matched existing "${actualRoPo}"`);
+  for (let i = 1; i < dataRange.length; i++) {
+    const rowRoPo = String(dataRange[i][COL.RO_PO] || '').trim();
+    const normalizedRow = rowRoPo.replace(/-.*$/, '');
+
+    if (rowRoPo === searchRoPo || normalizedRow === normalizedSearch) {
+      const rowNumber = i + 1;
+
+      if (data.scheduledDate) {
+        sheet.getRange(rowNumber, COL.SCHEDULED_DATE + 1).setValue(data.scheduledDate);
+        Logger.log('Set Scheduled Date for RO ' + rowRoPo + ': ' + data.scheduledDate);
+      }
+      if (data.scheduledTime) {
+        sheet.getRange(rowNumber, COL.SCHEDULED_TIME + 1).setValue(data.scheduledTime);
+        Logger.log('Set Scheduled Time for RO ' + rowRoPo + ': ' + data.scheduledTime);
+      }
+      if (data.technician) {
+        sheet.getRange(rowNumber, COL.TECHNICIAN + 1).setValue(data.technician);
+        Logger.log('Set Technician for RO ' + rowRoPo + ': ' + data.technician);
+      }
+
+      // CRITICAL: Update status to Scheduled when date and time are set
+      if (data.scheduledDate && data.scheduledTime) {
+        sheet.getRange(rowNumber, COL.STATUS + 1).setValue('Scheduled');
+        Logger.log('Set Status for RO ' + rowRoPo + ': Scheduled');
+
+        // Add flow history entry for scheduling (always in English)
+        var now = new Date();
+        var month = String(now.getMonth() + 1).padStart(2, '0');
+        var day = String(now.getDate()).padStart(2, '0');
+        var hours = now.getHours();
+        var ampm = hours >= 12 ? 'p' : 'a';
+        hours = hours % 12;
+        hours = hours ? hours : 12;
+        var minutes = String(now.getMinutes()).padStart(2, '0');
+        var timestamp = month + '/' + day + ' ' + hours + ':' + minutes + ampm;
+
+        var techName = data.technician || 'TBD';
+        var scheduleEntry = timestamp + '  SCHEDULED   Calibration scheduled for ' + data.scheduledDate + ' ' + data.scheduledTime + ' - Tech: ' + techName;
+
+        // Append to flow history (Column T)
+        var existingHistory = dataRange[i][COL.FLOW_HISTORY] || '';
+        var newHistory = existingHistory ? existingHistory + '\n' + scheduleEntry : scheduleEntry;
+        sheet.getRange(rowNumber, COL.FLOW_HISTORY + 1).setValue(newHistory);
+        Logger.log('Added flow history for RO ' + rowRoPo + ': ' + scheduleEntry);
+      }
+
+      if (data.notes && data.notes.trim()) {
+        const existingNotes = dataRange[i][COL.NOTES] || '';
+        const newNotes = existingNotes ? existingNotes + ' | ' + data.notes : data.notes;
+        sheet.getRange(rowNumber, COL.NOTES + 1).setValue(newNotes);
+      }
+
+      return {
+        success: true,
+        message: 'Schedule updated',
+        roPo: rowRoPo,
+        rowNumber: rowNumber,
+        scheduledDate: data.scheduledDate || '',
+        scheduledTime: data.scheduledTime || '',
+        technician: data.technician || '',
+        status: 'Scheduled'
+      };
+    }
   }
 
-  // Update Scheduled Date (Column G)
-  if (data.scheduledDate) {
-    sheet.getRange(rowNumber, COL.SCHEDULED_DATE + 1).setValue(data.scheduledDate);
-    Logger.log(`Set Scheduled Date for RO ${actualRoPo}: ${data.scheduledDate}`);
-  }
-
-  // Update Scheduled Time (Column H)
-  if (data.scheduledTime) {
-    sheet.getRange(rowNumber, COL.SCHEDULED_TIME + 1).setValue(data.scheduledTime);
-    Logger.log(`Set Scheduled Time for RO ${actualRoPo}: ${data.scheduledTime}`);
-  }
-
-  // Auto-set status to "Scheduled" when both date and time are set
-  if (data.scheduledDate && data.scheduledTime) {
-    sheet.getRange(rowNumber, COL.STATUS + 1).setValue('Scheduled');
-    Logger.log(`Auto-set status to Scheduled for RO ${actualRoPo}`);
-  }
-
-  // Update Technician (Column I) - auto-assigned by dispatcher
-  if (data.technician) {
-    sheet.getRange(rowNumber, COL.TECHNICIAN + 1).setValue(data.technician);
-    Logger.log(`Set Technician for RO ${actualRoPo}: ${data.technician}`);
-  }
-
-  // If override note provided, append to Notes (Column S)
-  if (data.notes && data.notes.trim()) {
-    const existingNotes = dataRange[rowNumber - 1][COL.NOTES] || '';
-    const newNotes = existingNotes
-      ? `${existingNotes} | ${data.notes}`
-      : data.notes;
-    sheet.getRange(rowNumber, COL.NOTES + 1).setValue(newNotes);
-    Logger.log(`Appended override note for RO ${actualRoPo}: ${data.notes}`);
-  }
-
-  return {
-    success: true,
-    message: 'Schedule updated',
-    roPo: actualRoPo,
-    searchedRoPo: roPo,
-    rowNumber: rowNumber,
-    scheduledDate: data.scheduledDate || '',
-    scheduledTime: data.scheduledTime || '',
-    technician: data.technician || dataRange[rowNumber - 1][COL.TECHNICIAN] || ''
-  };
+  return { success: false, error: 'RO ' + roPo + ' not found in schedule', roPo: roPo };
 }
 
 /**

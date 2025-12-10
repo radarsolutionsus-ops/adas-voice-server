@@ -1,40 +1,6 @@
 {
-  "PaintMax": {
-    "morning": ["Felipe"],
-    "afternoon": ["Martin", "Felipe"],
-    "fallback": ["Randy"]
-  },
-  "Paint Max": {
-    "morning": ["Felipe"],
-    "afternoon": ["Martin", "Felipe"],
-    "fallback": ["Randy"]
-  },
-  "Reinaldo_BodyShop": {
-    "morning": ["Felipe"],
-    "afternoon": ["Martin", "Felipe"],
-    "fallback": ["Randy"]
-  },
-  "Reinaldo Body Shop": {
-    "morning": ["Felipe"],
-    "afternoon": ["Martin", "Felipe"],
-    "fallback": ["Randy"]
-  },
-  "AutoSport": {
-    "morning": ["Felipe"],
-    "afternoon": ["Felipe"],
-    "fallback": ["Martin"]
-  },
-  "Auto Sport": {
-    "morning": ["Felipe"],
-    "afternoon": ["Felipe"],
-    "fallback": ["Martin"]
-  },
-  "CCNM": {
-    "all_day": ["Anthony"],
-    "fallback": ["Felipe"]
-  },
-  "Collision Center of North Miami": {
-    "all_day": ["Anthony"],
+  "JMD AUTO BODY COLLISION": {
+    "all_day": ["Randy"],
     "fallback": ["Felipe"]
   },
   "JMD": {
@@ -44,5 +10,60 @@
   "JMD Body Shop": {
     "all_day": ["Randy"],
     "fallback": ["Felipe"]
+  },
+  "HIALEAH": {
+    "morning": ["Felipe"],
+    "afternoon": ["Felipe", "Martin"],
+    "fallback": ["Randy"]
+  },
+  "HIALEAH AUTO": {
+    "morning": ["Felipe"],
+    "afternoon": ["Felipe", "Martin"],
+    "fallback": ["Randy"]
+  },
+  "HIALEAH AUTO BODY": {
+    "morning": ["Felipe"],
+    "afternoon": ["Felipe", "Martin"],
+    "fallback": ["Randy"]
+  },
+  "CCNM": {
+    "morning": ["Anthony"],
+    "afternoon": ["Anthony", "Martin"],
+    "fallback": ["Martin"]
+  },
+  "Collision Center of North Miami": {
+    "morning": ["Anthony"],
+    "afternoon": ["Anthony", "Martin"],
+    "fallback": ["Martin"]
+  },
+  "PaintMax": {
+    "morning": ["Felipe"],
+    "afternoon": ["Felipe", "Martin"],
+    "fallback": ["Randy"]
+  },
+  "Paint Max": {
+    "morning": ["Felipe"],
+    "afternoon": ["Felipe", "Martin"],
+    "fallback": ["Randy"]
+  },
+  "Reinaldo_BodyShop": {
+    "morning": ["Felipe"],
+    "afternoon": ["Felipe", "Martin"],
+    "fallback": ["Randy"]
+  },
+  "Reinaldo Body Shop": {
+    "morning": ["Felipe"],
+    "afternoon": ["Felipe", "Martin"],
+    "fallback": ["Randy"]
+  },
+  "AutoSport": {
+    "morning": ["Felipe"],
+    "afternoon": ["Felipe"],
+    "fallback": ["Randy"]
+  },
+  "Auto Sport": {
+    "morning": ["Felipe"],
+    "afternoon": ["Felipe"],
+    "fallback": ["Randy"]
   }
 }

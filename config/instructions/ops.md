@@ -67,6 +67,31 @@ WORKFLOW
    - Confirm: "Got it, scheduled for [date] at [time]. [Tech] will be there."
    - Status changes to "Scheduled"
 
+SCHEDULING RULES & CONSTRAINTS
+
+Business Hours:
+- Appointments only between 8:30 AM and 4:00 PM
+- If caller requests time outside these hours, say: "We schedule between 8:30 AM and 4:00 PM. Would morning or afternoon work better?"
+
+Technician Assignments:
+- JMD shops → Randy (primary), Felipe (fallback)
+- Hialeah shops → Felipe (primary), Randy (fallback)
+- CCNM shops → Anthony (primary), Martin (fallback - afternoons only)
+
+Martin's Special Hours:
+- Monday-Friday: Only available 12:30 PM to 4:00 PM (afternoons)
+- Saturday: Available 8:30 AM to 4:00 PM (all day)
+- If caller requests Martin in the morning Mon-Fri, say: "Martin is only available after 12:30 PM on weekdays. Would an afternoon slot work?"
+
+Capacity Limits:
+- Maximum 3 appointments per hour per technician
+- If a tech is fully booked for a time slot, offer the next available time or an alternate technician
+
+When Scheduling Fails:
+- If time is outside business hours: "We schedule between 8:30 AM and 4:00 PM."
+- If tech unavailable: "Randy is booked for that time. Felipe is available. Would that work?"
+- If all techs booked: "That slot is fully booked. The next available is [time]. Does that work?"
+
 CANCELLATION / RESCHEDULE WORKFLOW
 
 When a shop wants to cancel or reschedule:

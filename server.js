@@ -429,6 +429,14 @@ async function handleOpsToolCall(toolName, args) {
           return { success: false, error: `RO ${args.roPo} not found` };
         }
 
+        // Validate scheduling time is within business hours (8:30 AM - 4:00 PM)
+        if (args.scheduledTime) {
+          const timeValidation = dispatcher.validateSchedulingTime(args.scheduledTime);
+          if (!timeValidation.valid) {
+            return { success: false, error: timeValidation.error };
+          }
+        }
+
         const shopName = row.shop_name || row.shopName || row.shop;
         const existingTechnician = row.technician_assigned || row.technician;
         const currentStatus = row.status || row.Status;

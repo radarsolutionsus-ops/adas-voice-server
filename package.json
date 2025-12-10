@@ -9,7 +9,10 @@
     "dev": "node --watch server.js",
     "email:start": "curl -X POST http://localhost:8080/email/start",
     "email:stop": "curl -X POST http://localhost:8080/email/stop",
-    "email:status": "curl http://localhost:8080/email/status"
+    "email:status": "curl http://localhost:8080/email/status",
+    "gas:push": "cd scripts/google_apps_script && npx clasp push",
+    "gas:deploy": "cd scripts/google_apps_script && npx clasp push && npx clasp deploy",
+    "gas:deployments": "cd scripts/google_apps_script && npx clasp deployments"
   },
   "keywords": [
     "adas",

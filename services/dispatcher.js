@@ -37,6 +37,39 @@ const __dirname = path.dirname(__filename);
 // Miami is in Eastern Time
 const TIMEZONE = 'America/New_York';
 
+// Scheduling constraints
+const SCHEDULING_RULES = {
+  earliestTime: 8.5,   // 8:30 AM in decimal hours
+  latestTime: 16,      // 4:00 PM in decimal hours
+  maxPerHourPerTech: 3, // Max 3 RO/POs per hour per technician
+  workDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+};
+
+// Technician availability schedules
+const TECH_SCHEDULES = {
+  'Randy': {
+    days: [1, 2, 3, 4, 5], // Mon-Fri (0=Sun, 1=Mon, etc.)
+    startTime: 8.5,  // 8:30 AM
+    endTime: 16      // 4:00 PM
+  },
+  'Felipe': {
+    days: [1, 2, 3, 4, 5], // Mon-Fri
+    startTime: 8.5,
+    endTime: 16
+  },
+  'Anthony': {
+    days: [1, 2, 3, 4, 5], // Mon-Fri
+    startTime: 8.5,
+    endTime: 16
+  },
+  'Martin': {
+    days: [1, 2, 3, 4, 5, 6], // Mon-Sat
+    startTime: 12.5, // 12:30 PM (afternoons only Mon-Fri)
+    endTime: 16,
+    saturdayHours: { startTime: 8.5, endTime: 16 } // All day Saturday
+  }
+};
+
 // Load data files
 let technicianAssignments = {};
 let blockerDTCs = { codes: [], descriptions: {}, categories: {} };
@@ -66,17 +99,119 @@ loadDataFiles();
 // Track tech assignment rotation
 const techRotation = {};
 
-// Martin's working hours: Mon-Thu 12:00-17:00, Fri-Sat all day
+// Martin's working hours: Mon-Fri 12:30-4:00 PM, Sat all day 8:30-4:00 PM
 const MARTIN_SCHEDULE = {
   // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
   0: null, // Sunday - off
-  1: { start: 12, end: 17 }, // Monday
-  2: { start: 12, end: 17 }, // Tuesday
-  3: { start: 12, end: 17 }, // Wednesday
-  4: { start: 12, end: 17 }, // Thursday
-  5: { start: 8, end: 17 }, // Friday - all day
-  6: { start: 8, end: 17 }  // Saturday - all day
+  1: { start: 12.5, end: 16 }, // Monday - 12:30 PM to 4:00 PM
+  2: { start: 12.5, end: 16 }, // Tuesday - 12:30 PM to 4:00 PM
+  3: { start: 12.5, end: 16 }, // Wednesday - 12:30 PM to 4:00 PM
+  4: { start: 12.5, end: 16 }, // Thursday - 12:30 PM to 4:00 PM
+  5: { start: 12.5, end: 16 }, // Friday - 12:30 PM to 4:00 PM
+  6: { start: 8.5, end: 16 }   // Saturday - 8:30 AM to 4:00 PM (all day)
 };
+
+/**
+ * Parse time string to decimal hours
+ * @param {string} timeStr - Time like "10:00 AM", "2:30 PM", "14:00"
+ * @returns {number} - Decimal hours (e.g., 14.5 for 2:30 PM)
+ */
+function parseTimeToDecimalHours(timeStr) {
+  if (!timeStr) return null;
+
+  const normalized = timeStr.toString().trim().toUpperCase();
+  let hours = 0;
+  let minutes = 0;
+
+  // Try 12-hour format (e.g., "10:00 AM", "2:30 PM")
+  const match12 = normalized.match(/^(\d{1,2}):?(\d{2})?\s*(AM|PM)?$/i);
+  if (match12) {
+    hours = parseInt(match12[1], 10);
+    minutes = match12[2] ? parseInt(match12[2], 10) : 0;
+    const isPM = match12[3] === 'PM';
+    const isAM = match12[3] === 'AM';
+
+    if (isPM && hours !== 12) hours += 12;
+    if (isAM && hours === 12) hours = 0;
+  } else {
+    // Try 24-hour format (e.g., "14:30")
+    const match24 = normalized.match(/^(\d{1,2}):(\d{2})$/);
+    if (match24) {
+      hours = parseInt(match24[1], 10);
+      minutes = parseInt(match24[2], 10);
+    }
+  }
+
+  return hours + (minutes / 60);
+}
+
+/**
+ * Check if a technician is available for a specific time slot
+ * @param {string} techName - Technician name
+ * @param {number} dayOfWeek - Day of week (0=Sun, 6=Sat)
+ * @param {string} timeStr - Time string
+ * @returns {{available: boolean, reason?: string}}
+ */
+function checkTechAvailability(techName, dayOfWeek, timeStr) {
+  const schedule = TECH_SCHEDULES[techName];
+  if (!schedule) {
+    return { available: true }; // Unknown tech, assume available
+  }
+
+  // Check if tech works this day
+  if (!schedule.days.includes(dayOfWeek)) {
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    return {
+      available: false,
+      reason: `${techName} does not work on ${dayNames[dayOfWeek]}s`
+    };
+  }
+
+  const requestedHour = parseTimeToDecimalHours(timeStr);
+  if (requestedHour === null) {
+    return { available: true }; // Can't parse time, assume available
+  }
+
+  // Special handling for Martin on Saturday (all day)
+  let startTime = schedule.startTime;
+  let endTime = schedule.endTime;
+  if (techName === 'Martin' && dayOfWeek === 6 && schedule.saturdayHours) {
+    startTime = schedule.saturdayHours.startTime;
+    endTime = schedule.saturdayHours.endTime;
+  }
+
+  // Check if time is within tech's hours
+  if (requestedHour < startTime) {
+    const startFormatted = formatDecimalHoursToTime(startTime);
+    return {
+      available: false,
+      reason: `${techName} is only available after ${startFormatted}`
+    };
+  }
+
+  if (requestedHour >= endTime) {
+    const endFormatted = formatDecimalHoursToTime(endTime);
+    return {
+      available: false,
+      reason: `${techName} is not available after ${endFormatted}`
+    };
+  }
+
+  return { available: true };
+}
+
+/**
+ * Format decimal hours to time string
+ * @param {number} decimalHours - e.g., 12.5 for 12:30 PM
+ * @returns {string} - e.g., "12:30 PM"
+ */
+function formatDecimalHoursToTime(decimalHours) {
+  const hours = Math.floor(decimalHours);
+  const minutes = Math.round((decimalHours - hours) * 60);
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  const displayHours = hours > 12 ? hours - 12 : (hours === 0 ? 12 : hours);
+  return `${displayHours}:${String(minutes).padStart(2, '0')} ${ampm}`;
+}
 
 /**
  * Get current time window based on Miami (ET) time
@@ -179,6 +314,85 @@ function isMartinAllowedForTime(scheduledTime) {
 
   // Also check Martin's day schedule
   return isMartinAvailable();
+}
+
+/**
+ * Validate scheduling time is within business hours (8:30 AM - 4:00 PM)
+ * @param {string} timeStr - Time string
+ * @returns {{valid: boolean, error?: string}}
+ */
+export function validateSchedulingTime(timeStr) {
+  const hour = parseTimeToDecimalHours(timeStr);
+  if (hour === null) {
+    return { valid: true }; // Can't parse, assume valid
+  }
+
+  if (hour < SCHEDULING_RULES.earliestTime) {
+    return {
+      valid: false,
+      error: 'Scheduling only available 8:30 AM to 4:00 PM. The requested time is too early.'
+    };
+  }
+
+  if (hour >= SCHEDULING_RULES.latestTime) {
+    return {
+      valid: false,
+      error: 'Scheduling only available 8:30 AM to 4:00 PM. The requested time is too late.'
+    };
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Get technician bookings for a specific hour
+ * @param {string} technician - Technician name
+ * @param {string} date - Date in YYYY-MM-DD format
+ * @param {number} hour - Hour in decimal (e.g., 10.5 for 10:30)
+ * @returns {Promise<number>} - Count of bookings
+ */
+async function getTechBookingsForHour(technician, date, hour) {
+  try {
+    const jobs = await sheetWriter.getScheduledJobsForTechOnDate(technician, date);
+    let count = 0;
+
+    for (const job of jobs) {
+      const jobTime = job.scheduled_time || job.scheduledTime;
+      if (jobTime) {
+        const jobHour = parseTimeToDecimalHours(jobTime);
+        // Count jobs within the same hour window
+        if (jobHour !== null && Math.floor(jobHour) === Math.floor(hour)) {
+          count++;
+        }
+      }
+    }
+
+    return count;
+  } catch (err) {
+    console.error(`${LOG_TAG} Error getting tech bookings:`, err.message);
+    return 0;
+  }
+}
+
+/**
+ * Check if technician has capacity for a time slot
+ * @param {string} technician - Technician name
+ * @param {string} date - Date in YYYY-MM-DD format
+ * @param {string} timeStr - Time string
+ * @returns {Promise<{hasCapacity: boolean, bookingCount: number}>}
+ */
+async function checkTechCapacity(technician, date, timeStr) {
+  const hour = parseTimeToDecimalHours(timeStr);
+  if (hour === null) {
+    return { hasCapacity: true, bookingCount: 0 };
+  }
+
+  const bookings = await getTechBookingsForHour(technician, date, hour);
+  const hasCapacity = bookings < SCHEDULING_RULES.maxPerHourPerTech;
+
+  console.log(`${LOG_TAG} Capacity check: ${technician} on ${date} at hour ${Math.floor(hour)} has ${bookings}/${SCHEDULING_RULES.maxPerHourPerTech} bookings`);
+
+  return { hasCapacity, bookingCount: bookings };
 }
 
 /**
@@ -957,6 +1171,7 @@ export default {
   suggestTimeSlot,
   normalizeRO,
   validateShopName,
+  validateSchedulingTime,
   extractROFromText,
   convertSpanishNumbersToDigits,
   padRO
