@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vehicles - ADAS F1RST Admin</title>
+  <link rel="stylesheet" href="/admin/css/admin.css">
+</head>
+<body>
+  <div class="admin-layout">
+    <!-- Sidebar (same as dashboard) -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">
+          <div class="logo-icon">A</div>
+          <span class="logo-text">ADAS F1RST</span>
+        </div>
+        <button class="sidebar-toggle" id="sidebarToggle" title="Toggle Sidebar">
+          <span id="toggleIcon">&#9776;</span>
+        </button>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-section">
+          <a href="/admin/dashboard.html" class="nav-item">
+            <span class="nav-icon">&#128200;</span>
+            <span class="nav-text">Dashboard</span>
+          </a>
+        </div>
+
+        <div class="nav-section">
+          <div class="nav-section-title">Vehicles</div>
+          <a href="/admin/vehicles.html" class="nav-item active">
+            <span class="nav-icon">&#128663;</span>
+            <span class="nav-text">All Vehicles</span>
+          </a>
+          <a href="/admin/vehicles.html?status=New" class="nav-item">
+            <span class="nav-icon">&#10024;</span>
+            <span class="nav-text">New</span>
+          </a>
+          <a href="/admin/vehicles.html?status=Scheduled" class="nav-item">
+            <span class="nav-icon">&#128197;</span>
+            <span class="nav-text">Scheduled</span>
+          </a>
+          <a href="/admin/vehicles.html?status=In%20Progress" class="nav-item">
+            <span class="nav-icon">&#128295;</span>
+            <span class="nav-text">In Progress</span>
+          </a>
+          <a href="/admin/vehicles.html?status=Completed" class="nav-item">
+            <span class="nav-icon">&#9989;</span>
+            <span class="nav-text">Completed</span>
+          </a>
+        </div>
+
+        <div class="nav-section">
+          <div class="nav-section-title">Management</div>
+          <a href="/admin/shops.html" class="nav-item">
+            <span class="nav-icon">&#127978;</span>
+            <span class="nav-text">Shops</span>
+          </a>
+          <a href="/admin/techs.html" class="nav-item">
+            <span class="nav-icon">&#128119;</span>
+            <span class="nav-text">Technicians</span>
+          </a>
+        </div>
+
+        <div class="nav-section">
+          <div class="nav-section-title">Billing</div>
+          <a href="/admin/billing.html" class="nav-item">
+            <span class="nav-icon">&#128176;</span>
+            <span class="nav-text">Overview</span>
+          </a>
+        </div>
+
+        <div class="nav-section">
+          <div class="nav-section-title">System</div>
+          <a href="/admin/settings.html" class="nav-item">
+            <span class="nav-icon">&#9881;</span>
+            <span class="nav-text">Settings</span>
+          </a>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="sidebar-user">
+          <div class="user-avatar" id="userAvatar">R</div>
+          <div class="user-info">
+            <div class="user-name" id="userName">Randy</div>
+            <div class="user-role">Owner</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <header class="top-header">
+        <div class="header-left">
+          <button class="mobile-menu-btn" id="mobileMenuBtn">&#9776;</button>
+          <h1 class="page-title">Vehicles</h1>
+        </div>
+        <div class="header-right">
+          <button class="btn-logout" id="logoutBtn">Logout</button>
+        </div>
+      </header>
+
+      <div class="content-area">
+        <!-- Filters -->
+        <div class="card" style="margin-bottom:24px;">
+          <div class="card-body" style="padding:16px;">
+            <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;">
+              <div style="flex:1;min-width:200px;">
+                <input type="text" class="form-input" id="searchInput" placeholder="Search RO, VIN, or vehicle...">
+              </div>
+              <div>
+                <select class="form-select" id="statusFilter" style="min-width:150px;">
+                  <option value="">All Statuses</option>
+                  <option value="New">New</option>
+                  <option value="Ready">Ready</option>
+                  <option value="Scheduled">Scheduled</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Completed">Completed</option>
+                  <option value="Cancelled">Cancelled</option>
+                </select>
+              </div>
+              <div>
+                <select class="form-select" id="shopFilter" style="min-width:180px;">
+                  <option value="">All Shops</option>
+                </select>
+              </div>
+              <button class="btn btn-secondary" id="clearFilters">Clear Filters</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Results Count -->
+        <div style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;">
+          <span id="resultCount" style="color:var(--text-secondary);">Loading...</span>
+        </div>
+
+        <!-- Vehicles Table -->
+        <div class="card">
+          <div class="card-body no-padding">
+            <table class="data-table" id="vehiclesTable">
+              <thead>
+                <tr>
+                  <th>RO/PO</th>
+                  <th>Vehicle</th>
+                  <th>Shop</th>
+                  <th>Status</th>
+                  <th>Scheduled</th>
+                  <th>Tech</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="vehiclesList">
+                <tr><td colspan="7" style="text-align:center;padding:48px;">
+                  <div class="spinner"></div>
+                </td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Vehicle Detail Modal -->
+  <div class="modal" id="vehicleModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;align-items:center;justify-content:center;">
+    <div class="modal-content" style="background:white;border-radius:12px;width:90%;max-width:600px;max-height:90vh;overflow-y:auto;">
+      <div class="modal-header" style="padding:20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+        <h3 id="modalTitle">Vehicle Details</h3>
+        <button class="modal-close" style="background:none;border:none;font-size:24px;cursor:pointer;" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="modal-body" style="padding:20px;" id="modalBody">
+        Loading...
+      </div>
+      <div class="modal-footer" style="padding:20px;border-top:1px solid var(--border);display:flex;gap:12px;justify-content:flex-end;">
+        <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+        <button class="btn btn-primary" id="saveChangesBtn" style="display:none;">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/auth.js"></script>
+  <script src="/js/admin/admin-common.js"></script>
+  <script src="/js/admin/vehicles.js"></script>
+</body>
+</html>

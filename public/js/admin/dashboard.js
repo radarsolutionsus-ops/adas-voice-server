@@ -3,58 +3,16 @@
  */
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // Check auth - must be admin
-  const token = Auth.getToken();
-  if (!token) {
-    window.location.href = '/';
-    return;
-  }
-
-  // Verify role from token
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    if (payload.role !== 'admin') {
-      console.error('Access denied: Admin role required');
-      Auth.logout();
-      window.location.href = '/';
-      return;
-    }
-  } catch (e) {
-    console.error('Invalid token');
-    Auth.logout();
-    window.location.href = '/';
-    return;
-  }
-
-  // Logout handler
-  document.getElementById('logoutBtn').addEventListener('click', async () => {
-    await Auth.logout();
-    window.location.href = '/';
-  });
-
-  // Fetch dashboard data
-  await loadDashboard();
+  // Wait for admin-common.js to initialize
+  setTimeout(loadDashboard, 100);
 });
 
 async function loadDashboard() {
   try {
-    const token = await Auth.getValidToken();
+    const data = await AdminAPI.get('/api/admin/dashboard');
 
-    const response = await fetch('/api/admin/dashboard', {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    const data = await response.json();
-
-    if (!response.ok || !data.success) {
+    if (!data.success) {
       console.error('Dashboard load failed:', data.error);
-      if (response.status === 401 || response.status === 403) {
-        Auth.logout();
-        window.location.href = '/';
-      }
       return;
     }
 
@@ -62,68 +20,82 @@ async function loadDashboard() {
     document.getElementById('statTotal').textContent = data.stats.total;
     document.getElementById('statNew').textContent = data.stats.new;
     document.getElementById('statScheduled').textContent = data.stats.scheduled;
-    document.getElementById('statInProgress').textContent = data.stats.inProgress;
     document.getElementById('statCompleted').textContent = data.stats.completed;
-    document.getElementById('statAttention').textContent = data.stats.needsAttention;
 
-    // Today's jobs
-    document.getElementById('todayCount').textContent = data.todayJobs.length;
-    renderTodayJobs(data.todayJobs);
+    // Update sidebar badge
+    const newCount = document.getElementById('newCount');
+    if (newCount) {
+      newCount.textContent = data.stats.new;
+      newCount.style.display = data.stats.new > 0 ? 'inline' : 'none';
+    }
+
+    // Today's schedule
+    document.getElementById('todayCount').textContent = `${data.todayJobs.length} jobs`;
+    renderTodaySchedule(data.todayJobs);
 
     // By shop breakdown
-    renderBreakdown('byShop', data.byShop);
+    renderBreakdown('byShop', data.byShop, '/admin/vehicles.html?shop=');
 
     // By tech breakdown
-    renderBreakdown('byTech', data.byTech);
+    renderBreakdown('byTech', data.byTech, '/admin/vehicles.html?tech=');
 
   } catch (err) {
     console.error('Dashboard error:', err);
   }
 }
 
-function renderTodayJobs(jobs) {
-  const container = document.getElementById('todayJobs');
+function renderTodaySchedule(jobs) {
+  const container = document.getElementById('todaySchedule');
 
   if (!jobs || jobs.length === 0) {
-    container.innerHTML = '<p class="empty-state">No jobs scheduled for today</p>';
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">&#128197;</div>
+        <h3>No jobs scheduled for today</h3>
+      </div>
+    `;
     return;
   }
 
   container.innerHTML = jobs.map(job => `
-    <div class="job-item">
-      <div class="job-info">
-        <strong>${escapeHtml(job.roPo)}</strong> - ${escapeHtml(job.vehicle || 'Unknown')}
-        <span class="job-shop">${escapeHtml(job.shopName || '')}</span>
+    <div class="schedule-item">
+      <div class="schedule-time">${escapeHtml(job.scheduledTime) || 'TBD'}</div>
+      <div class="schedule-info">
+        <div class="schedule-ro">
+          <a href="/admin/vehicles.html?ro=${encodeURIComponent(job.roPo)}">${escapeHtml(job.roPo)}</a>
+          - ${escapeHtml(job.vehicle || 'Unknown')}
+        </div>
+        <div class="schedule-shop">${escapeHtml(job.shopName || '')}</div>
       </div>
-      <div>
-        <span class="job-time">${escapeHtml(job.scheduledTime || 'TBD')}</span>
-        <span class="status-badge ${(job.status || '').toLowerCase().replace(/\s+/g, '-')}">${escapeHtml(job.status || 'Unknown')}</span>
-      </div>
+      <span class="status-badge ${getStatusClass(job.status)}">${escapeHtml(job.status)}</span>
     </div>
   `).join('');
 }
 
-function renderBreakdown(containerId, data) {
+function renderBreakdown(containerId, data, linkPrefix) {
   const container = document.getElementById(containerId);
 
   if (!data || Object.keys(data).length === 0) {
-    container.innerHTML = '<p class="empty-state">No data</p>';
+    container.innerHTML = `
+      <div class="empty-state">
+        <p>No data available</p>
+      </div>
+    `;
     return;
   }
 
   const entries = Object.entries(data).sort((a, b) => b[1] - a[1]);
 
-  container.innerHTML = entries.map(([name, count]) => `
-    <div class="breakdown-item">
-      <span class="breakdown-name">${escapeHtml(name)}</span>
-      <span class="breakdown-count">${count}</span>
-    </div>
-  `).join('');
-}
-
-function escapeHtml(text) {
-  if (!text) return '';
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
+  container.innerHTML = `
+    <table class="data-table">
+      <tbody>
+        ${entries.map(([name, count]) => `
+          <tr class="clickable" onclick="window.location='${linkPrefix}${encodeURIComponent(name)}'">
+            <td>${escapeHtml(name)}</td>
+            <td style="text-align:right;font-weight:600;">${count}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
 }

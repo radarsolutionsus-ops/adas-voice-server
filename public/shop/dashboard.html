@@ -3,149 +3,131 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard - ADAS F1RST Shop Portal</title>
-  <link rel="stylesheet" href="/css/styles.css">
+  <title>My Vehicles - ADAS F1RST</title>
+  <link rel="stylesheet" href="/shop/css/shop.css">
 </head>
 <body>
-  <nav class="navbar">
-    <div class="navbar-brand">
-      <h1>ADAS F1RST</h1>
-      <span id="shop-name" class="shop-badge"></span>
+  <!-- Simple Top Nav -->
+  <header class="shop-header">
+    <div class="header-left">
+      <span class="logo">ADAS F1RST</span>
     </div>
-    <div class="navbar-menu">
-      <a href="/shop/dashboard.html" class="nav-link active">Dashboard</a>
-      <a href="/shop/submit.html" class="nav-link">Submit Vehicle</a>
-      <button id="logout-btn" class="btn btn-outline btn-sm">Logout</button>
+    <div class="header-center">
+      <span class="shop-name" id="shopName">Loading...</span>
     </div>
-  </nav>
+    <div class="header-right">
+      <button class="btn-icon" id="helpBtn" title="Need Help?">&#10067;</button>
+      <button class="btn-logout" id="logoutBtn">Logout</button>
+    </div>
+  </header>
 
-  <main class="main-content">
-    <!-- Stats Cards -->
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-value" id="stat-total">-</div>
+  <main class="shop-main">
+    <!-- Welcome Banner -->
+    <div class="welcome-banner">
+      <div class="welcome-text">
+        <h1>Welcome back!</h1>
+        <p>Here's what's happening with your vehicles</p>
+      </div>
+      <a href="/shop/submit.html" class="btn-primary btn-large">
+        <span>+</span>
+        Submit New Vehicle
+      </a>
+    </div>
+
+    <!-- Quick Stats - Large, Tappable Cards -->
+    <div class="quick-stats">
+      <div class="stat-card tappable" onclick="filterByStatus('all')">
+        <div class="stat-icon">&#128663;</div>
+        <div class="stat-number" id="statTotal">0</div>
         <div class="stat-label">Total Vehicles</div>
       </div>
-      <div class="stat-card stat-new new-vehicles" id="stat-card-new">
-        <div class="stat-value" id="stat-new">-</div>
-        <div class="stat-label">New</div>
-      </div>
-      <div class="stat-card stat-ready">
-        <div class="stat-value" id="stat-ready">-</div>
-        <div class="stat-label">Ready</div>
-      </div>
-      <div class="stat-card stat-scheduled">
-        <div class="stat-value" id="stat-scheduled">-</div>
+
+      <div class="stat-card tappable new" onclick="filterByStatus('Scheduled')">
+        <div class="stat-icon">&#128197;</div>
+        <div class="stat-number" id="statScheduled">0</div>
         <div class="stat-label">Scheduled</div>
       </div>
-      <div class="stat-card stat-progress">
-        <div class="stat-value" id="stat-progress">-</div>
+
+      <div class="stat-card tappable in-progress" onclick="filterByStatus('In Progress')">
+        <div class="stat-icon">&#128295;</div>
+        <div class="stat-number" id="statInProgress">0</div>
         <div class="stat-label">In Progress</div>
       </div>
-      <div class="stat-card stat-completed">
-        <div class="stat-value" id="stat-completed">-</div>
+
+      <div class="stat-card tappable completed" onclick="filterByStatus('Completed')">
+        <div class="stat-icon">&#9989;</div>
+        <div class="stat-number" id="statCompleted">0</div>
         <div class="stat-label">Completed</div>
       </div>
     </div>
 
-    <!-- Filters -->
-    <div class="filters-bar">
-      <div class="filter-group">
-        <label for="status-filter">Status:</label>
-        <select id="status-filter" class="filter-select">
-          <option value="all">All</option>
-          <option value="new">New</option>
-          <option value="ready">Ready</option>
-          <option value="scheduled">Scheduled</option>
-          <option value="in progress">In Progress</option>
-          <option value="completed">Completed</option>
-          <option value="cancelled">Cancelled</option>
-        </select>
+    <!-- Simple Filter Bar -->
+    <div class="filter-bar">
+      <div class="filter-tabs">
+        <button class="filter-tab active" data-status="all">All</button>
+        <button class="filter-tab" data-status="New">New</button>
+        <button class="filter-tab" data-status="Scheduled">Scheduled</button>
+        <button class="filter-tab" data-status="In Progress">In Progress</button>
+        <button class="filter-tab" data-status="Completed">Completed</button>
       </div>
-      <div class="filter-group search-group">
-        <input type="text" id="search-input" class="search-input" placeholder="Search RO, VIN, or Vehicle...">
-        <button id="search-btn" class="btn btn-secondary btn-sm">Search</button>
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Search RO or VIN...">
       </div>
-      <button id="refresh-btn" class="btn btn-secondary btn-sm">Refresh</button>
     </div>
 
-    <!-- Vehicles Table -->
-    <div class="table-container">
-      <table class="data-table" id="vehicles-table">
-        <thead>
-          <tr>
-            <th>RO/PO</th>
-            <th>VIN</th>
-            <th>Vehicle</th>
-            <th>Calibrations</th>
-            <th>Status</th>
-            <th>Scheduled</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="vehicles-tbody">
-          <tr class="loading-row">
-            <td colspan="7">
-              <div class="loading-spinner"></div>
-              <span>Loading vehicles...</span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <!-- Vehicle Cards - Not a Table, Cards are Easier -->
+    <div class="vehicle-list" id="vehicleList">
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <p>Loading your vehicles...</p>
+      </div>
     </div>
 
     <!-- Empty State -->
-    <div id="empty-state" class="empty-state hidden">
-      <h3>No vehicles found</h3>
-      <p>No vehicles match your current filters.</p>
-      <a href="/shop/submit.html" class="btn btn-primary">Submit a Vehicle</a>
+    <div class="empty-state" id="emptyState" style="display:none;">
+      <div class="empty-icon">&#128663;</div>
+      <h2>No vehicles yet</h2>
+      <p>Submit your first vehicle to get started</p>
+      <a href="/shop/submit.html" class="btn-primary btn-large">Submit a Vehicle</a>
     </div>
   </main>
 
-  <!-- Vehicle Detail Modal -->
-  <div id="vehicle-modal" class="modal hidden">
-    <div class="modal-backdrop"></div>
+  <!-- Help Modal -->
+  <div class="modal" id="helpModal">
     <div class="modal-content">
       <div class="modal-header">
-        <h2>Vehicle Details</h2>
-        <button class="modal-close">&times;</button>
-      </div>
-      <div class="modal-body" id="vehicle-detail-content">
-        <!-- Populated by JS -->
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary modal-close-btn">Close</button>
-        <a href="#" id="schedule-vehicle-btn" class="btn btn-primary">Schedule</a>
-      </div>
-    </div>
-  </div>
-
-  <!-- Cancel Modal -->
-  <div id="cancel-modal" class="modal hidden">
-    <div class="modal-backdrop"></div>
-    <div class="modal-content modal-sm">
-      <div class="modal-header">
-        <h2>Cancel Appointment</h2>
+        <h3>Need Help?</h3>
         <button class="modal-close">&times;</button>
       </div>
       <div class="modal-body">
-        <p>Please provide a reason for cancellation:</p>
-        <div class="form-group">
-          <textarea id="cancel-reason" rows="3" placeholder="Enter cancellation reason (minimum 10 characters)..."></textarea>
+        <div class="help-item">
+          <span class="help-icon">&#128222;</span>
+          <div>
+            <strong>Call Us</strong>
+            <p><a href="tel:+13055551234">305-555-1234</a></p>
+          </div>
         </div>
-        <input type="hidden" id="cancel-ro">
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary modal-close-btn">Close</button>
-        <button id="confirm-cancel-btn" class="btn btn-primary" style="background: var(--danger);">Cancel Appointment</button>
+        <div class="help-item">
+          <span class="help-icon">&#128231;</span>
+          <div>
+            <strong>Email Support</strong>
+            <p><a href="mailto:adasf1rstservice@gmail.com">adasf1rstservice@gmail.com</a></p>
+          </div>
+        </div>
+        <div class="help-item">
+          <span class="help-icon">&#128336;</span>
+          <div>
+            <strong>Hours</strong>
+            <p>Mon-Fri 8AM-6PM, Sat 9AM-2PM</p>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
-  <div id="toast" class="toast hidden"></div>
-
-  <script src="/shop/js/auth.js"></script>
-  <script src="/shop/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/shop/js/shop-common.js"></script>
   <script src="/shop/js/dashboard.js"></script>
 </body>
 </html>

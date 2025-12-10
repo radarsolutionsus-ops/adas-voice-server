@@ -3,132 +3,752 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Submit Vehicle - ADAS F1RST Shop Portal</title>
-  <link rel="stylesheet" href="/css/styles.css">
+  <title>Submit Vehicle - ADAS F1RST</title>
+  <link rel="stylesheet" href="/shop/css/shop.css">
+  <style>
+    .progress-bar {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 32px;
+      padding: 0 16px;
+    }
+    .progress-step {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .step-circle {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--border);
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+    .step-circle.active {
+      background: var(--primary);
+      color: white;
+    }
+    .step-circle.completed {
+      background: var(--success);
+      color: white;
+    }
+    .step-label {
+      font-size: 14px;
+      color: var(--text-muted);
+      display: none;
+    }
+    @media (min-width: 600px) {
+      .step-label { display: block; }
+    }
+    .step-line {
+      width: 40px;
+      height: 3px;
+      background: var(--border);
+      border-radius: 2px;
+    }
+    .step-line.completed {
+      background: var(--success);
+    }
+
+    .form-step {
+      display: none;
+    }
+    .form-step.active {
+      display: block;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .form-group {
+      margin-bottom: 24px;
+    }
+    .form-label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .form-input {
+      width: 100%;
+      padding: 16px;
+      font-size: 18px;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      background: var(--background);
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .form-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(26, 115, 232, 0.1);
+    }
+    .form-input::placeholder {
+      color: var(--text-muted);
+    }
+    textarea.form-input {
+      min-height: 120px;
+      resize: vertical;
+    }
+
+    .upload-zone {
+      border: 3px dashed var(--border);
+      border-radius: 16px;
+      padding: 40px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+      background: var(--background);
+    }
+    .upload-zone:hover, .upload-zone.dragover {
+      border-color: var(--primary);
+      background: rgba(26, 115, 232, 0.05);
+    }
+    .upload-zone .icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+    .upload-zone .title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .upload-zone .subtitle {
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+    .upload-zone input[type="file"] {
+      display: none;
+    }
+
+    .file-preview {
+      margin-top: 16px;
+      padding: 16px;
+      background: var(--surface);
+      border-radius: 12px;
+      display: none;
+    }
+    .file-preview.has-file {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .file-preview .file-icon {
+      font-size: 32px;
+    }
+    .file-preview .file-info {
+      flex: 1;
+    }
+    .file-preview .file-name {
+      font-weight: 600;
+      word-break: break-all;
+    }
+    .file-preview .file-size {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .file-preview .file-remove {
+      background: none;
+      border: none;
+      font-size: 24px;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 8px;
+    }
+
+    .btn-nav {
+      display: flex;
+      gap: 16px;
+      margin-top: 32px;
+    }
+    .btn-back {
+      flex: 1;
+      padding: 18px 24px;
+      font-size: 18px;
+      font-weight: 600;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      background: white;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-back:hover {
+      background: var(--background);
+    }
+    .btn-next {
+      flex: 2;
+      padding: 18px 24px;
+      font-size: 18px;
+      font-weight: 600;
+      border: none;
+      border-radius: 12px;
+      background: var(--primary);
+      color: white;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-next:hover {
+      background: var(--primary-dark);
+    }
+    .btn-next:disabled {
+      background: var(--border);
+      cursor: not-allowed;
+    }
+    .btn-submit {
+      width: 100%;
+      padding: 20px 32px;
+      font-size: 20px;
+      font-weight: 700;
+      border: none;
+      border-radius: 12px;
+      background: var(--success);
+      color: white;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 24px;
+    }
+    .btn-submit:hover {
+      background: #15803d;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+    }
+    .btn-submit:disabled {
+      background: var(--border);
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .review-section {
+      background: var(--background);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .review-section h3 {
+      font-size: 14px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+    .review-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .review-item:last-child {
+      border-bottom: none;
+    }
+    .review-label {
+      color: var(--text-secondary);
+    }
+    .review-value {
+      font-weight: 600;
+      text-align: right;
+      word-break: break-all;
+    }
+
+    .checkbox-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 8px;
+    }
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      background: var(--background);
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .checkbox-item:hover {
+      border-color: var(--primary);
+    }
+    .checkbox-item.selected {
+      background: rgba(26, 115, 232, 0.1);
+      border-color: var(--primary);
+    }
+    .checkbox-item input {
+      width: 20px;
+      height: 20px;
+      accent-color: var(--primary);
+    }
+    .checkbox-item label {
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
 </head>
 <body>
-  <nav class="navbar">
-    <div class="navbar-brand">
-      <h1>ADAS F1RST</h1>
-      <span id="shop-name" class="shop-badge"></span>
+  <header class="shop-header">
+    <div class="header-left">
+      <span class="logo">ADAS F1RST</span>
     </div>
-    <div class="navbar-menu">
-      <a href="/shop/dashboard.html" class="nav-link">Dashboard</a>
-      <a href="/shop/submit.html" class="nav-link active">Submit Vehicle</a>
-      <button id="logout-btn" class="btn btn-outline btn-sm">Logout</button>
+    <div class="header-center">
+      <span class="shop-name" id="shopName">Loading...</span>
     </div>
-  </nav>
+    <div class="header-right">
+      <button class="btn-icon" id="helpBtn" title="Need Help?">&#10067;</button>
+      <button class="btn-logout" id="logoutBtn">Logout</button>
+    </div>
+  </header>
 
-  <main class="main-content">
-    <div class="page-header">
-      <a href="/shop/dashboard.html" class="back-link">&larr; Back to Dashboard</a>
-      <h2>Submit New Vehicle</h2>
+  <main class="shop-main">
+    <!-- Back Button -->
+    <div style="margin-bottom:24px;">
+      <a href="/shop/dashboard.html" class="btn-secondary" style="display:inline-flex;align-items:center;gap:8px;">
+        &#8592; Back to Dashboard
+      </a>
     </div>
 
-    <form id="submit-form" class="submit-form">
-      <!-- Vehicle Info Section -->
-      <div class="form-section">
-        <h3>Vehicle Information</h3>
-        <div class="form-row">
-          <div class="form-group">
-            <label for="ro-po">RO/PO Number *</label>
-            <input type="text" id="ro-po" name="roPo" required placeholder="Enter RO or PO number">
-          </div>
-          <div class="form-group">
-            <label for="vin">VIN (17 characters) *</label>
-            <input type="text" id="vin" name="vin" required maxlength="17" placeholder="Enter full VIN">
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label for="year">Year *</label>
-            <input type="number" id="year" name="year" required min="1990" max="2030" placeholder="YYYY">
-          </div>
-          <div class="form-group">
-            <label for="make">Make *</label>
-            <input type="text" id="make" name="make" required placeholder="e.g., Toyota">
-          </div>
-          <div class="form-group">
-            <label for="model">Model *</label>
-            <input type="text" id="model" name="model" required placeholder="e.g., Camry">
-          </div>
-        </div>
+    <div class="card">
+      <div class="card-header">
+        <h1 style="font-size:24px;">Submit New Vehicle</h1>
       </div>
+      <div class="card-body">
+        <!-- Progress Bar -->
+        <div class="progress-bar">
+          <div class="progress-step">
+            <div class="step-circle active" id="step1Circle">1</div>
+            <span class="step-label">Vehicle Info</span>
+          </div>
+          <div class="step-line" id="line1"></div>
+          <div class="progress-step">
+            <div class="step-circle" id="step2Circle">2</div>
+            <span class="step-label">Documents</span>
+          </div>
+          <div class="step-line" id="line2"></div>
+          <div class="progress-step">
+            <div class="step-circle" id="step3Circle">3</div>
+            <span class="step-label">Review</span>
+          </div>
+        </div>
 
-      <!-- Documents Section -->
-      <div class="form-section">
-        <h3>Required Documents</h3>
+        <form id="submitForm">
+          <!-- Step 1: Vehicle Information -->
+          <div class="form-step active" id="step1">
+            <div class="form-group">
+              <label class="form-label">RO/PO Number *</label>
+              <input type="text" class="form-input" id="roNumber" placeholder="Enter RO or PO number" required>
+            </div>
 
-        <div class="form-group">
-          <label for="estimate-pdf">Estimate PDF *</label>
-          <div class="file-upload-container">
-            <input type="file" id="estimate-pdf" accept=".pdf" required>
-            <div class="file-upload-info">
-              <span class="file-name" id="estimate-file-name">No file selected</span>
-              <span class="file-size" id="estimate-file-size"></span>
+            <div class="form-group">
+              <label class="form-label">Vehicle Year, Make, Model *</label>
+              <input type="text" class="form-input" id="vehicle" placeholder="e.g., 2023 Toyota Camry" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">VIN (Optional)</label>
+              <input type="text" class="form-input" id="vin" placeholder="17-character VIN" maxlength="17" style="text-transform:uppercase;">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Required Calibrations</label>
+              <div class="checkbox-group" id="calibrationOptions">
+                <div class="checkbox-item">
+                  <input type="checkbox" id="calFront" name="calibrations" value="Front Camera">
+                  <label for="calFront">Front Camera</label>
+                </div>
+                <div class="checkbox-item">
+                  <input type="checkbox" id="calRadar" name="calibrations" value="Radar">
+                  <label for="calRadar">Radar</label>
+                </div>
+                <div class="checkbox-item">
+                  <input type="checkbox" id="calBlind" name="calibrations" value="Blind Spot">
+                  <label for="calBlind">Blind Spot</label>
+                </div>
+                <div class="checkbox-item">
+                  <input type="checkbox" id="cal360" name="calibrations" value="360 Camera">
+                  <label for="cal360">360 Camera</label>
+                </div>
+                <div class="checkbox-item">
+                  <input type="checkbox" id="calLidar" name="calibrations" value="LiDAR">
+                  <label for="calLidar">LiDAR</label>
+                </div>
+                <div class="checkbox-item">
+                  <input type="checkbox" id="calOther" name="calibrations" value="Other">
+                  <label for="calOther">Other</label>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Notes / Special Instructions</label>
+              <textarea class="form-input" id="notes" placeholder="Any additional information about the vehicle or service needed..."></textarea>
+            </div>
+
+            <div class="btn-nav">
+              <button type="button" class="btn-next" onclick="goToStep(2)">Continue to Documents &#8594;</button>
             </div>
           </div>
-        </div>
 
-        <div class="form-group">
-          <label for="prescan-pdf">Pre-Scan PDF</label>
-          <div class="file-upload-container">
-            <input type="file" id="prescan-pdf" accept=".pdf">
-            <div class="file-upload-info">
-              <span class="file-name" id="prescan-file-name">No file selected</span>
-              <span class="file-size" id="prescan-file-size"></span>
+          <!-- Step 2: Documents -->
+          <div class="form-step" id="step2">
+            <div class="form-group">
+              <label class="form-label">Estimate PDF</label>
+              <div class="upload-zone" id="estimateZone">
+                <div class="icon">&#128196;</div>
+                <div class="title">Tap to upload estimate</div>
+                <div class="subtitle">or drag and drop PDF file here</div>
+                <input type="file" id="estimateFile" accept=".pdf">
+              </div>
+              <div class="file-preview" id="estimatePreview">
+                <div class="file-icon">&#128196;</div>
+                <div class="file-info">
+                  <div class="file-name" id="estimateFileName"></div>
+                  <div class="file-size" id="estimateFileSize"></div>
+                </div>
+                <button type="button" class="file-remove" onclick="removeFile('estimate')">&times;</button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Pre-Scan PDF (Optional)</label>
+              <div class="upload-zone" id="prescanZone">
+                <div class="icon">&#128203;</div>
+                <div class="title">Tap to upload pre-scan</div>
+                <div class="subtitle">or drag and drop PDF file here</div>
+                <input type="file" id="prescanFile" accept=".pdf">
+              </div>
+              <div class="file-preview" id="prescanPreview">
+                <div class="file-icon">&#128203;</div>
+                <div class="file-info">
+                  <div class="file-name" id="prescanFileName"></div>
+                  <div class="file-size" id="prescanFileSize"></div>
+                </div>
+                <button type="button" class="file-remove" onclick="removeFile('prescan')">&times;</button>
+              </div>
+            </div>
+
+            <div class="btn-nav">
+              <button type="button" class="btn-back" onclick="goToStep(1)">&#8592; Back</button>
+              <button type="button" class="btn-next" onclick="goToStep(3)">Review Submission &#8594;</button>
             </div>
           </div>
-          <div class="prescan-checkbox">
-            <label>
-              <input type="checkbox" id="no-prescan-confirm">
-              I confirm there are no active DTC codes for this vehicle
-            </label>
+
+          <!-- Step 3: Review -->
+          <div class="form-step" id="step3">
+            <div class="review-section">
+              <h3>Vehicle Information</h3>
+              <div class="review-item">
+                <span class="review-label">RO/PO Number</span>
+                <span class="review-value" id="reviewRo"></span>
+              </div>
+              <div class="review-item">
+                <span class="review-label">Vehicle</span>
+                <span class="review-value" id="reviewVehicle"></span>
+              </div>
+              <div class="review-item">
+                <span class="review-label">VIN</span>
+                <span class="review-value" id="reviewVin"></span>
+              </div>
+              <div class="review-item">
+                <span class="review-label">Calibrations</span>
+                <span class="review-value" id="reviewCalibrations"></span>
+              </div>
+              <div class="review-item">
+                <span class="review-label">Notes</span>
+                <span class="review-value" id="reviewNotes"></span>
+              </div>
+            </div>
+
+            <div class="review-section">
+              <h3>Documents</h3>
+              <div class="review-item">
+                <span class="review-label">Estimate</span>
+                <span class="review-value" id="reviewEstimate"></span>
+              </div>
+              <div class="review-item">
+                <span class="review-label">Pre-Scan</span>
+                <span class="review-value" id="reviewPrescan"></span>
+              </div>
+            </div>
+
+            <div class="btn-nav" style="flex-direction:column;">
+              <button type="submit" class="btn-submit" id="submitBtn">
+                &#10003; Submit Vehicle
+              </button>
+              <button type="button" class="btn-back" style="flex:1;margin-top:12px;" onclick="goToStep(1)">&#8592; Edit Information</button>
+            </div>
           </div>
-        </div>
+        </form>
       </div>
-
-      <!-- Notes Section -->
-      <div class="form-section">
-        <h3>Additional Notes</h3>
-        <div class="form-group">
-          <label for="notes">Notes (optional)</label>
-          <textarea id="notes" name="notes" rows="4" placeholder="Enter any additional information about the vehicle or service needed..."></textarea>
-        </div>
-      </div>
-
-      <div id="form-error" class="error-message hidden"></div>
-
-      <div class="form-actions">
-        <a href="/shop/dashboard.html" class="btn btn-secondary">Cancel</a>
-        <button type="submit" id="submit-btn" class="btn btn-primary">
-          <span class="btn-text">Submit Vehicle</span>
-          <span class="btn-spinner hidden"></span>
-        </button>
-      </div>
-    </form>
+    </div>
   </main>
 
-  <!-- Success Modal -->
-  <div id="success-modal" class="modal hidden">
-    <div class="modal-backdrop"></div>
-    <div class="modal-content modal-sm">
-      <div class="modal-body text-center">
-        <div class="success-icon">&#10003;</div>
-        <h2>Vehicle Submitted!</h2>
-        <p>Your vehicle has been submitted successfully.</p>
-        <p><strong>RO/PO:</strong> <span id="success-ro"></span></p>
+  <!-- Help Modal -->
+  <div class="modal" id="helpModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Need Help?</h3>
+        <button class="modal-close">&times;</button>
       </div>
-      <div class="modal-footer">
-        <a href="/shop/dashboard.html" class="btn btn-primary btn-block">Go to Dashboard</a>
+      <div class="modal-body">
+        <div class="help-item">
+          <span class="help-icon">&#128222;</span>
+          <div>
+            <strong>Call Us</strong>
+            <p><a href="tel:+13055551234">305-555-1234</a></p>
+          </div>
+        </div>
+        <div class="help-item">
+          <span class="help-icon">&#128231;</span>
+          <div>
+            <strong>Email Support</strong>
+            <p><a href="mailto:adasf1rstservice@gmail.com">adasf1rstservice@gmail.com</a></p>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
-  <div id="toast" class="toast hidden"></div>
+  <!-- Success Modal -->
+  <div class="modal" id="successModal">
+    <div class="modal-content" style="text-align:center;padding:40px;">
+      <div style="font-size:64px;margin-bottom:16px;">&#9989;</div>
+      <h2 style="margin-bottom:8px;">Vehicle Submitted!</h2>
+      <p style="color:var(--text-secondary);margin-bottom:24px;">Your vehicle has been submitted successfully. We'll be in touch shortly.</p>
+      <a href="/shop/dashboard.html" class="btn-primary" style="display:inline-block;padding:16px 32px;font-size:18px;">
+        Back to Dashboard
+      </a>
+    </div>
+  </div>
 
-  <script src="/shop/js/auth.js"></script>
-  <script src="/shop/js/api.js"></script>
-  <script src="/shop/js/submit.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/shop/js/shop-common.js"></script>
+  <script>
+    let currentStep = 1;
+    let uploadedFiles = {
+      estimate: null,
+      prescan: null
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!initShopPortal()) return;
+      setupCommonHandlers();
+      setupFileUploads();
+      setupCheckboxes();
+      setupFormSubmit();
+    });
+
+    function goToStep(step) {
+      // Validate step 1 before proceeding
+      if (currentStep === 1 && step > 1) {
+        const ro = document.getElementById('roNumber').value.trim();
+        const vehicle = document.getElementById('vehicle').value.trim();
+        if (!ro || !vehicle) {
+          Toast.error('Please fill in RO number and vehicle');
+          return;
+        }
+      }
+
+      // Update step circles
+      for (let i = 1; i <= 3; i++) {
+        const circle = document.getElementById(`step${i}Circle`);
+        const line = document.getElementById(`line${i - 1}`);
+
+        circle.classList.remove('active', 'completed');
+        if (i < step) {
+          circle.classList.add('completed');
+          circle.innerHTML = '&#10003;';
+        } else if (i === step) {
+          circle.classList.add('active');
+          circle.textContent = i;
+        } else {
+          circle.textContent = i;
+        }
+
+        if (line) {
+          line.classList.toggle('completed', i < step);
+        }
+      }
+
+      // Show/hide steps
+      document.querySelectorAll('.form-step').forEach((el, idx) => {
+        el.classList.toggle('active', idx + 1 === step);
+      });
+
+      // Populate review if going to step 3
+      if (step === 3) {
+        populateReview();
+      }
+
+      currentStep = step;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function setupFileUploads() {
+      ['estimate', 'prescan'].forEach(type => {
+        const zone = document.getElementById(`${type}Zone`);
+        const input = document.getElementById(`${type}File`);
+
+        zone.addEventListener('click', () => input.click());
+
+        zone.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          zone.classList.add('dragover');
+        });
+
+        zone.addEventListener('dragleave', () => {
+          zone.classList.remove('dragover');
+        });
+
+        zone.addEventListener('drop', (e) => {
+          e.preventDefault();
+          zone.classList.remove('dragover');
+          const file = e.dataTransfer.files[0];
+          if (file && file.type === 'application/pdf') {
+            handleFile(type, file);
+          } else {
+            Toast.error('Please upload a PDF file');
+          }
+        });
+
+        input.addEventListener('change', (e) => {
+          const file = e.target.files[0];
+          if (file) {
+            handleFile(type, file);
+          }
+        });
+      });
+    }
+
+    function handleFile(type, file) {
+      uploadedFiles[type] = file;
+
+      const preview = document.getElementById(`${type}Preview`);
+      const fileName = document.getElementById(`${type}FileName`);
+      const fileSize = document.getElementById(`${type}FileSize`);
+      const zone = document.getElementById(`${type}Zone`);
+
+      fileName.textContent = file.name;
+      fileSize.textContent = formatFileSize(file.size);
+      preview.classList.add('has-file');
+      zone.style.display = 'none';
+    }
+
+    function removeFile(type) {
+      uploadedFiles[type] = null;
+
+      const preview = document.getElementById(`${type}Preview`);
+      const zone = document.getElementById(`${type}Zone`);
+      const input = document.getElementById(`${type}File`);
+
+      preview.classList.remove('has-file');
+      zone.style.display = 'block';
+      input.value = '';
+    }
+
+    function formatFileSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    function setupCheckboxes() {
+      document.querySelectorAll('.checkbox-item').forEach(item => {
+        const checkbox = item.querySelector('input[type="checkbox"]');
+
+        item.addEventListener('click', (e) => {
+          if (e.target !== checkbox) {
+            checkbox.checked = !checkbox.checked;
+          }
+          item.classList.toggle('selected', checkbox.checked);
+        });
+
+        checkbox.addEventListener('change', () => {
+          item.classList.toggle('selected', checkbox.checked);
+        });
+      });
+    }
+
+    function getSelectedCalibrations() {
+      const checked = document.querySelectorAll('input[name="calibrations"]:checked');
+      return Array.from(checked).map(cb => cb.value);
+    }
+
+    function populateReview() {
+      document.getElementById('reviewRo').textContent = document.getElementById('roNumber').value || '-';
+      document.getElementById('reviewVehicle').textContent = document.getElementById('vehicle').value || '-';
+      document.getElementById('reviewVin').textContent = document.getElementById('vin').value || 'Not provided';
+
+      const calibrations = getSelectedCalibrations();
+      document.getElementById('reviewCalibrations').textContent = calibrations.length > 0 ? calibrations.join(', ') : 'Not specified';
+
+      document.getElementById('reviewNotes').textContent = document.getElementById('notes').value || 'None';
+      document.getElementById('reviewEstimate').textContent = uploadedFiles.estimate ? uploadedFiles.estimate.name : 'Not uploaded';
+      document.getElementById('reviewPrescan').textContent = uploadedFiles.prescan ? uploadedFiles.prescan.name : 'Not uploaded';
+    }
+
+    function setupFormSubmit() {
+      document.getElementById('submitForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner" style="width:20px;height:20px;border-width:3px;display:inline-block;vertical-align:middle;margin-right:8px;"></span> Submitting...';
+
+        try {
+          const formData = new FormData();
+          formData.append('roPo', document.getElementById('roNumber').value.trim());
+          formData.append('vehicle', document.getElementById('vehicle').value.trim());
+          formData.append('vin', document.getElementById('vin').value.trim().toUpperCase());
+          formData.append('requiredCalibrations', getSelectedCalibrations().join(', '));
+          formData.append('notes', document.getElementById('notes').value.trim());
+
+          if (uploadedFiles.estimate) {
+            formData.append('estimatePdf', uploadedFiles.estimate);
+          }
+          if (uploadedFiles.prescan) {
+            formData.append('preScanPdf', uploadedFiles.prescan);
+          }
+
+          const token = await Auth.getValidToken();
+          const response = await fetch('/api/shop/vehicles', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            },
+            body: formData
+          });
+
+          const result = await response.json();
+
+          if (result.success) {
+            document.getElementById('successModal').classList.add('open');
+          } else {
+            Toast.error(result.error || 'Failed to submit vehicle');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '&#10003; Submit Vehicle';
+          }
+        } catch (err) {
+          console.error('Submit error:', err);
+          Toast.error('Failed to submit vehicle. Please try again.');
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '&#10003; Submit Vehicle';
+        }
+      });
+    }
+  </script>
 </body>
 </html>

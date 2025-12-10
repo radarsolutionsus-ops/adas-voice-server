@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vehicle Details - ADAS F1RST</title>
+  <link rel="stylesheet" href="/shop/css/shop.css">
+</head>
+<body>
+  <header class="shop-header">
+    <div class="header-left">
+      <span class="logo">ADAS F1RST</span>
+    </div>
+    <div class="header-center">
+      <span class="shop-name" id="shopName">Loading...</span>
+    </div>
+    <div class="header-right">
+      <button class="btn-icon" id="helpBtn" title="Need Help?">&#10067;</button>
+      <button class="btn-logout" id="logoutBtn">Logout</button>
+    </div>
+  </header>
+
+  <main class="shop-main">
+    <!-- Back Button -->
+    <div style="margin-bottom:24px;">
+      <a href="/shop/dashboard.html" class="btn-secondary" style="display:inline-flex;align-items:center;gap:8px;">
+        &#8592; Back to Dashboard
+      </a>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loadingState" class="card">
+      <div class="card-body">
+        <div class="loading-state">
+          <div class="spinner"></div>
+          <p>Loading vehicle details...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Vehicle Details (hidden until loaded) -->
+    <div id="vehicleDetails" style="display:none;">
+      <!-- Header Card -->
+      <div class="card" style="margin-bottom:24px;">
+        <div class="card-body">
+          <div style="display:flex;justify-content:space-between;align-items:start;flex-wrap:wrap;gap:16px;">
+            <div>
+              <h1 style="font-size:28px;margin-bottom:8px;">RO #<span id="vehicleRo"></span></h1>
+              <p style="font-size:18px;color:var(--text-secondary);" id="vehicleName"></p>
+            </div>
+            <span class="vehicle-status" id="vehicleStatus" style="font-size:16px;padding:10px 24px;"></span>
+          </div>
+
+          <!-- Scheduled Date Banner -->
+          <div id="scheduledBanner" class="scheduled-info" style="display:none;margin-top:20px;">
+            <span class="icon">&#128197;</span>
+            <span class="date" id="scheduledDate"></span>
+            <span class="time" id="scheduledTime"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Info Grid -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;margin-bottom:24px;">
+        <!-- Vehicle Info -->
+        <div class="card">
+          <div class="card-header">
+            <h2>Vehicle Information</h2>
+          </div>
+          <div class="card-body">
+            <div style="display:flex;flex-direction:column;gap:16px;">
+              <div>
+                <label style="font-size:13px;color:var(--text-muted);text-transform:uppercase;">VIN</label>
+                <p style="font-family:monospace;font-size:16px;" id="vehicleVin">-</p>
+              </div>
+              <div>
+                <label style="font-size:13px;color:var(--text-muted);text-transform:uppercase;">Required Calibrations</label>
+                <p id="vehicleCalibrations">-</p>
+              </div>
+              <div>
+                <label style="font-size:13px;color:var(--text-muted);text-transform:uppercase;">Notes</label>
+                <p id="vehicleNotes" style="white-space:pre-wrap;background:var(--background);padding:12px;border-radius:8px;max-height:200px;overflow-y:auto;">-</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Documents -->
+        <div class="card">
+          <div class="card-header">
+            <h2>Documents</h2>
+          </div>
+          <div class="card-body">
+            <div class="document-grid" id="documentGrid">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="card">
+        <div class="card-header">
+          <h2>Actions</h2>
+        </div>
+        <div class="card-body">
+          <div style="display:flex;gap:16px;flex-wrap:wrap;" id="actionButtons">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Error State -->
+    <div id="errorState" class="card" style="display:none;">
+      <div class="card-body">
+        <div class="empty-state">
+          <div class="empty-icon">&#9888;</div>
+          <h2>Vehicle Not Found</h2>
+          <p id="errorMessage">The requested vehicle could not be found.</p>
+          <a href="/shop/dashboard.html" class="btn-primary" style="margin-top:16px;">Back to Dashboard</a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Help Modal -->
+  <div class="modal" id="helpModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Need Help?</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="help-item">
+          <span class="help-icon">&#128222;</span>
+          <div>
+            <strong>Call Us</strong>
+            <p><a href="tel:+13055551234">305-555-1234</a></p>
+          </div>
+        </div>
+        <div class="help-item">
+          <span class="help-icon">&#128231;</span>
+          <div>
+            <strong>Email Support</strong>
+            <p><a href="mailto:adasf1rstservice@gmail.com">adasf1rstservice@gmail.com</a></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/auth.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/shop/js/shop-common.js"></script>
+  <script>
+    let currentVehicle = null;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      if (!initShopPortal()) return;
+      setupCommonHandlers();
+
+      // Get RO from URL
+      const params = new URLSearchParams(window.location.search);
+      const ro = params.get('ro');
+
+      if (!ro) {
+        showError('No RO number provided');
+        return;
+      }
+
+      await loadVehicle(ro);
+    });
+
+    async function loadVehicle(ro) {
+      try {
+        const response = await ShopAPI.get(`/api/shop/vehicles/${encodeURIComponent(ro)}`);
+
+        if (!response.success || !response.vehicle) {
+          showError(response.error || 'Vehicle not found');
+          return;
+        }
+
+        currentVehicle = response.vehicle;
+        renderVehicle(currentVehicle);
+
+      } catch (err) {
+        console.error('Load vehicle error:', err);
+        showError('Failed to load vehicle details');
+      }
+    }
+
+    function renderVehicle(v) {
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('vehicleDetails').style.display = 'block';
+
+      // Basic info
+      document.getElementById('vehicleRo').textContent = v.roPo;
+      document.getElementById('vehicleName').textContent = v.vehicle || 'Unknown Vehicle';
+
+      const statusEl = document.getElementById('vehicleStatus');
+      statusEl.textContent = v.status || 'New';
+      statusEl.className = `vehicle-status ${getStatusClass(v.status)}`;
+
+      document.getElementById('vehicleVin').textContent = v.vin || '-';
+      document.getElementById('vehicleCalibrations').textContent = v.requiredCalibrations || 'Not determined';
+      document.getElementById('vehicleNotes').textContent = v.notes || 'No notes';
+
+      // Scheduled date
+      if ((v.status === 'Scheduled' || v.status === 'Rescheduled') && v.scheduledDate) {
+        document.getElementById('scheduledBanner').style.display = 'flex';
+        document.getElementById('scheduledDate').textContent = formatDate(v.scheduledDate);
+        document.getElementById('scheduledTime').textContent = v.scheduledTime ? `at ${formatTime(v.scheduledTime)}` : '';
+      }
+
+      // Documents
+      renderDocuments(v);
+
+      // Actions
+      renderActions(v);
+    }
+
+    function renderDocuments(v) {
+      const grid = document.getElementById('documentGrid');
+      const docs = [
+        { name: 'Estimate', url: v.estimatePdf, icon: '&#128196;' },
+        { name: 'Pre-Scan', url: v.preScanPdf || v.postScanPdf, icon: '&#128203;' },
+        { name: 'Revv Report', url: v.revvReportPdf, icon: '&#128202;' },
+        { name: 'Post-Scan', url: v.postScanPdf, icon: '&#128203;' },
+        { name: 'Invoice', url: v.invoicePdf, icon: '&#128179;' }
+      ];
+
+      grid.innerHTML = docs.map(doc => `
+        <div class="document-card ${doc.url ? 'available' : ''}" ${doc.url ? `onclick="window.open('${doc.url}', '_blank')"` : ''}>
+          <div class="doc-icon">${doc.icon}</div>
+          <div class="doc-name">${doc.name}</div>
+          <div class="doc-status">${doc.url ? 'Available' : 'Not uploaded'}</div>
+        </div>
+      `).join('');
+    }
+
+    function renderActions(v) {
+      const container = document.getElementById('actionButtons');
+      const actions = [];
+
+      if (v.status !== 'Completed' && v.status !== 'In Progress' && v.status !== 'Cancelled') {
+        const scheduleText = (v.status === 'Scheduled' || v.status === 'Rescheduled') ? 'Reschedule' : 'Schedule Calibration';
+        actions.push(`<a href="/shop/schedule.html?ro=${encodeURIComponent(v.roPo)}" class="btn-action btn-schedule">${scheduleText}</a>`);
+      }
+
+      if (v.status === 'Scheduled' || v.status === 'Rescheduled') {
+        actions.push(`<button class="btn-action btn-view" onclick="cancelAppointment('${v.roPo}')">Cancel Appointment</button>`);
+      }
+
+      if (actions.length === 0) {
+        actions.push('<p style="color:var(--text-muted);">No actions available for this vehicle.</p>');
+      }
+
+      container.innerHTML = actions.join('');
+    }
+
+    async function cancelAppointment(ro) {
+      const reason = prompt('Please provide a reason for cancellation (required):');
+      if (!reason || reason.trim().length < 10) {
+        Toast.error('Cancellation reason must be at least 10 characters');
+        return;
+      }
+
+      try {
+        const response = await ShopAPI.post(`/api/shop/vehicles/${encodeURIComponent(ro)}/cancel`, { reason });
+        if (response.success) {
+          Toast.success('Appointment cancelled');
+          setTimeout(() => location.reload(), 1000);
+        } else {
+          Toast.error(response.error || 'Failed to cancel');
+        }
+      } catch (err) {
+        Toast.error('Failed to cancel appointment');
+      }
+    }
+
+    function showError(message) {
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('errorState').style.display = 'block';
+      document.getElementById('errorMessage').textContent = message;
+    }
+  </script>
+</body>
+</html>

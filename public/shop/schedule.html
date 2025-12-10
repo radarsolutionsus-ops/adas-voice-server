@@ -3,124 +3,578 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Schedule - ADAS F1RST Shop Portal</title>
-  <link rel="stylesheet" href="/css/styles.css">
+  <title>Schedule Calibration - ADAS F1RST</title>
+  <link rel="stylesheet" href="/shop/css/shop.css">
+  <style>
+    .vehicle-summary {
+      background: var(--background);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+    .vehicle-summary h2 {
+      font-size: 20px;
+      margin-bottom: 4px;
+    }
+    .vehicle-summary .ro {
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+    .vehicle-summary .current-schedule {
+      margin-top: 16px;
+      padding: 12px 16px;
+      background: rgba(234, 179, 8, 0.1);
+      border-left: 4px solid var(--warning);
+      border-radius: 8px;
+    }
+
+    .date-picker-section {
+      margin-bottom: 32px;
+    }
+    .date-picker-section h3 {
+      font-size: 16px;
+      margin-bottom: 16px;
+      color: var(--text-secondary);
+    }
+
+    .date-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: 12px;
+    }
+    .date-option {
+      padding: 16px 12px;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: white;
+    }
+    .date-option:hover {
+      border-color: var(--primary);
+      transform: translateY(-2px);
+    }
+    .date-option.selected {
+      border-color: var(--primary);
+      background: rgba(26, 115, 232, 0.1);
+    }
+    .date-option.unavailable {
+      opacity: 0.5;
+      cursor: not-allowed;
+      background: var(--background);
+    }
+    .date-option .day-name {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .date-option .day-num {
+      font-size: 24px;
+      font-weight: 700;
+    }
+    .date-option .month {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .time-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 12px;
+    }
+    .time-option {
+      padding: 16px;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: white;
+      font-size: 16px;
+      font-weight: 500;
+    }
+    .time-option:hover {
+      border-color: var(--primary);
+    }
+    .time-option.selected {
+      border-color: var(--primary);
+      background: rgba(26, 115, 232, 0.1);
+    }
+    .time-option.unavailable {
+      opacity: 0.5;
+      cursor: not-allowed;
+      text-decoration: line-through;
+      background: var(--background);
+    }
+
+    .notes-section {
+      margin-bottom: 32px;
+    }
+    .notes-input {
+      width: 100%;
+      padding: 16px;
+      font-size: 16px;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      resize: vertical;
+      min-height: 100px;
+    }
+    .notes-input:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    .schedule-summary {
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+      display: none;
+    }
+    .schedule-summary.visible {
+      display: block;
+    }
+    .schedule-summary h3 {
+      font-size: 14px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+    .schedule-summary .summary-date {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .schedule-summary .summary-time {
+      font-size: 16px;
+      color: var(--text-secondary);
+    }
+
+    .btn-schedule {
+      width: 100%;
+      padding: 20px 32px;
+      font-size: 20px;
+      font-weight: 700;
+      border: none;
+      border-radius: 12px;
+      background: var(--primary);
+      color: white;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-schedule:hover:not(:disabled) {
+      background: var(--primary-dark);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(26, 115, 232, 0.3);
+    }
+    .btn-schedule:disabled {
+      background: var(--border);
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .calendar-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .calendar-nav button {
+      padding: 10px 16px;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      background: white;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .calendar-nav button:hover {
+      border-color: var(--primary);
+    }
+    .calendar-nav .week-label {
+      font-weight: 600;
+    }
+  </style>
 </head>
 <body>
-  <nav class="navbar">
-    <div class="navbar-brand">
-      <h1>ADAS F1RST</h1>
-      <span id="shop-name" class="shop-badge"></span>
+  <header class="shop-header">
+    <div class="header-left">
+      <span class="logo">ADAS F1RST</span>
     </div>
-    <div class="navbar-menu">
-      <a href="/shop/dashboard.html" class="nav-link">Dashboard</a>
-      <a href="/shop/submit.html" class="nav-link">Submit Vehicle</a>
-      <button id="logout-btn" class="btn btn-outline btn-sm">Logout</button>
+    <div class="header-center">
+      <span class="shop-name" id="shopName">Loading...</span>
     </div>
-  </nav>
+    <div class="header-right">
+      <button class="btn-icon" id="helpBtn" title="Need Help?">&#10067;</button>
+      <button class="btn-logout" id="logoutBtn">Logout</button>
+    </div>
+  </header>
 
-  <main class="main-content">
-    <div class="page-header">
-      <a href="/shop/dashboard.html" class="back-link">&larr; Back to Dashboard</a>
-      <h2>Schedule Appointment</h2>
+  <main class="shop-main">
+    <!-- Back Button -->
+    <div style="margin-bottom:24px;">
+      <a href="/shop/dashboard.html" class="btn-secondary" style="display:inline-flex;align-items:center;gap:8px;">
+        &#8592; Back to Dashboard
+      </a>
     </div>
 
-    <!-- Vehicle Info Card -->
-    <div class="info-card" id="vehicle-info-card">
-      <div class="info-card-header">
-        <h3>Vehicle Information</h3>
-        <span class="status-badge" id="vehicle-status">Loading...</span>
-      </div>
-      <div class="info-card-body">
-        <div class="detail-grid">
-          <div class="detail-item">
-            <label>RO/PO</label>
-            <span id="detail-ro">-</span>
-          </div>
-          <div class="detail-item">
-            <label>VIN</label>
-            <span id="detail-vin">-</span>
-          </div>
-          <div class="detail-item">
-            <label>Vehicle</label>
-            <span id="detail-vehicle">-</span>
-          </div>
-          <div class="detail-item">
-            <label>Required Calibrations</label>
-            <span id="detail-cals">-</span>
-          </div>
-        </div>
-
-        <!-- Current Schedule Display -->
-        <div class="current-schedule hidden" id="current-schedule">
-          <p><strong>Currently Scheduled:</strong> <span id="current-schedule-date">-</span></p>
+    <!-- Loading State -->
+    <div id="loadingState" class="card">
+      <div class="card-body">
+        <div class="loading-state">
+          <div class="spinner"></div>
+          <p>Loading vehicle details...</p>
         </div>
       </div>
     </div>
 
-    <!-- Schedule Form -->
-    <form id="schedule-form" class="schedule-form">
-      <h3>Select Date & Time</h3>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label for="schedule-date">Date *</label>
-          <input type="date" id="schedule-date" name="date" required>
-        </div>
-        <div class="form-group">
-          <label for="schedule-time">Preferred Time</label>
-          <select id="schedule-time" name="time">
-            <option value="">Any time</option>
-            <option value="08:00">8:00 AM</option>
-            <option value="09:00">9:00 AM</option>
-            <option value="10:00">10:00 AM</option>
-            <option value="11:00">11:00 AM</option>
-            <option value="12:00">12:00 PM</option>
-            <option value="13:00">1:00 PM</option>
-            <option value="14:00">2:00 PM</option>
-            <option value="15:00">3:00 PM</option>
-            <option value="16:00">4:00 PM</option>
-          </select>
+    <!-- Schedule Form (hidden until loaded) -->
+    <div id="scheduleContent" style="display:none;">
+      <!-- Vehicle Summary -->
+      <div class="card" style="margin-bottom:24px;">
+        <div class="card-body">
+          <div class="vehicle-summary">
+            <h2 id="vehicleName">Loading...</h2>
+            <p class="ro">RO #<span id="vehicleRo"></span></p>
+            <div class="current-schedule" id="currentSchedule" style="display:none;">
+              <strong>Currently Scheduled:</strong> <span id="currentDate"></span>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div class="form-group">
-        <label for="schedule-notes">Notes (optional)</label>
-        <textarea id="schedule-notes" name="notes" rows="3" placeholder="Any special instructions or notes..."></textarea>
+      <!-- Date Selection -->
+      <div class="card" style="margin-bottom:24px;">
+        <div class="card-header">
+          <h2>Select a Date</h2>
+        </div>
+        <div class="card-body">
+          <div class="calendar-nav">
+            <button type="button" id="prevWeek">&#8592; Previous</button>
+            <span class="week-label" id="weekLabel"></span>
+            <button type="button" id="nextWeek">Next &#8594;</button>
+          </div>
+          <div class="date-grid" id="dateGrid">
+            <!-- Populated by JS -->
+          </div>
+        </div>
       </div>
 
-      <div id="form-error" class="error-message hidden"></div>
-
-      <div class="form-actions">
-        <a href="/shop/dashboard.html" class="btn btn-secondary">Cancel</a>
-        <button type="submit" id="schedule-btn" class="btn btn-primary">
-          <span class="btn-text">Schedule Appointment</span>
-          <span class="btn-spinner hidden"></span>
-        </button>
+      <!-- Time Selection -->
+      <div class="card" style="margin-bottom:24px;">
+        <div class="card-header">
+          <h2>Select a Time</h2>
+        </div>
+        <div class="card-body">
+          <div class="time-grid" id="timeGrid">
+            <!-- Populated by JS -->
+          </div>
+        </div>
       </div>
-    </form>
+
+      <!-- Notes -->
+      <div class="card" style="margin-bottom:24px;">
+        <div class="card-header">
+          <h2>Additional Notes (Optional)</h2>
+        </div>
+        <div class="card-body">
+          <textarea class="notes-input" id="scheduleNotes" placeholder="Any special instructions for the technician..."></textarea>
+        </div>
+      </div>
+
+      <!-- Summary & Submit -->
+      <div class="schedule-summary" id="scheduleSummary">
+        <h3>Your Selection</h3>
+        <p class="summary-date" id="summaryDate">-</p>
+        <p class="summary-time" id="summaryTime">-</p>
+      </div>
+
+      <button type="button" class="btn-schedule" id="scheduleBtn" disabled>
+        Confirm Appointment
+      </button>
+    </div>
+
+    <!-- Error State -->
+    <div id="errorState" class="card" style="display:none;">
+      <div class="card-body">
+        <div class="empty-state">
+          <div class="empty-icon">&#9888;</div>
+          <h2>Vehicle Not Found</h2>
+          <p id="errorMessage">The requested vehicle could not be found.</p>
+          <a href="/shop/dashboard.html" class="btn-primary" style="margin-top:16px;">Back to Dashboard</a>
+        </div>
+      </div>
+    </div>
   </main>
 
-  <!-- Success Modal -->
-  <div id="success-modal" class="modal hidden">
-    <div class="modal-backdrop"></div>
-    <div class="modal-content modal-sm">
-      <div class="modal-body text-center">
-        <div class="success-icon">&#10003;</div>
-        <h2>Appointment Scheduled!</h2>
-        <p>Your appointment has been scheduled for:</p>
-        <p><strong id="success-datetime">-</strong></p>
+  <!-- Help Modal -->
+  <div class="modal" id="helpModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Need Help?</h3>
+        <button class="modal-close">&times;</button>
       </div>
-      <div class="modal-footer">
-        <a href="/shop/dashboard.html" class="btn btn-primary btn-block">Go to Dashboard</a>
+      <div class="modal-body">
+        <div class="help-item">
+          <span class="help-icon">&#128222;</span>
+          <div>
+            <strong>Call Us</strong>
+            <p><a href="tel:+13055551234">305-555-1234</a></p>
+          </div>
+        </div>
+        <div class="help-item">
+          <span class="help-icon">&#128231;</span>
+          <div>
+            <strong>Email Support</strong>
+            <p><a href="mailto:adasf1rstservice@gmail.com">adasf1rstservice@gmail.com</a></p>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
-  <div id="toast" class="toast hidden"></div>
+  <!-- Success Modal -->
+  <div class="modal" id="successModal">
+    <div class="modal-content" style="text-align:center;padding:40px;">
+      <div style="font-size:64px;margin-bottom:16px;">&#128197;</div>
+      <h2 style="margin-bottom:8px;">Appointment Scheduled!</h2>
+      <p style="color:var(--text-secondary);margin-bottom:8px;">Your calibration has been scheduled for:</p>
+      <p style="font-size:20px;font-weight:600;margin-bottom:24px;" id="successDateTime"></p>
+      <a href="/shop/dashboard.html" class="btn-primary" style="display:inline-block;padding:16px 32px;font-size:18px;">
+        Back to Dashboard
+      </a>
+    </div>
+  </div>
 
-  <script src="/shop/js/auth.js"></script>
-  <script src="/shop/js/api.js"></script>
-  <script src="/shop/js/schedule.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/shop/js/shop-common.js"></script>
+  <script>
+    let currentVehicle = null;
+    let selectedDate = null;
+    let selectedTime = null;
+    let weekOffset = 0;
+
+    const timeSlots = [
+      { value: '08:00', label: '8:00 AM' },
+      { value: '09:00', label: '9:00 AM' },
+      { value: '10:00', label: '10:00 AM' },
+      { value: '11:00', label: '11:00 AM' },
+      { value: '12:00', label: '12:00 PM' },
+      { value: '13:00', label: '1:00 PM' },
+      { value: '14:00', label: '2:00 PM' },
+      { value: '15:00', label: '3:00 PM' },
+      { value: '16:00', label: '4:00 PM' }
+    ];
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      if (!initShopPortal()) return;
+      setupCommonHandlers();
+
+      // Get RO from URL
+      const params = new URLSearchParams(window.location.search);
+      const ro = params.get('ro');
+
+      if (!ro) {
+        showError('No RO number provided');
+        return;
+      }
+
+      await loadVehicle(ro);
+      setupEventListeners();
+    });
+
+    async function loadVehicle(ro) {
+      try {
+        const response = await ShopAPI.get(`/api/shop/vehicles/${encodeURIComponent(ro)}`);
+
+        if (!response.success || !response.vehicle) {
+          showError(response.error || 'Vehicle not found');
+          return;
+        }
+
+        currentVehicle = response.vehicle;
+        renderVehicleInfo();
+        renderDateGrid();
+        renderTimeGrid();
+
+        document.getElementById('loadingState').style.display = 'none';
+        document.getElementById('scheduleContent').style.display = 'block';
+
+      } catch (err) {
+        console.error('Load vehicle error:', err);
+        showError('Failed to load vehicle details');
+      }
+    }
+
+    function renderVehicleInfo() {
+      document.getElementById('vehicleName').textContent = currentVehicle.vehicle || 'Unknown Vehicle';
+      document.getElementById('vehicleRo').textContent = currentVehicle.roPo;
+
+      if ((currentVehicle.status === 'Scheduled' || currentVehicle.status === 'Rescheduled') && currentVehicle.scheduledDate) {
+        document.getElementById('currentSchedule').style.display = 'block';
+        const dateStr = formatDate(currentVehicle.scheduledDate);
+        const timeStr = currentVehicle.scheduledTime ? formatTime(currentVehicle.scheduledTime) : '';
+        document.getElementById('currentDate').textContent = `${dateStr}${timeStr ? ' at ' + timeStr : ''}`;
+      }
+    }
+
+    function renderDateGrid() {
+      const grid = document.getElementById('dateGrid');
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      // Start from next business day
+      const startDate = new Date(today);
+      startDate.setDate(startDate.getDate() + 1 + (weekOffset * 7));
+
+      // Skip weekends for start
+      while (startDate.getDay() === 0 || startDate.getDay() === 6) {
+        startDate.setDate(startDate.getDate() + 1);
+      }
+
+      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+      let html = '';
+      let count = 0;
+      const currentDate = new Date(startDate);
+
+      while (count < 5) {
+        if (currentDate.getDay() !== 0 && currentDate.getDay() !== 6) {
+          const dateStr = currentDate.toISOString().split('T')[0];
+          const isSelected = selectedDate === dateStr;
+
+          html += `
+            <div class="date-option ${isSelected ? 'selected' : ''}" data-date="${dateStr}">
+              <div class="day-name">${days[currentDate.getDay()]}</div>
+              <div class="day-num">${currentDate.getDate()}</div>
+              <div class="month">${months[currentDate.getMonth()]}</div>
+            </div>
+          `;
+          count++;
+        }
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+
+      grid.innerHTML = html;
+
+      // Update week label
+      const endDate = new Date(currentDate);
+      endDate.setDate(endDate.getDate() - 1);
+      document.getElementById('weekLabel').textContent =
+        `${months[startDate.getMonth()]} ${startDate.getDate()} - ${months[endDate.getMonth()]} ${endDate.getDate()}`;
+
+      // Add click handlers
+      grid.querySelectorAll('.date-option').forEach(el => {
+        el.addEventListener('click', () => selectDate(el.dataset.date));
+      });
+    }
+
+    function renderTimeGrid() {
+      const grid = document.getElementById('timeGrid');
+
+      grid.innerHTML = timeSlots.map(slot => `
+        <div class="time-option ${selectedTime === slot.value ? 'selected' : ''}" data-time="${slot.value}">
+          ${slot.label}
+        </div>
+      `).join('');
+
+      grid.querySelectorAll('.time-option').forEach(el => {
+        el.addEventListener('click', () => selectTime(el.dataset.time));
+      });
+    }
+
+    function selectDate(date) {
+      selectedDate = date;
+      renderDateGrid();
+      updateSummary();
+    }
+
+    function selectTime(time) {
+      selectedTime = time;
+      renderTimeGrid();
+      updateSummary();
+    }
+
+    function updateSummary() {
+      const summary = document.getElementById('scheduleSummary');
+      const btn = document.getElementById('scheduleBtn');
+
+      if (selectedDate && selectedTime) {
+        const date = new Date(selectedDate + 'T12:00:00');
+        const timeSlot = timeSlots.find(t => t.value === selectedTime);
+
+        document.getElementById('summaryDate').textContent = date.toLocaleDateString('en-US', {
+          weekday: 'long',
+          month: 'long',
+          day: 'numeric'
+        });
+        document.getElementById('summaryTime').textContent = timeSlot ? timeSlot.label : selectedTime;
+
+        summary.classList.add('visible');
+        btn.disabled = false;
+      } else {
+        summary.classList.remove('visible');
+        btn.disabled = true;
+      }
+    }
+
+    function setupEventListeners() {
+      document.getElementById('prevWeek').addEventListener('click', () => {
+        if (weekOffset > 0) {
+          weekOffset--;
+          renderDateGrid();
+        }
+      });
+
+      document.getElementById('nextWeek').addEventListener('click', () => {
+        weekOffset++;
+        renderDateGrid();
+      });
+
+      document.getElementById('scheduleBtn').addEventListener('click', submitSchedule);
+    }
+
+    async function submitSchedule() {
+      if (!selectedDate || !selectedTime || !currentVehicle) return;
+
+      const btn = document.getElementById('scheduleBtn');
+      btn.disabled = true;
+      btn.textContent = 'Scheduling...';
+
+      try {
+        const response = await ShopAPI.post(`/api/shop/vehicles/${encodeURIComponent(currentVehicle.roPo)}/schedule`, {
+          date: selectedDate,
+          time: selectedTime,
+          notes: document.getElementById('scheduleNotes').value.trim()
+        });
+
+        if (response.success) {
+          const date = new Date(selectedDate + 'T12:00:00');
+          const timeSlot = timeSlots.find(t => t.value === selectedTime);
+          document.getElementById('successDateTime').textContent =
+            `${date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} at ${timeSlot ? timeSlot.label : selectedTime}`;
+          document.getElementById('successModal').classList.add('open');
+        } else {
+          Toast.error(response.error || 'Failed to schedule');
+          btn.disabled = false;
+          btn.textContent = 'Confirm Appointment';
+        }
+      } catch (err) {
+        console.error('Schedule error:', err);
+        Toast.error('Failed to schedule appointment');
+        btn.disabled = false;
+        btn.textContent = 'Confirm Appointment';
+      }
+    }
+
+    function showError(message) {
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('errorState').style.display = 'block';
+      document.getElementById('errorMessage').textContent = message;
+    }
+  </script>
 </body>
 </html>
