@@ -247,9 +247,60 @@ function truncate(str, len) {
   return str.length > len ? str.substring(0, len) + '...' : str;
 }
 
-function formatSchedule(date, time) {
-  if (!date) return 'Not scheduled';
-  return time ? `${date} ${time}` : date;
+/**
+ * Format schedule date and time for display
+ * Handles ISO strings, date strings, and filters out invalid 1899 dates
+ */
+function formatSchedule(dateStr, timeStr) {
+  if (!dateStr) return 'Not scheduled';
+
+  // Filter out invalid 1899 dates (Google Sheets artifact for empty/time-only cells)
+  if (String(dateStr).includes('1899')) return 'Not scheduled';
+
+  try {
+    let date;
+
+    // Handle ISO string
+    if (String(dateStr).includes('T')) {
+      date = new Date(dateStr);
+    }
+    // Handle MM/DD/YYYY format
+    else if (String(dateStr).includes('/')) {
+      const parts = String(dateStr).match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+      if (parts) {
+        date = new Date(parts[3], parts[1] - 1, parts[2]);
+      }
+    }
+    // Handle YYYY-MM-DD format
+    else if (String(dateStr).includes('-')) {
+      date = new Date(dateStr + 'T12:00:00');
+    }
+
+    if (!date || isNaN(date.getTime())) return 'Not scheduled';
+
+    // Format date as "Dec 11, 2025"
+    const options = { month: 'short', day: 'numeric', year: 'numeric' };
+    let formatted = date.toLocaleDateString('en-US', options);
+
+    // Add time if available and valid
+    if (timeStr && !String(timeStr).includes('1899')) {
+      // If timeStr is ISO, parse it
+      if (String(timeStr).includes('T')) {
+        const timeDate = new Date(timeStr);
+        if (!isNaN(timeDate.getTime())) {
+          const timeOptions = { hour: 'numeric', minute: '2-digit', hour12: true };
+          formatted += ' ' + timeDate.toLocaleTimeString('en-US', timeOptions);
+        }
+      } else if (timeStr) {
+        // If it's already a time string like "10:00 AM"
+        formatted += ' ' + timeStr;
+      }
+    }
+
+    return formatted;
+  } catch (e) {
+    return 'Not scheduled';
+  }
 }
 
 // Initialize

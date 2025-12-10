@@ -62,6 +62,9 @@ async function loadVehicle() {
 
 // Display vehicle info
 function displayVehicle() {
+  const currentScheduleFormatted = formatScheduleDisplay(vehicle.scheduledDate, vehicle.scheduledTime);
+  const hasSchedule = currentScheduleFormatted !== 'Not scheduled';
+
   vehicleInfoContent.innerHTML = `
     <div class="detail-grid">
       <div class="detail-item">
@@ -85,28 +88,36 @@ function displayVehicle() {
         <span>${escapeHtml(vehicle.requiredCalibrations) || 'None specified'}</span>
       </div>
     </div>
-    ${vehicle.scheduledDate ? `
+    ${hasSchedule ? `
       <div class="current-schedule">
-        <p><strong>Current Schedule:</strong> ${escapeHtml(vehicle.scheduledDate)} ${escapeHtml(vehicle.scheduledTime) || ''}</p>
+        <p><strong>Current Schedule:</strong> ${currentScheduleFormatted}</p>
       </div>
     ` : ''}
   `;
 
   // Pre-fill date/time if already scheduled
-  if (vehicle.scheduledDate) {
-    // Try to parse the date
-    const dateParts = vehicle.scheduledDate.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-    if (dateParts) {
-      const [, month, day, year] = dateParts;
-      const isoDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-      scheduleDate.value = isoDate;
-    }
+  const inputDate = parseDateForInput(vehicle.scheduledDate);
+  if (inputDate) {
+    scheduleDate.value = inputDate;
   }
-  if (vehicle.scheduledTime) {
+
+  if (vehicle.scheduledTime && !String(vehicle.scheduledTime).includes('1899')) {
     // Try to match time to select options
+    let timeValue = vehicle.scheduledTime;
+    // If ISO time, extract just the time part
+    if (String(timeValue).includes('T')) {
+      const timeDate = new Date(timeValue);
+      if (!isNaN(timeDate.getTime())) {
+        const hours = timeDate.getHours();
+        const mins = timeDate.getMinutes();
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        const hour12 = hours % 12 || 12;
+        timeValue = `${hour12}:${String(mins).padStart(2, '0')} ${ampm}`;
+      }
+    }
     const timeOptions = Array.from(scheduleTime.options).map(o => o.value);
-    if (timeOptions.includes(vehicle.scheduledTime)) {
-      scheduleTime.value = vehicle.scheduledTime;
+    if (timeOptions.includes(timeValue)) {
+      scheduleTime.value = timeValue;
     }
   }
 }
@@ -230,6 +241,100 @@ function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = str;
   return div.innerHTML;
+}
+
+/**
+ * Format schedule date and time for display
+ * Handles ISO strings, date strings, and filters out invalid 1899 dates
+ */
+function formatScheduleDisplay(dateStr, timeStr) {
+  if (!dateStr) return 'Not scheduled';
+
+  // Filter out invalid 1899 dates (Google Sheets artifact)
+  if (String(dateStr).includes('1899')) return 'Not scheduled';
+
+  try {
+    let date;
+
+    // Handle ISO string
+    if (String(dateStr).includes('T')) {
+      date = new Date(dateStr);
+    }
+    // Handle MM/DD/YYYY format
+    else if (String(dateStr).includes('/')) {
+      const parts = String(dateStr).match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+      if (parts) {
+        date = new Date(parts[3], parts[1] - 1, parts[2]);
+      }
+    }
+    // Handle YYYY-MM-DD format
+    else if (String(dateStr).includes('-')) {
+      date = new Date(dateStr + 'T12:00:00');
+    }
+
+    if (!date || isNaN(date.getTime())) return 'Not scheduled';
+
+    // Format date nicely
+    const options = {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    };
+    let formatted = date.toLocaleDateString('en-US', options);
+
+    // Add time if available and valid
+    if (timeStr && !String(timeStr).includes('1899')) {
+      // If timeStr is ISO, parse it
+      if (String(timeStr).includes('T')) {
+        const timeDate = new Date(timeStr);
+        if (!isNaN(timeDate.getTime())) {
+          const timeOptions = { hour: 'numeric', minute: '2-digit', hour12: true };
+          formatted += ' at ' + timeDate.toLocaleTimeString('en-US', timeOptions);
+        }
+      } else if (timeStr) {
+        // If it's already a time string like "10:00 AM"
+        formatted += ' at ' + timeStr;
+      }
+    }
+
+    return formatted;
+  } catch (e) {
+    return 'Not scheduled';
+  }
+}
+
+/**
+ * Parse date string to YYYY-MM-DD for input field
+ */
+function parseDateForInput(dateStr) {
+  if (!dateStr || String(dateStr).includes('1899')) return '';
+
+  try {
+    let date;
+
+    // Handle ISO string
+    if (String(dateStr).includes('T')) {
+      date = new Date(dateStr);
+    }
+    // Handle MM/DD/YYYY format
+    else if (String(dateStr).includes('/')) {
+      const parts = String(dateStr).match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+      if (parts) {
+        return `${parts[3]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+      }
+    }
+    // Handle YYYY-MM-DD format
+    else if (String(dateStr).includes('-')) {
+      return dateStr.split('T')[0];
+    }
+
+    if (date && !isNaN(date.getTime())) {
+      return date.toISOString().split('T')[0];
+    }
+  } catch (e) {}
+
+  return '';
 }
 
 // Initialize
