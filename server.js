@@ -23,6 +23,7 @@ import sheetWriter from "./services/sheetWriter.js";
 import dispatcher from "./services/dispatcher.js";
 import emailListener from "./services/emailListener.js";
 import billingMailer from "./services/billingMailer.js";
+import smsHandler from "./services/smsHandler.js";
 // DEPRECATED: Scrubbing imports removed - all estimate analysis now done manually via RevvADAS
 // import { formatScrubResultsAsNotes, getScrubSummary } from "./services/estimateScrubber.js";
 // import { scrubEstimateNew } from "./src/scrub/index.js";
@@ -4938,6 +4939,13 @@ app.get("/billing/shop/:shopName", async (req, res) => {
 });
 
 // ============================================================
+// SMS ENDPOINTS
+// ============================================================
+
+// Twilio SMS webhook - handles incoming text messages for scheduling
+app.post("/sms", smsHandler.handleIncomingSMS);
+
+// ============================================================
 // STARTUP
 // ============================================================
 
@@ -4955,6 +4963,8 @@ console.log(`   Auth URL: GET  /email/auth-url`);
 console.log(`💰 Billing:`);
 console.log(`   Send:     POST /billing/send/:roPo`);
 console.log(`   Shop:     GET  /billing/shop/:shopName`);
+console.log(`📱 SMS Scheduling:`);
+console.log(`   Webhook:  POST /sms (Twilio)`);
 
 // Auto-start email listener if configured
 if (process.env.AUTO_START_EMAIL_LISTENER === "true") {
