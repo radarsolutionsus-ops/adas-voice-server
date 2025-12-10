@@ -1246,59 +1246,68 @@ function setScheduleDateTime(data) {
     return { success: false, error: 'Schedule sheet not found' };
   }
 
+  // Use findRowByRO for normalized matching (handles "2919" -> "2919-ENTFLEET")
+  const rowNumber = findRowByRO(sheet, roPo);
+
+  if (rowNumber === 0) {
+    return {
+      success: false,
+      error: `RO ${roPo} not found in schedule`,
+      roPo: roPo
+    };
+  }
+
+  // Get the actual RO from the sheet for logging
   const dataRange = sheet.getDataRange().getValues();
+  const actualRoPo = String(dataRange[rowNumber - 1][COL.RO_PO] || '').trim();
 
-  // Find the row with matching RO/PO (Column C = index 2)
-  for (let i = 1; i < dataRange.length; i++) {
-    const rowRoPo = String(dataRange[i][COL.RO_PO] || '').trim();
+  if (actualRoPo !== String(roPo).trim()) {
+    Logger.log(`Normalized RO match: "${roPo}" matched existing "${actualRoPo}"`);
+  }
 
-    if (rowRoPo === String(roPo).trim()) {
-      const rowNumber = i + 1; // 1-based row number
+  // Update Scheduled Date (Column G)
+  if (data.scheduledDate) {
+    sheet.getRange(rowNumber, COL.SCHEDULED_DATE + 1).setValue(data.scheduledDate);
+    Logger.log(`Set Scheduled Date for RO ${actualRoPo}: ${data.scheduledDate}`);
+  }
 
-      // Update Scheduled Date (Column G)
-      if (data.scheduledDate) {
-        sheet.getRange(rowNumber, COL.SCHEDULED_DATE + 1).setValue(data.scheduledDate);
-        Logger.log(`Set Scheduled Date for RO ${roPo}: ${data.scheduledDate}`);
-      }
+  // Update Scheduled Time (Column H)
+  if (data.scheduledTime) {
+    sheet.getRange(rowNumber, COL.SCHEDULED_TIME + 1).setValue(data.scheduledTime);
+    Logger.log(`Set Scheduled Time for RO ${actualRoPo}: ${data.scheduledTime}`);
+  }
 
-      // Update Scheduled Time (Column H)
-      if (data.scheduledTime) {
-        sheet.getRange(rowNumber, COL.SCHEDULED_TIME + 1).setValue(data.scheduledTime);
-        Logger.log(`Set Scheduled Time for RO ${roPo}: ${data.scheduledTime}`);
-      }
+  // Auto-set status to "Scheduled" when both date and time are set
+  if (data.scheduledDate && data.scheduledTime) {
+    sheet.getRange(rowNumber, COL.STATUS + 1).setValue('Scheduled');
+    Logger.log(`Auto-set status to Scheduled for RO ${actualRoPo}`);
+  }
 
-      // Update Technician (Column I) - auto-assigned by dispatcher
-      if (data.technician) {
-        sheet.getRange(rowNumber, COL.TECHNICIAN + 1).setValue(data.technician);
-        Logger.log(`Set Technician for RO ${roPo}: ${data.technician}`);
-      }
+  // Update Technician (Column I) - auto-assigned by dispatcher
+  if (data.technician) {
+    sheet.getRange(rowNumber, COL.TECHNICIAN + 1).setValue(data.technician);
+    Logger.log(`Set Technician for RO ${actualRoPo}: ${data.technician}`);
+  }
 
-      // If override note provided, append to Notes (Column S)
-      if (data.notes && data.notes.trim()) {
-        const existingNotes = dataRange[i][COL.NOTES] || '';
-        const newNotes = existingNotes
-          ? `${existingNotes} | ${data.notes}`
-          : data.notes;
-        sheet.getRange(rowNumber, COL.NOTES + 1).setValue(newNotes);
-        Logger.log(`Appended override note for RO ${roPo}: ${data.notes}`);
-      }
-
-      return {
-        success: true,
-        message: 'Schedule updated',
-        roPo: roPo,
-        rowNumber: rowNumber,
-        scheduledDate: data.scheduledDate || '',
-        scheduledTime: data.scheduledTime || '',
-        technician: data.technician || dataRange[i][COL.TECHNICIAN] || ''
-      };
-    }
+  // If override note provided, append to Notes (Column S)
+  if (data.notes && data.notes.trim()) {
+    const existingNotes = dataRange[rowNumber - 1][COL.NOTES] || '';
+    const newNotes = existingNotes
+      ? `${existingNotes} | ${data.notes}`
+      : data.notes;
+    sheet.getRange(rowNumber, COL.NOTES + 1).setValue(newNotes);
+    Logger.log(`Appended override note for RO ${actualRoPo}: ${data.notes}`);
   }
 
   return {
-    success: false,
-    error: `RO ${roPo} not found in schedule`,
-    roPo: roPo
+    success: true,
+    message: 'Schedule updated',
+    roPo: actualRoPo,
+    searchedRoPo: roPo,
+    rowNumber: rowNumber,
+    scheduledDate: data.scheduledDate || '',
+    scheduledTime: data.scheduledTime || '',
+    technician: data.technician || dataRange[rowNumber - 1][COL.TECHNICIAN] || ''
   };
 }
 
@@ -1335,43 +1344,46 @@ function updateROStatus(data) {
     return { success: false, error: 'Schedule sheet not found' };
   }
 
+  // Use findRowByRO for normalized matching (handles "2919" -> "2919-ENTFLEET")
+  const rowNumber = findRowByRO(sheet, roPo);
+
+  if (rowNumber === 0) {
+    return {
+      success: false,
+      error: `RO ${roPo} not found in schedule`,
+      roPo: roPo
+    };
+  }
+
+  // Get the actual RO from the sheet for logging
   const dataRange = sheet.getDataRange().getValues();
+  const actualRoPo = String(dataRange[rowNumber - 1][COL.RO_PO] || '').trim();
 
-  // Find the row with matching RO/PO (Column C = index 2)
-  for (let i = 1; i < dataRange.length; i++) {
-    const rowRoPo = String(dataRange[i][COL.RO_PO] || '').trim();
+  if (actualRoPo !== String(roPo).trim()) {
+    Logger.log(`Normalized RO match: "${roPo}" matched existing "${actualRoPo}"`);
+  }
 
-    if (rowRoPo === String(roPo).trim()) {
-      const rowNumber = i + 1; // 1-based row number
+  // Update Status (Column F) - use normalized status
+  sheet.getRange(rowNumber, COL.STATUS + 1).setValue(normalizedStatus);
+  Logger.log(`Updated status for RO ${actualRoPo}: ${normalizedStatus}`);
 
-      // Update Status (Column F) - use normalized status
-      sheet.getRange(rowNumber, COL.STATUS + 1).setValue(normalizedStatus);
-      Logger.log(`Updated status for RO ${roPo}: ${normalizedStatus}`);
-
-      // Append notes if provided (Column S)
-      if (notes && notes.trim()) {
-        const existingNotes = dataRange[i][COL.NOTES] || '';
-        const newNotes = existingNotes
-          ? `${existingNotes} | ${notes}`
-          : notes;
-        sheet.getRange(rowNumber, COL.NOTES + 1).setValue(newNotes);
-        Logger.log(`Appended status note for RO ${roPo}: ${notes}`);
-      }
-
-      return {
-        success: true,
-        message: `Status updated to ${newStatus}`,
-        roPo: roPo,
-        status: newStatus,
-        rowNumber: rowNumber
-      };
-    }
+  // Append notes if provided (Column S)
+  if (notes && notes.trim()) {
+    const existingNotes = dataRange[rowNumber - 1][COL.NOTES] || '';
+    const newNotes = existingNotes
+      ? `${existingNotes} | ${notes}`
+      : notes;
+    sheet.getRange(rowNumber, COL.NOTES + 1).setValue(newNotes);
+    Logger.log(`Appended status note for RO ${actualRoPo}: ${notes}`);
   }
 
   return {
-    success: false,
-    error: `RO ${roPo} not found in schedule`,
-    roPo: roPo
+    success: true,
+    message: `Status updated to ${newStatus}`,
+    roPo: actualRoPo,
+    searchedRoPo: roPo,
+    status: newStatus,
+    rowNumber: rowNumber
   };
 }
 

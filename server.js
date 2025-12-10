@@ -2868,7 +2868,9 @@ wss.on("connection", (twilioWs, req) => {
     pendingScheduleRO: null,  // RO waiting for override confirmation
     // FIX: Prevent double response during Spanish language switch
     switchingToSpanish: false,  // True while transitioning to Spanish greeting
-    spanishGreetingSent: false  // True after Spanish greeting has been sent
+    spanishGreetingSent: false,  // True after Spanish greeting has been sent
+    // FIX: Track response state for interruption handling
+    responseInProgress: false
   };
 
   // OPS Language detection - Spanish keywords trigger Spanish mode
@@ -3185,12 +3187,14 @@ wss.on("connection", (twilioWs, req) => {
         // Track response lifecycle to prevent "conversation_already_has_active_response" errors
         case "response.created":
           isResponseInProgress = true;
+          sessionState.responseInProgress = true;
           lastResponseId = event.response?.id || null;
           console.log(`🎯 Response started: ${lastResponseId}`);
           break;
 
         case "response.done":
           isResponseInProgress = false;
+          sessionState.responseInProgress = false;
           console.log(`✅ Response completed: ${lastResponseId}`);
           lastResponseId = null;
           break;
@@ -3256,31 +3260,15 @@ wss.on("connection", (twilioWs, req) => {
                 }
               }
 
-              // FIX: Announce scheduling before processing (same pattern as get_ro_summary)
-              if (assistantType === "ops" && event.name === "set_schedule" && args.roPo) {
-                const scheduleMsg = isSpanish
-                  ? `Un momento mientras programo la cita.`
-                  : `One moment while I schedule that for you.`;
-                console.log(`📅 OPS: Announcing scheduling for ${args.roPo} (${isSpanish ? "Spanish" : "English"})`);
-                openaiWs.send(JSON.stringify({
-                  type: "response.create",
-                  response: {
-                    modalities: ["text", "audio"],
-                    instructions: `Say ONLY: "${scheduleMsg}" Then wait for the scheduling result.`
-                  }
-                }));
-                // Small delay to let the announcement play
-                await new Promise(resolve => setTimeout(resolve, 100));
-              }
+              // REMOVED: Explicit announcement blocks that cause overlapping responses
+              // The assistant will naturally handle lookups/scheduling silently and respond with results
+              // This improves natural conversation flow and prevents robotic "one moment" phrases
 
-              // PATCH 1: Prevent duplicate RO lookups for OPS assistant
+              // PATCH 1: Prevent duplicate RO lookups for OPS assistant (keep logic, remove announcement)
               if (assistantType === "ops" && (event.name === "get_ro_summary" || event.name === "compute_readiness") && args.roPo) {
                 // Check if this is the same RO we already looked up (and it was found)
                 if (sessionState.lastLookedUpRO === args.roPo && sessionState.lastLookupFound) {
                   console.log(`🔍 OPS: Suppressing duplicate RO lookup for ${args.roPo}`);
-                  const alreadyHaveMsg = isSpanish
-                    ? `Ya tengo la información del RO ${args.roPo} en el sistema.`
-                    : `I already have RO ${args.roPo} information loaded.`;
                   openaiWs.send(JSON.stringify({
                     type: "conversation.item.create",
                     item: {
@@ -3293,30 +3281,11 @@ wss.on("connection", (twilioWs, req) => {
                       })
                     }
                   }));
-                  openaiWs.send(JSON.stringify({
-                    type: "response.create",
-                    response: {
-                      modalities: ["text", "audio"],
-                      instructions: `Say: "${alreadyHaveMsg}" Then continue with the conversation.`
-                    }
-                  }));
+                  openaiWs.send(JSON.stringify({ type: "response.create" }));
                   break; // Skip the actual lookup
                 }
-
-                // New RO or previous lookup failed - announce and proceed
-                const lookupMsg = isSpanish
-                  ? `Dame un momento mientras busco el RO ${args.roPo} en el sistema.`
-                  : `Got it, give me a moment while I look up RO ${args.roPo} in the system.`;
-                console.log(`🔍 OPS: Announcing RO lookup for ${args.roPo} (${isSpanish ? "Spanish" : "English"})`);
-                openaiWs.send(JSON.stringify({
-                  type: "response.create",
-                  response: {
-                    modalities: ["text", "audio"],
-                    instructions: `Say ONLY: "${lookupMsg}" Then wait for the lookup result.`
-                  }
-                }));
-                // Small delay to let the announcement play
-                await new Promise(resolve => setTimeout(resolve, 100));
+                // New RO or previous lookup failed - proceed silently
+                console.log(`🔍 OPS: Looking up RO ${args.roPo} silently`);
               }
 
               const handler = assistantType === "tech" ? handleTechToolCall : handleOpsToolCall;
@@ -4345,7 +4314,17 @@ wss.on("connection", (twilioWs, req) => {
           break;
 
         case "input_audio_buffer.speech_started":
-          console.log("🎤 User speaking");
+          console.log("🎤 User speaking - checking for interruption");
+          // If assistant is responding, cancel and let user speak
+          if (sessionState.responseInProgress) {
+            console.log("🛑 User interrupted - cancelling assistant response");
+            openaiWs.send(JSON.stringify({ type: "response.cancel" }));
+            sessionState.responseInProgress = false;
+          }
+          // Clear Twilio audio buffer to stop playback immediately
+          if (streamSid) {
+            twilioWs.send(JSON.stringify({ event: "clear", streamSid: streamSid }));
+          }
           break;
 
         case "input_audio_buffer.speech_stopped":
