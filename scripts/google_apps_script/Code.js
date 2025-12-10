@@ -210,6 +210,10 @@ function doPost(e) {
         result = getAllShops();
         break;
 
+      case 'get_all_schedule':
+        result = getAllScheduleRows(data.shop_name);
+        break;
+
       case 'append_billing':
         result = appendBillingRow(data);
         break;
@@ -1213,6 +1217,60 @@ function searchSchedule(query) {
     success: true,
     count: results.length,
     results: results.slice(0, 10)
+  };
+}
+
+/**
+ * Get all schedule rows, optionally filtered by shop name
+ * Used by shop portal to load dashboard
+ */
+function getAllScheduleRows(shopName) {
+  const ss = SpreadsheetApp.getActive();
+  const sheet = ss.getSheetByName(SCHEDULE_SHEET);
+
+  if (!sheet) {
+    return { success: false, error: 'Sheet not found' };
+  }
+
+  const data = sheet.getDataRange().getValues();
+  const results = [];
+  const shopNameLower = shopName ? shopName.toLowerCase().trim() : null;
+
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    const rowShop = (row[COL.SHOP_NAME] || '').toLowerCase().trim();
+
+    // Skip if no RO/PO
+    if (!row[COL.RO_PO]) continue;
+
+    // Filter by shop if provided
+    if (shopNameLower && rowShop !== shopNameLower) continue;
+
+    results.push({
+      rowNumber: i + 1,
+      timestampCreated: row[COL.TIMESTAMP] || '',
+      shopName: row[COL.SHOP_NAME] || '',
+      roPo: row[COL.RO_PO] || '',
+      vin: row[COL.VIN] || '',
+      vehicle: row[COL.VEHICLE] || '',
+      status: row[COL.STATUS] || '',
+      scheduledDate: formatDateForOutput(row[COL.SCHEDULED_DATE]),
+      scheduledTime: formatTimeForOutput(row[COL.SCHEDULED_TIME]),
+      technician: row[COL.TECHNICIAN] || '',
+      requiredCalibrations: row[COL.REQUIRED_CALS] || '',
+      completedCalibrations: row[COL.COMPLETED_CALS] || '',
+      dtcs: row[COL.DTCS] || '',
+      revvReportPdf: row[COL.REVV_PDF] || '',
+      postScanPdf: row[COL.POST_SCAN_PDF] || '',
+      invoicePdf: row[COL.INVOICE_PDF] || '',
+      notes: row[COL.NOTES] || ''
+    });
+  }
+
+  return {
+    success: true,
+    count: results.length,
+    rows: results
   };
 }
 

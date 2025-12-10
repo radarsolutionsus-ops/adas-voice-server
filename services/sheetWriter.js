@@ -1641,35 +1641,27 @@ function extractModelFromVehicleInfo(vehicleInfo) {
 }
 
 /**
- * Get all schedule rows from the sheet
+ * Get all schedule rows from the sheet via GAS webhook
  * Used by shop portal to fetch all vehicles for filtering
+ * @param {string} shopName - Optional shop name to filter by (for portal)
  * @returns {Promise<{success: boolean, rows?: Array, error?: string}>}
  */
-export async function getAllScheduleRows() {
-  console.log(`${LOG_TAG} Getting all schedule rows via direct Sheets API`);
+export async function getAllScheduleRows(shopName = null) {
+  console.log(`${LOG_TAG} Getting all schedule rows via GAS webhook${shopName ? ` for shop: ${shopName}` : ''}`);
 
   try {
-    const rows = await readSheetData(SCHEDULE_SHEET_NAME, 'A:U');
+    const result = await makeGASRequest('get_all_schedule', {
+      shop_name: shopName
+    });
 
-    if (rows.length <= 1) {
-      console.log(`${LOG_TAG} No data rows found in ${SCHEDULE_SHEET_NAME}`);
-      return { success: true, rows: [] };
+    if (!result.success) {
+      console.error(`${LOG_TAG} GAS request failed:`, result.error);
+      return { success: false, error: result.error };
     }
 
-    // Skip header row (index 0), convert to objects
-    const dataRows = rows.slice(1);
-    const results = [];
-
-    for (let i = 0; i < dataRows.length; i++) {
-      const row = dataRows[i];
-      if (!row || row.length === 0) continue;
-      // Skip rows without RO/PO
-      if (!row[SCHEDULE_COLUMNS.RO_PO]) continue;
-      results.push(scheduleRowToObject(row, i));
-    }
-
-    console.log(`${LOG_TAG} Retrieved ${results.length} schedule rows`);
-    return { success: true, rows: results };
+    const rows = result.data?.rows || [];
+    console.log(`${LOG_TAG} Retrieved ${rows.length} schedule rows`);
+    return { success: true, rows };
   } catch (err) {
     console.error(`${LOG_TAG} Failed to get all schedule rows:`, err.message);
     return { success: false, error: err.message };
