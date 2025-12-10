@@ -529,7 +529,9 @@ async function handleOpsToolCall(toolName, args) {
         const oldScheduleFormatted = formatScheduleDateTime(rawOldDate, rawOldTime);
         const newScheduleFormatted = formatScheduleDateTime(newDate, newTime);
 
-        const statusChangeNote = `Rescheduled from ${oldScheduleFormatted} to ${newScheduleFormatted}: ${reason}`;
+        // Translate reason to English for flow history
+        const translatedReason = translateToEnglish(reason);
+        const statusChangeNote = `Rescheduled from ${oldScheduleFormatted} to ${newScheduleFormatted}: ${translatedReason}`;
 
         const result = await sheetWriter.updateScheduleRowWithFullNotes(roPo, {
           status: "Rescheduled",
@@ -549,9 +551,12 @@ async function handleOpsToolCall(toolName, args) {
           return { success: false, error: "Cancellation reason is required" };
         }
 
+        // Translate reason to English for flow history
+        const translatedCancelReason = translateToEnglish(reason);
+
         const result = await sheetWriter.updateScheduleRowWithFullNotes(roPo, {
           status: "Cancelled",
-          statusChangeNote: `Cancelled: ${reason}`
+          statusChangeNote: `Cancelled: ${translatedCancelReason}`
         });
 
         return result.success
@@ -644,6 +649,78 @@ function formatScheduleDateTime(dateVal, timeVal) {
 }
 
 /**
+ * Translate Spanish notes/reasons to English before saving to sheets
+ * Flow history must always be in English for consistency
+ * @param {string} text - Text that may contain Spanish
+ * @returns {string} Text with Spanish phrases translated to English
+ */
+function translateToEnglish(text) {
+  if (!text) return text;
+
+  // Common Spanish phrases used in ADAS scheduling (case-insensitive matching)
+  const translations = {
+    // Cancellation reasons
+    'el vehículo fue declarado pérdida total': 'Vehicle was declared a total loss',
+    'vehículo fue declarado pérdida total': 'Vehicle was declared a total loss',
+    'pérdida total': 'total loss',
+    'el carro no está listo': 'The car is not ready',
+    'carro no está listo': 'Car is not ready',
+    'no está listo': 'not ready',
+    'el cliente canceló': 'Customer cancelled',
+    'cliente canceló': 'Customer cancelled',
+    'el cliente no quiere': 'Customer does not want',
+    'cliente no quiere': 'Customer does not want',
+    'ya no necesita calibración': 'No longer needs calibration',
+    'no necesita calibración': 'Does not need calibration',
+    'el seguro no aprobó': 'Insurance did not approve',
+    'seguro no aprobó': 'Insurance did not approve',
+    'el taller canceló': 'Shop cancelled',
+    'taller canceló': 'Shop cancelled',
+
+    // Reschedule reasons
+    'el carro no estaba listo': 'The car was not ready',
+    'carro no estaba listo': 'Car was not ready',
+    'no estaba listo': 'was not ready',
+    'necesitan más tiempo': 'They need more time',
+    'necesita más tiempo': 'Needs more time',
+    'el cliente pidió otro día': 'Customer requested another day',
+    'cliente pidió otro día': 'Customer requested another day',
+    'conflicto de horario': 'Schedule conflict',
+    'el técnico no puede': 'Technician cannot make it',
+    'técnico no puede': 'Technician cannot make it',
+    'el técnico está ocupado': 'Technician is busy',
+    'técnico está ocupado': 'Technician is busy',
+
+    // Status notes
+    'calibración completada': 'Calibration completed',
+    'calibración completada exitosamente': 'Calibration completed successfully',
+    'en camino': 'On the way',
+    'llegué al taller': 'Arrived at shop',
+    'llegue al taller': 'Arrived at shop',
+    'esperando el vehículo': 'Waiting for vehicle',
+    'esperando vehículo': 'Waiting for vehicle',
+    'trabajando en el vehículo': 'Working on vehicle',
+    'trabajo completado': 'Work completed',
+    'sin problemas': 'No issues',
+    'todo bien': 'All good',
+    'listo': 'Done'
+  };
+
+  let result = text;
+
+  // Sort by length descending to match longer phrases first
+  const sortedPhrases = Object.entries(translations).sort((a, b) => b[0].length - a[0].length);
+
+  // Check for Spanish phrases (case-insensitive) and replace
+  for (const [spanish, english] of sortedPhrases) {
+    const regex = new RegExp(spanish, 'gi');
+    result = result.replace(regex, english);
+  }
+
+  return result;
+}
+
+/**
  * @param {string} roPo - Raw RO/PO input
  * @returns {{valid: boolean, cleaned: string, error?: string}}
  */
@@ -726,9 +803,12 @@ async function handleTechToolCall(toolName, args) {
           return { success: false, error: "Cancellation reason is required" };
         }
 
+        // Translate reason to English for flow history
+        const translatedTechCancelReason = translateToEnglish(args.reason);
+
         const result = await sheetWriter.updateScheduleRowWithFullNotes(args.roPo, {
           status: "Cancelled",
-          statusChangeNote: `Cancelled: ${args.reason}`
+          statusChangeNote: `Cancelled: ${translatedTechCancelReason}`
         });
 
         return result.success
