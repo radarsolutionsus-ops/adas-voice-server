@@ -93,6 +93,74 @@ const BILLING_SHEET_NAME = process.env.BILLING_SHEET_ID || 'Billing';
 const SHOPS_SHEET_NAME = process.env.SHOPS_SHEET_ID || 'Shops';
 const CONFIG_SHEET_NAME = 'Config';
 
+/**
+ * Format a date value from Google Sheets for display
+ * Google Sheets returns dates as Date objects or strings
+ * @param {*} dateVal - Date value from sheet
+ * @returns {string} Formatted date string like "12/10/2025" or empty string
+ */
+function formatSheetDate(dateVal) {
+  if (!dateVal) return '';
+
+  if (dateVal instanceof Date) {
+    // Date object from Google Sheets - format it
+    const month = dateVal.getMonth() + 1;
+    const day = dateVal.getDate();
+    const year = dateVal.getFullYear();
+    return `${month}/${day}/${year}`;
+  } else if (typeof dateVal === 'string') {
+    // String - check if it's an ISO string that needs formatting
+    if (dateVal.includes('T') || dateVal.match(/^\d{4}-\d{2}-\d{2}/)) {
+      const d = new Date(dateVal);
+      if (!isNaN(d.getTime())) {
+        const month = d.getMonth() + 1;
+        const day = d.getDate();
+        const year = d.getFullYear();
+        return `${month}/${day}/${year}`;
+      }
+    }
+    // Already formatted or unrecognized - return as-is
+    return dateVal;
+  }
+  return String(dateVal);
+}
+
+/**
+ * Format a time value from Google Sheets for display
+ * Google Sheets stores times as Date objects with date 1899-12-30
+ * @param {*} timeVal - Time value from sheet
+ * @returns {string} Formatted time string like "2:00 PM" or empty string
+ */
+function formatSheetTime(timeVal) {
+  if (!timeVal) return '';
+
+  if (timeVal instanceof Date) {
+    // Time stored as Date object (Google Sheets does this)
+    let hours = timeVal.getHours();
+    const mins = String(timeVal.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    return `${hours}:${mins} ${ampm}`;
+  } else if (typeof timeVal === 'string') {
+    // String - check if it's an ISO string that needs formatting
+    if (timeVal.includes('T')) {
+      const t = new Date(timeVal);
+      if (!isNaN(t.getTime())) {
+        let hours = t.getHours();
+        const mins = String(t.getMinutes()).padStart(2, '0');
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12;
+        hours = hours ? hours : 12;
+        return `${hours}:${mins} ${ampm}`;
+      }
+    }
+    // Already formatted like "2:00 PM" - return as-is
+    return timeVal;
+  }
+  return String(timeVal);
+}
+
 // Column mappings for ADAS_Schedule (A-U)
 const SCHEDULE_COLUMNS = {
   TIMESTAMP_CREATED: 0,    // A
@@ -360,6 +428,10 @@ function rowToObject(row, columnMapping, columnNames) {
  * Convert ADAS_Schedule row to object
  */
 function scheduleRowToObject(row, rowIndex) {
+  // Format date and time from Google Sheets (handles Date objects and ISO strings)
+  const rawDate = row[SCHEDULE_COLUMNS.SCHEDULED_DATE];
+  const rawTime = row[SCHEDULE_COLUMNS.SCHEDULED_TIME];
+
   return {
     rowNumber: rowIndex + 2, // +2 because sheets are 1-indexed and row 1 is header
     timestampCreated: row[SCHEDULE_COLUMNS.TIMESTAMP_CREATED] || '',
@@ -368,8 +440,8 @@ function scheduleRowToObject(row, rowIndex) {
     vin: row[SCHEDULE_COLUMNS.VIN] || '',
     vehicle: row[SCHEDULE_COLUMNS.VEHICLE] || '',
     status: row[SCHEDULE_COLUMNS.STATUS] || '',
-    scheduledDate: row[SCHEDULE_COLUMNS.SCHEDULED_DATE] || '',
-    scheduledTime: row[SCHEDULE_COLUMNS.SCHEDULED_TIME] || '',
+    scheduledDate: formatSheetDate(rawDate),  // Format to MM/DD/YYYY
+    scheduledTime: formatSheetTime(rawTime),  // Format to H:MM AM/PM
     technicianAssigned: row[SCHEDULE_COLUMNS.TECHNICIAN_ASSIGNED] || '',
     requiredCalibrations: row[SCHEDULE_COLUMNS.REQUIRED_CALIBRATIONS] || '',
     completedCalibrations: row[SCHEDULE_COLUMNS.COMPLETED_CALIBRATIONS] || '',
