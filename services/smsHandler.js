@@ -69,6 +69,8 @@ export async function handleIncomingSMS(req, res) {
     // Process message and get response
     const response = await processConversation(convo, body);
 
+    console.log(`[SMS] Response to ${from}: "${response}"`);
+
     convo.history.push({ role: "assistant", content: response });
 
     // Send response via TwiML
@@ -76,6 +78,8 @@ export async function handleIncomingSMS(req, res) {
 <Response>
   <Message>${escapeXml(response)}</Message>
 </Response>`;
+
+    console.log(`[SMS] Sending TwiML response`);
 
     res.type("text/xml");
     res.send(twiml);
