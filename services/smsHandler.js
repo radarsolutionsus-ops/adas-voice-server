@@ -350,7 +350,7 @@ export async function notifyTech(techName, message) {
 
   try {
     const result = await twilioClient.messages.create({
-      body: `RadarSolutions: ${message}`,
+      body: `ADAS F1rst: ${message}`,
       from: TWILIO_PHONE_NUMBER,
       to: techPhone
     });

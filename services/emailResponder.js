@@ -474,7 +474,7 @@ export async function sendCalibrationConfirmation(params) {
 
       <p>If you have any questions, please reply to this email or call us.</p>
 
-      <p>Best regards,<br><strong>ADAS F1RST Team</strong><br>radarsolutionsus@gmail.com</p>
+      <p>Best regards,<br><strong>ADAS F1RST Team</strong></p>
     </div>
 
     <div class="footer">
@@ -520,7 +520,6 @@ If you have any questions, please reply to this email or call us.
 
 Best regards,
 ADAS F1RST Team
-radarsolutionsus@gmail.com
 
 ═══════════════════════════════════════════════════
 This is an automated response. Please review the attached report for complete details.
@@ -696,7 +695,7 @@ export async function sendJobCompletionEmail(params) {
 
       <p>Thank you for your business!</p>
 
-      <p>Best regards,<br><strong>ADAS F1RST Team</strong><br>radarsolutionsus@gmail.com</p>
+      <p>Best regards,<br><strong>ADAS F1RST Team</strong></p>
     </div>
 
     <div class="footer">
@@ -741,7 +740,6 @@ Thank you for your business!
 
 Best regards,
 ADAS F1RST Team
-radarsolutionsus@gmail.com
 
 ═══════════════════════════════════════════════════
 ADAS F1RST | Miami, FL | Professional ADAS Calibration Services

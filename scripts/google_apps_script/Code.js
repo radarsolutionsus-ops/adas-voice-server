@@ -3598,8 +3598,7 @@ function sendIntakeEmailToShop(rowNum) {
     'The attached RevvADAS report contains detailed requirements.\n\n' +
     'If you have any questions, please reply to this email or call us.\n\n' +
     'Best regards,\n' +
-    'ADAS F1RST Team\n' +
-    'radarsolutionsus@gmail.com\n\n' +
+    'ADAS F1RST Team\n\n' +
     '═══════════════════════════════════════════════════\n' +
     'This is an automated message from ADAS F1RST.\n' +
     '═══════════════════════════════════════════════════';
@@ -3700,8 +3699,7 @@ function sendClosureEmailToShop(rowNum) {
     'The post-scan report confirms all ADAS systems are functioning properly.\n\n' +
     'Thank you for your business!\n\n' +
     'Best regards,\n' +
-    'ADAS F1RST Team\n' +
-    'radarsolutionsus@gmail.com\n\n' +
+    'ADAS F1RST Team\n\n' +
     '═══════════════════════════════════════════════════\n' +
     'ADAS F1RST | Miami, FL | Professional ADAS Calibration Services\n' +
     '═══════════════════════════════════════════════════';

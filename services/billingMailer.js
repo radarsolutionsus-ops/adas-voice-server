@@ -258,8 +258,7 @@ function buildBillingEmailBody(billingData) {
     <p>Thank you for your business!</p>
 
     <p>Best regards,<br>
-    <strong>ADAS F1RST Team</strong><br>
-    radarsolutionsus@gmail.com</p>
+    <strong>ADAS F1RST Team</strong></p>
   </div>
 
   <div class="footer">
@@ -325,7 +324,6 @@ Thank you for your business!
 
 Best regards,
 ADAS F1RST Team
-radarsolutionsus@gmail.com
 
 ---
 ADAS F1RST | Miami, FL | Professional ADAS Calibration Services
