@@ -662,22 +662,23 @@ function extractRoFromEstimate(estimateText) {
 
   // RO patterns in PRIORITY ORDER - RO Number MUST come FIRST!
   // NOTE: Claim/File/Reference patterns are EXCLUDED - these are insurance IDs, not RO numbers
+  // CRITICAL: All patterns MUST capture digits (not words like "Number")
   const patterns = [
-    // HIGHEST PRIORITY: "RO Number: 12313-1" (allows alphanumeric with hyphens)
-    /RO\s*Number[\s:]+([A-Za-z0-9]+-?[A-Za-z0-9]*)/i,
-    // "RO #12345" or "RO: 12345" format
-    /(?:^|\s)RO[\s#:\-]+([A-Za-z0-9]+-?[A-Za-z0-9]*)/i,
+    // HIGHEST PRIORITY: "RO Number: 12313-1" - capture DIGITS after "Number"
+    /RO\s*Number[\s:]+(\d+[-]?[A-Za-z0-9]*)/i,
+    // "RO #12345" or "RO: 12345" format - must start with digit
+    /(?:^|\s)RO[\s#:\-]+(\d+[-]?[A-Za-z0-9]*)/i,
     // "R.O. 12345" format
-    /R\.O\.[\s#:\-]*([A-Za-z0-9]+-?[A-Za-z0-9]*)/i,
-    // "Repair Order: 12345" format
-    /Repair\s*Order[\s#:\-]*([A-Za-z0-9]+-?[A-Za-z0-9]*)/i,
+    /R\.O\.[\s#:\-]*(\d+[-]?[A-Za-z0-9]*)/i,
+    // "Repair Order Number: 12345" - MUST have digits after
+    /Repair\s*Order\s*(?:Number)?[\s#:\-]*(\d+[-]?[A-Za-z0-9]*)/i,
     // "Work Order: 12345" format
-    /Work\s*Order[\s#:\-]*([A-Za-z0-9]+-?[A-Za-z0-9]*)/i,
+    /Work\s*Order[\s#:\-]*(\d+[-]?[A-Za-z0-9]*)/i,
     // "WO: 12345" format
-    /(?:^|\s)WO[\s#:\-]+([A-Za-z0-9]+-?[A-Za-z0-9]*)/i,
+    /(?:^|\s)WO[\s#:\-]+(\d+[-]?[A-Za-z0-9]*)/i,
     // PO patterns: "PO#12345", "PO: 12345"
-    /(?:^|\s)PO[\s#:\-]+([A-Za-z0-9]+-?[A-Za-z0-9]*)/i,
-    /P\.O\.[\s#:\-]*([A-Za-z0-9]+-?[A-Za-z0-9]*)/i,
+    /(?:^|\s)PO[\s#:\-]+(\d+[-]?[A-Za-z0-9]*)/i,
+    /P\.O\.[\s#:\-]*(\d+[-]?[A-Za-z0-9]*)/i,
     // Order patterns: "Order #12345"
     /Order[\s#:\-]*(\d{4,10})/i,
     // Estimate number patterns: "Estimate #12345"
@@ -689,9 +690,19 @@ function extractRoFromEstimate(estimateText) {
     const match = estimateText.match(pattern);
     if (match) {
       const ro = match[1].trim();
+      // CRITICAL: Skip if the match has no digits (e.g., "Number")
+      if (!/\d/.test(ro)) {
+        console.log(`${LOG_TAG} Skipping non-numeric RO match: "${ro}"`);
+        continue;
+      }
       // Skip if it looks like a claim number (too long or has multiple dashes like X-X-X)
       if (ro.length > 15 || /^\d+-\d+-\d+/.test(ro) || /^\d{10,}$/.test(ro)) {
         console.log(`${LOG_TAG} Skipping potential claim/insurance number: ${ro}`);
+        continue;
+      }
+      // Skip common false positives
+      if (/^(number|order|repair|work|estimate)$/i.test(ro)) {
+        console.log(`${LOG_TAG} Skipping false positive RO: "${ro}"`);
         continue;
       }
       console.log(`${LOG_TAG} Extracted RO from estimate content: ${ro} (pattern: ${pattern.toString().substring(0, 40)}...)`);
@@ -742,18 +753,45 @@ function generateSyntheticRo(messageId) {
 
 /**
  * Parse email subject to extract RO/PO number
+ * Enhanced to handle JMD pattern where subject IS the RO number (e.g., "3095")
  */
 function parseEmailSubject(subject) {
   if (!subject) return { roPo: null, subjectType: 'unknown' };
 
-  // Match patterns like "RO 11977", "RO 11977-PM", "PO 12345", etc.
-  const roMatch = subject.match(/(?:RO|R\.O\.|PO|P\.O\.)[\s#\-:]*([A-Z0-9\-]+)/i);
+  const trimmedSubject = subject.trim();
 
+  // PRIORITY 1: Subject IS the RO number (JMD pattern: "3095", "3082", etc.)
+  // Match 3-6 digit number optionally with suffix like -ENT, -PM
+  const directRoMatch = trimmedSubject.match(/^(\d{3,6}(?:[-_][A-Z0-9]+)?)$/i);
+  if (directRoMatch) {
+    console.log(`${LOG_TAG} RO from subject (direct number): ${directRoMatch[1]}`);
+    return {
+      roPo: directRoMatch[1].toUpperCase(),
+      subjectType: 'direct_ro_number'
+    };
+  }
+
+  // PRIORITY 2: Match patterns like "RO 11977", "RO 11977-PM", "PO 12345", etc.
+  const roMatch = trimmedSubject.match(/(?:RO|R\.O\.|PO|P\.O\.)[\s#\-:]*([A-Z0-9\-]+)/i);
   if (roMatch) {
     return {
       roPo: roMatch[1].toUpperCase(),
       subjectType: 'calibration_documents'
     };
+  }
+
+  // PRIORITY 3: Subject contains a number somewhere (e.g., "NEED CALIBRATION - 3095")
+  const containsRoMatch = trimmedSubject.match(/\b(\d{3,6}(?:[-_][A-Z0-9]+)?)\b/i);
+  if (containsRoMatch) {
+    // Verify it's not a year or other common number
+    const num = parseInt(containsRoMatch[1], 10);
+    if (num >= 1000 && num < 100000 && !/^20[12]\d$/.test(containsRoMatch[1])) {
+      console.log(`${LOG_TAG} RO from subject (embedded number): ${containsRoMatch[1]}`);
+      return {
+        roPo: containsRoMatch[1].toUpperCase(),
+        subjectType: 'embedded_ro_number'
+      };
+    }
   }
 
   return { roPo: null, subjectType: 'unknown' };
@@ -1023,59 +1061,135 @@ async function processEmail(message) {
     }
 
     // === RO/PO EXTRACTION CHAIN ===
-    // Priority: Explicit filename (PO/RO prefix) > PDF content > Email subject > Email body > Any filename > Synthetic
-    // Explicit filename patterns (like "PO 11999-PM.pdf") are most reliable
+    // FIXED PRIORITY ORDER:
+    // 1. Email subject (JMD sends just RO number as subject like "3095")
+    // 2. Explicit filename (PO/RO prefix like "PO 11999-PM.pdf")
+    // 3. Estimate filename (numeric only like "3095.pdf")
+    // 4. Pre-scan filename with RO prefix (like "3095-PRESCAN.pdf")
+    // 5. Revv Report filename pattern
+    // 6. PDF content (LAST RESORT - often unreliable)
+    // 7. Synthetic RO if all else fails
     let roPo = null;
     let roSource = null;
     let isSyntheticRo = false;
+    let detectedSuffix = null;
 
-    // 1. FIRST: Check for explicit RO/PO/WO prefix in filenames (highest priority)
-    // Filenames like "PO 11999-PM.pdf", "RO 24806.pdf" are intentionally named and most reliable
-    for (const pdf of pdfs) {
-      const filename = pdf.filename || '';
-      const nameWithoutExt = filename.replace(/\.pdf$/i, '');
-      // Check for explicit PO/RO/WO prefix pattern
-      const explicitMatch = nameWithoutExt.match(/^(?:PO|RO|WO)[\s_\-]*(\d+[\-]?[A-Z0-9]*)/i);
-      if (explicitMatch) {
-        roPo = explicitMatch[1].toUpperCase();
-        roSource = `filename_explicit:${pdf.filename}`;
-        console.log(`${LOG_TAG} Extracted RO from explicit filename pattern: ${roPo} (${pdf.filename})`);
-        break;
+    // Helper: Detect insurance suffix from filename (ENT, SIXT, etc.)
+    const detectSuffix = (filename) => {
+      const match = filename.match(/^\d{3,6}[-_](ENT|SIXT|ENTPRE|ENTERPRISE|PM|FOX)/i);
+      if (match) {
+        let suffix = match[1].toUpperCase();
+        // Normalize ENTPRE/ENTERPRISE to ENT
+        if (suffix === 'ENTPRE' || suffix === 'ENTERPRISE') suffix = 'ENT';
+        return suffix;
       }
+      return null;
+    };
+
+    // 1. FIRST: Try email subject (JMD pattern: subject IS the RO number)
+    const subjectResult = parseEmailSubject(subject);
+    if (subjectResult.roPo) {
+      roPo = subjectResult.roPo;
+      roSource = `subject:${subjectResult.subjectType}`;
+      console.log(`${LOG_TAG} ✓ RO from email subject: ${roPo}`);
     }
 
-    // 1b. Check for Revv Report filename pattern: RO_revv_report_DATE_VIN.pdf
-    // e.g., "11999-PM_revv_report_2025-12-08_KMTG34SC1SU153228.pdf" → "11999-PM"
+    // 2. Check for explicit RO/PO/WO prefix in filenames
     if (!roPo) {
       for (const pdf of pdfs) {
         const filename = pdf.filename || '';
         const nameWithoutExt = filename.replace(/\.pdf$/i, '');
-        // Match RO at start followed by _revv_report
-        const revvFilenameMatch = nameWithoutExt.match(/^(\d+[\-]?[A-Z0-9]*)_revv_report/i);
-        if (revvFilenameMatch) {
-          roPo = revvFilenameMatch[1].toUpperCase();
-          roSource = `filename_revv:${pdf.filename}`;
-          console.log(`${LOG_TAG} Extracted RO from Revv Report filename: ${roPo} (${pdf.filename})`);
+        const explicitMatch = nameWithoutExt.match(/^(?:PO|RO|WO)[\s_\-]*(\d+[\-]?[A-Z0-9]*)/i);
+        if (explicitMatch) {
+          roPo = explicitMatch[1].toUpperCase();
+          roSource = `filename_explicit:${pdf.filename}`;
+          detectedSuffix = detectSuffix(filename);
+          console.log(`${LOG_TAG} ✓ RO from explicit filename: ${roPo} (${pdf.filename})`);
           break;
         }
       }
     }
 
-    // 2. Try PDF text content (from estimate or RevvADAS)
+    // 3. Check for estimate filename (numeric only like "3095.pdf")
+    if (!roPo) {
+      for (const pdf of pdfs) {
+        const filename = pdf.filename || '';
+        // Match pure numeric filenames (the estimate PDF)
+        const estimateMatch = filename.match(/^(\d{3,6})\.pdf$/i);
+        if (estimateMatch) {
+          roPo = estimateMatch[1];
+          roSource = `filename_estimate:${pdf.filename}`;
+          console.log(`${LOG_TAG} ✓ RO from estimate filename: ${roPo} (${pdf.filename})`);
+          break;
+        }
+      }
+    }
+
+    // 4. Check for pre-scan filename with RO prefix (3095-PRESCAN.pdf, 3094-ENTPRE.pdf)
+    if (!roPo) {
+      for (const pdf of pdfs) {
+        const filename = pdf.filename || '';
+        const nameWithoutExt = filename.replace(/\.pdf$/i, '');
+        // Match RO followed by suffix (ENT, PRESCAN, etc.)
+        const prescanMatch = nameWithoutExt.match(/^(\d{3,6})[-_]?(ENT|SIXT|ENTPRE|ENTERPRISE|PM|FOX|PRE\s*SCAN|PRESCAN)/i);
+        if (prescanMatch) {
+          roPo = prescanMatch[1];
+          roSource = `filename_prescan:${pdf.filename}`;
+          detectedSuffix = detectSuffix(filename);
+          console.log(`${LOG_TAG} ✓ RO from pre-scan filename: ${roPo} (suffix: ${detectedSuffix || 'none'})`);
+          break;
+        }
+      }
+    }
+
+    // 5. Check for Revv Report filename pattern
+    if (!roPo) {
+      for (const pdf of pdfs) {
+        const filename = pdf.filename || '';
+        const nameWithoutExt = filename.replace(/\.pdf$/i, '');
+        const revvFilenameMatch = nameWithoutExt.match(/^(\d+[\-]?[A-Z0-9]*)_revv_report/i);
+        if (revvFilenameMatch) {
+          roPo = revvFilenameMatch[1].toUpperCase();
+          roSource = `filename_revv:${pdf.filename}`;
+          console.log(`${LOG_TAG} ✓ RO from Revv Report filename: ${roPo}`);
+          break;
+        }
+      }
+    }
+
+    // 6. Try any PDF filename with leading digits
+    if (!roPo) {
+      for (const pdf of pdfs) {
+        const filenameRo = extractRoFromFilename(pdf.filename);
+        if (filenameRo) {
+          roPo = filenameRo;
+          roSource = `filename:${pdf.filename}`;
+          detectedSuffix = detectSuffix(pdf.filename);
+          console.log(`${LOG_TAG} ✓ RO from filename digits: ${roPo}`);
+          break;
+        }
+      }
+    }
+
+    // 7. LAST RESORT: Try PDF text content (often unreliable)
     if (!roPo && pdfs.length > 0) {
       try {
         const pdfParse = await import('pdf-parse');
-        // Check all PDFs for RO, prioritizing estimates
         for (const pdf of pdfs) {
           const pdfData = await pdfParse.default(pdf.buffer);
           const pdfText = pdfData.text || '';
 
           const pdfRo = extractRoFromPdfText(pdfText);
           if (pdfRo) {
-            roPo = pdfRo;
-            roSource = `pdf_content:${pdf.filename}`;
-            console.log(`${LOG_TAG} Extracted RO from PDF content: ${roPo} (${pdf.filename})`);
-            break;
+            // VALIDATE: Make sure it's not "Number" or other false positive
+            if (/^\d/.test(pdfRo) && pdfRo.length >= 3) {
+              roPo = pdfRo;
+              roSource = `pdf_content:${pdf.filename}`;
+              console.log(`${LOG_TAG} ✓ RO from PDF content: ${roPo} (${pdf.filename})`);
+              break;
+            } else {
+              console.log(`${LOG_TAG} ✗ Rejected invalid RO from PDF content: "${pdfRo}"`);
+            }
           }
         }
       } catch (pdfErr) {
@@ -1083,46 +1197,29 @@ async function processEmail(message) {
       }
     }
 
-    // 3. Try email subject as fallback
+    // 8. Try email body
     if (!roPo) {
-      const subjectResult = parseEmailSubject(subject);
-      if (subjectResult.roPo) {
-        roPo = subjectResult.roPo;
-        roSource = 'subject';
-        console.log(`${LOG_TAG} Found RO in subject (fallback): ${roPo}`);
-      }
-    }
-
-    // 4. If not in subject, try email body
-    if (!roPo) {
-      console.log(`${LOG_TAG} No RO found in subject — attempting extraction from body`);
+      console.log(`${LOG_TAG} No RO found — attempting extraction from email body`);
       const bodyRo = extractRoFromText(body);
-      if (bodyRo) {
+      if (bodyRo && /^\d/.test(bodyRo)) {
         roPo = bodyRo;
         roSource = 'email_body';
-        console.log(`${LOG_TAG} Extracted RO from email body: ${roPo}`);
+        console.log(`${LOG_TAG} ✓ RO from email body: ${roPo}`);
       }
     }
 
-    // 5. Try any PDF filename pattern (less reliable - just numeric patterns)
-    if (!roPo) {
-      for (const pdf of pdfs) {
-        const filenameRo = extractRoFromFilename(pdf.filename);
-        if (filenameRo) {
-          roPo = filenameRo;
-          roSource = `filename:${pdf.filename}`;
-          console.log(`${LOG_TAG} Extracted RO from PDF filename: ${roPo}`);
-          break;
-        }
-      }
-    }
-
-    // 6. Generate synthetic RO if nothing found
+    // 9. Generate synthetic RO if nothing found
     if (!roPo) {
       roPo = generateSyntheticRo(message.id);
       roSource = 'synthetic';
       isSyntheticRo = true;
-      console.log(`${LOG_TAG} No RO found anywhere — using synthetic RO: ${roPo}`);
+      console.log(`${LOG_TAG} ✗ No RO found — using synthetic RO: ${roPo}`);
+    }
+
+    // Apply detected suffix if we have one and RO doesn't already have it
+    if (detectedSuffix && roPo && !roPo.includes('-')) {
+      console.log(`${LOG_TAG} Applying detected suffix: ${roPo} → ${roPo}-${detectedSuffix}`);
+      roPo = `${roPo}-${detectedSuffix}`;
     }
 
     console.log(`${LOG_TAG} Processing RO: ${roPo} (source: ${roSource})`);
@@ -2027,10 +2124,26 @@ async function processEmail(message) {
       }
     }
 
+    // VALIDATION: Don't mark as processed if RO extraction failed
+    const isInvalidRO = !roPo ||
+      roPo.toLowerCase() === 'number' ||
+      roPo.length < 3 ||
+      !/\d/.test(roPo) ||
+      /^(number|order|repair|work|estimate|unknown)$/i.test(roPo);
+
+    if (isInvalidRO) {
+      console.error(`${LOG_TAG} ❌ INVALID RO DETECTED: "${roPo}" - NOT marking as processed`);
+      console.error(`${LOG_TAG} Email will be reprocessed on next poll cycle`);
+      // Remove from processed IDs so it can be retried
+      processedMessageIds.delete(message.id);
+      saveProcessedIds();
+      return { success: false, error: `Invalid RO extraction: "${roPo}"`, messageId: message.id };
+    }
+
     // Mark email as processed
     await markAsProcessed(message.id);
 
-    console.log(`${LOG_TAG} Successfully processed email for RO: ${roPo}`);
+    console.log(`${LOG_TAG} ✓ Successfully processed email for RO: ${roPo}`);
     return { success: true, roPo, messageId: message.id };
   } catch (err) {
     console.error(`${LOG_TAG} Failed to process email:`, err.message);

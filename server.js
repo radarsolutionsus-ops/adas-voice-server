@@ -4628,6 +4628,247 @@ app.post("/email/reset-processed", (req, res) => {
   }
 });
 
+// Reprocess a single email by removing the processed label
+app.post("/email/reprocess/:messageId", async (req, res) => {
+  try {
+    const { messageId } = req.params;
+
+    // Get the Gmail client from emailListener (we need to access processedLabelId)
+    const { google } = await import("googleapis");
+
+    // Load OAuth credentials
+    const credentials = JSON.parse(
+      process.env.GMAIL_OAUTH_CREDENTIALS_JSON ||
+        fs.readFileSync("./credentials/google-oauth-client.json", "utf8")
+    );
+    const { client_id, client_secret, redirect_uris } =
+      credentials.installed || credentials.web;
+
+    const oauth2Client = new google.auth.OAuth2(
+      client_id,
+      client_secret,
+      redirect_uris?.[0] || "urn:ietf:wg:oauth:2.0:oob"
+    );
+
+    // Get token from sheets or env
+    const token = await sheetWriter.getGmailTokenFromSheets();
+    if (!token) {
+      return res
+        .status(500)
+        .json({ success: false, error: "No Gmail OAuth token found" });
+    }
+    oauth2Client.setCredentials(token);
+
+    const gmail = google.gmail({ version: "v1", auth: oauth2Client });
+
+    // Find the ADAS_FIRST_PROCESSED label
+    const labelsResponse = await gmail.users.labels.list({ userId: "me" });
+    const processedLabel = labelsResponse.data.labels.find(
+      (l) => l.name === "ADAS_FIRST_PROCESSED"
+    );
+
+    if (!processedLabel) {
+      return res
+        .status(404)
+        .json({ success: false, error: "ADAS_FIRST_PROCESSED label not found" });
+    }
+
+    // Remove the processed label from the message
+    await gmail.users.messages.modify({
+      userId: "me",
+      id: messageId,
+      requestBody: {
+        removeLabelIds: [processedLabel.id],
+      },
+    });
+
+    // Also remove from local processed IDs
+    emailListener.clearProcessedIds(); // This clears the Set
+
+    console.log(
+      `[REPROCESS] Removed ADAS_FIRST_PROCESSED label from message ${messageId}`
+    );
+    res.json({
+      success: true,
+      message: `Message ${messageId} queued for reprocessing on next poll`,
+    });
+  } catch (err) {
+    console.error(`[REPROCESS] Error:`, err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// List messages that may have failed processing (have ADAS_FIRST_PROCESSED but invalid RO)
+app.get("/email/failed", async (req, res) => {
+  try {
+    const { google } = await import("googleapis");
+
+    // Load OAuth credentials
+    const credentials = JSON.parse(
+      process.env.GMAIL_OAUTH_CREDENTIALS_JSON ||
+        fs.readFileSync("./credentials/google-oauth-client.json", "utf8")
+    );
+    const { client_id, client_secret, redirect_uris } =
+      credentials.installed || credentials.web;
+
+    const oauth2Client = new google.auth.OAuth2(
+      client_id,
+      client_secret,
+      redirect_uris?.[0] || "urn:ietf:wg:oauth:2.0:oob"
+    );
+
+    const token = await sheetWriter.getGmailTokenFromSheets();
+    if (!token) {
+      return res
+        .status(500)
+        .json({ success: false, error: "No Gmail OAuth token found" });
+    }
+    oauth2Client.setCredentials(token);
+
+    const gmail = google.gmail({ version: "v1", auth: oauth2Client });
+
+    // Find the ADAS_FIRST_PROCESSED label
+    const labelsResponse = await gmail.users.labels.list({ userId: "me" });
+    const processedLabel = labelsResponse.data.labels.find(
+      (l) => l.name === "ADAS_FIRST_PROCESSED"
+    );
+
+    if (!processedLabel) {
+      return res
+        .status(404)
+        .json({ success: false, error: "ADAS_FIRST_PROCESSED label not found" });
+    }
+
+    // List messages with ADAS_FIRST_PROCESSED label
+    const messagesResponse = await gmail.users.messages.list({
+      userId: "me",
+      labelIds: [processedLabel.id],
+      maxResults: 50,
+    });
+
+    const messages = messagesResponse.data.messages || [];
+    const details = [];
+
+    for (const msg of messages) {
+      const fullMessage = await gmail.users.messages.get({
+        userId: "me",
+        id: msg.id,
+        format: "metadata",
+        metadataHeaders: ["Subject", "From", "Date"],
+      });
+
+      const headers = fullMessage.data.payload.headers;
+      details.push({
+        id: msg.id,
+        subject: headers.find((h) => h.name === "Subject")?.value || "",
+        from: headers.find((h) => h.name === "From")?.value || "",
+        date: headers.find((h) => h.name === "Date")?.value || "",
+      });
+    }
+
+    res.json({
+      success: true,
+      count: details.length,
+      messages: details,
+      note: "Use POST /email/reprocess/:messageId to requeue any of these",
+    });
+  } catch (err) {
+    console.error(`[EMAIL/FAILED] Error:`, err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Reprocess all emails that have ADAS_FIRST_PROCESSED label
+app.post("/email/reprocess-all", async (req, res) => {
+  try {
+    const { google } = await import("googleapis");
+
+    const credentials = JSON.parse(
+      process.env.GMAIL_OAUTH_CREDENTIALS_JSON ||
+        fs.readFileSync("./credentials/google-oauth-client.json", "utf8")
+    );
+    const { client_id, client_secret, redirect_uris } =
+      credentials.installed || credentials.web;
+
+    const oauth2Client = new google.auth.OAuth2(
+      client_id,
+      client_secret,
+      redirect_uris?.[0] || "urn:ietf:wg:oauth:2.0:oob"
+    );
+
+    const token = await sheetWriter.getGmailTokenFromSheets();
+    if (!token) {
+      return res
+        .status(500)
+        .json({ success: false, error: "No Gmail OAuth token found" });
+    }
+    oauth2Client.setCredentials(token);
+
+    const gmail = google.gmail({ version: "v1", auth: oauth2Client });
+
+    // Find both labels
+    const labelsResponse = await gmail.users.labels.list({ userId: "me" });
+    const processedLabel = labelsResponse.data.labels.find(
+      (l) => l.name === "ADAS_FIRST_PROCESSED"
+    );
+    const sourceLabel = labelsResponse.data.labels.find(
+      (l) => l.name === "ADAS FIRST"
+    );
+
+    if (!processedLabel || !sourceLabel) {
+      return res
+        .status(404)
+        .json({ success: false, error: "Required labels not found" });
+    }
+
+    // List messages with ADAS_FIRST_PROCESSED label
+    const messagesResponse = await gmail.users.messages.list({
+      userId: "me",
+      labelIds: [processedLabel.id],
+      maxResults: 100,
+    });
+
+    const messages = messagesResponse.data.messages || [];
+    let reprocessedCount = 0;
+
+    for (const msg of messages) {
+      try {
+        // Remove ADAS_FIRST_PROCESSED label, ensure ADAS FIRST label is present
+        await gmail.users.messages.modify({
+          userId: "me",
+          id: msg.id,
+          requestBody: {
+            removeLabelIds: [processedLabel.id],
+            addLabelIds: [sourceLabel.id],
+          },
+        });
+        reprocessedCount++;
+      } catch (modifyErr) {
+        console.error(
+          `[REPROCESS-ALL] Failed to modify message ${msg.id}:`,
+          modifyErr.message
+        );
+      }
+    }
+
+    // Clear local processed IDs
+    emailListener.clearProcessedIds();
+
+    console.log(
+      `[REPROCESS-ALL] Queued ${reprocessedCount}/${messages.length} messages for reprocessing`
+    );
+    res.json({
+      success: true,
+      message: `Queued ${reprocessedCount} messages for reprocessing`,
+      total: messages.length,
+      reprocessed: reprocessedCount,
+    });
+  } catch (err) {
+    console.error(`[REPROCESS-ALL] Error:`, err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // ============================================================
 // BILLING ENDPOINTS
 // ============================================================
