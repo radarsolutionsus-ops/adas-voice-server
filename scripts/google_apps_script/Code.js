@@ -235,6 +235,10 @@ function doPost(e) {
         result = appendFlowHistory(data.roPo, data.flow_entry);
         break;
 
+      case 'update_dtcs':
+        result = updateDTCs(data);
+        break;
+
       default:
         result = { success: false, error: `Unknown action: ${action}` };
     }
@@ -929,6 +933,167 @@ function appendFlowHistory(roPo, flowEntry) {
 
   return { success: true, message: 'Flow history updated', roPo: roPo };
 }
+
+// ============== DTC (Diagnostic Trouble Code) FUNCTIONS ==============
+
+/**
+ * Parse Column L value to extract PRE and POST DTCs
+ * Format: "PRE: P0171, U0100 | POST: None" or just "PRE: P0171"
+ * @param {string} value - Current Column L value
+ * @returns {Object} - { pre: string[], post: string[] }
+ */
+function parseDTCColumn(value) {
+  var result = { pre: [], post: [] };
+
+  if (!value || typeof value !== 'string') {
+    return result;
+  }
+
+  // Split by pipe separator
+  var parts = value.split('|').map(function(p) { return p.trim(); });
+
+  for (var i = 0; i < parts.length; i++) {
+    var part = parts[i];
+    var lowerPart = part.toLowerCase();
+
+    if (lowerPart.indexOf('pre:') === 0) {
+      var dtcsPart = part.substring(4).trim();
+      if (dtcsPart.toLowerCase() !== 'none') {
+        var dtcs = dtcsPart.split(',').map(function(d) { return d.trim(); });
+        dtcs = dtcs.filter(function(d) { return isValidDTCCode(d); });
+        result.pre = dtcs;
+      }
+    } else if (lowerPart.indexOf('post:') === 0) {
+      var dtcsPart = part.substring(5).trim();
+      if (dtcsPart.toLowerCase() !== 'none') {
+        var dtcs = dtcsPart.split(',').map(function(d) { return d.trim(); });
+        dtcs = dtcs.filter(function(d) { return isValidDTCCode(d); });
+        result.post = dtcs;
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Validate DTC code format (P, B, C, U followed by 4 hex chars)
+ * @param {string} code - DTC code like "P0171"
+ * @returns {boolean}
+ */
+function isValidDTCCode(code) {
+  if (!code || code.length !== 5) return false;
+  return /^[PBCU][0-9A-Fa-f]{4}$/i.test(code);
+}
+
+/**
+ * Merge new DTCs with existing Column L value
+ * @param {string} existingValue - Current Column L value
+ * @param {string[]} newDTCs - Array of new DTC codes
+ * @param {string} scanType - "PRE" or "POST"
+ * @returns {string} - Merged Column L value
+ */
+function mergeDTCs(existingValue, newDTCs, scanType) {
+  var parsed = parseDTCColumn(existingValue);
+  var upperScanType = (scanType || 'PRE').toUpperCase();
+
+  // Format new DTCs
+  var newFormatted = newDTCs && newDTCs.length > 0
+    ? upperScanType + ': ' + newDTCs.join(', ')
+    : upperScanType + ': None';
+
+  if (upperScanType === 'PRE') {
+    // Update PRE, keep POST
+    if (parsed.post.length > 0) {
+      return newFormatted + ' | POST: ' + parsed.post.join(', ');
+    }
+    return newFormatted;
+  } else {
+    // Keep PRE, update POST
+    var preFormatted = parsed.pre.length > 0
+      ? 'PRE: ' + parsed.pre.join(', ')
+      : 'PRE: None';
+    return preFormatted + ' | ' + newFormatted;
+  }
+}
+
+/**
+ * Update DTCs in Column L for a specific RO
+ * Handles merging PRE and POST scan DTCs
+ * @param {Object} data - { roPo, dtcs (string or array), scanType ('PRE' or 'POST') }
+ * @returns {Object} - { success, message } or { success: false, error }
+ */
+function updateDTCs(data) {
+  var ss = SpreadsheetApp.getActive();
+  var sheet = ss.getSheetByName(SCHEDULE_SHEET);
+
+  if (!sheet) {
+    return { success: false, error: 'Sheet not found' };
+  }
+
+  var roPo = String(data.roPo || data.ro_number || '').trim();
+  if (!roPo) {
+    return { success: false, error: 'RO/PO number required' };
+  }
+
+  var rowNum = findRowByRO(sheet, roPo);
+  if (rowNum === 0) {
+    return { success: false, error: 'RO not found: ' + roPo };
+  }
+
+  // Get current DTCs value
+  var currentDTCs = sheet.getRange(rowNum, COL.DTCS + 1).getValue() || '';
+  var scanType = (data.scanType || 'PRE').toUpperCase();
+
+  // Handle DTCs - can be string (already formatted) or array
+  var newDTCs = data.dtcs;
+  var finalValue;
+
+  if (typeof newDTCs === 'string') {
+    // Already formatted like "PRE: P0171, U0100"
+    if (newDTCs.toUpperCase().indexOf('PRE:') === 0 || newDTCs.toUpperCase().indexOf('POST:') === 0) {
+      // It's already in the right format - just use it or merge
+      if (currentDTCs && !currentDTCs.includes(scanType + ':')) {
+        // Merge with existing
+        finalValue = currentDTCs + ' | ' + newDTCs;
+      } else {
+        finalValue = newDTCs;
+      }
+    } else {
+      // Plain comma-separated DTCs - format and merge
+      var dtcArray = newDTCs.split(',').map(function(d) { return d.trim(); });
+      finalValue = mergeDTCs(currentDTCs, dtcArray, scanType);
+    }
+  } else if (Array.isArray(newDTCs)) {
+    // Array of DTCs
+    finalValue = mergeDTCs(currentDTCs, newDTCs, scanType);
+  } else {
+    // No DTCs - just set to "None" for this scan type
+    finalValue = mergeDTCs(currentDTCs, [], scanType);
+  }
+
+  // Update Column L
+  sheet.getRange(rowNum, COL.DTCS + 1).setValue(finalValue);
+  Logger.log('DTCs updated for RO ' + roPo + ': ' + finalValue);
+
+  // If there's an ADAS warning, add to notes
+  if (data.adasWarning) {
+    var currentNotes = sheet.getRange(rowNum, COL.NOTES + 1).getValue() || '';
+    if (!currentNotes.includes(data.adasWarning)) {
+      var newNotes = currentNotes ? currentNotes + ' | ' + data.adasWarning : data.adasWarning;
+      sheet.getRange(rowNum, COL.NOTES + 1).setValue(newNotes);
+    }
+  }
+
+  return {
+    success: true,
+    message: 'DTCs updated',
+    roPo: roPo,
+    dtcs: finalValue
+  };
+}
+
+// ============== END DTC FUNCTIONS ==============
 
 /**
  * Get row by RO/PO or VIN - used by Node.js to fetch existing data

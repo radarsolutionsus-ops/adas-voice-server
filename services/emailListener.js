@@ -32,6 +32,8 @@ import shopNotifier from './shopNotifier.js';
 import emailResponder from './emailResponder.js';
 import { sendNoCalibrationEmail } from './emailSender.js';
 import { getESTTimestamp, getESTISOTimestamp, formatToEST } from '../utils/timezone.js';
+import scanProcessor from './scanProcessor.js';
+import dtcExtractor from './dtcExtractor.js';
 
 const LOG_TAG = '[EMAIL_PIPELINE]';
 
@@ -1293,6 +1295,74 @@ async function processEmail(message) {
       console.log(`${LOG_TAG} Could not fetch existing sheet data: ${sheetErr.message}`);
     }
 
+    // Step 2a-DTC: Extract DTCs from pre-scan and post-scan PDFs
+    // Uses scanProcessor to classify PDFs and extract DTCs for Column L
+    let dtcsForColumn = null;
+    let adasDtcWarning = null;
+    let existingDTCs = '';
+
+    // Get existing DTCs from sheet if available
+    try {
+      const existingRow = await sheetWriter.getScheduleRowByRO(roPo);
+      if (existingRow?.dtcs) {
+        existingDTCs = existingRow.dtcs;
+        console.log(`${LOG_TAG} Found existing DTCs: ${existingDTCs}`);
+      }
+    } catch (dtcErr) {
+      console.log(`${LOG_TAG} Could not fetch existing DTCs: ${dtcErr.message}`);
+    }
+
+    // Process PDFs for scan reports and DTCs
+    for (const pdf of pdfs) {
+      try {
+        const pdfParse = await import('pdf-parse');
+        const pdfData = await pdfParse.default(pdf.buffer);
+        const pdfText = pdfData.text || '';
+
+        // Classify the PDF type
+        const pdfType = scanProcessor.classifyPDF(pdf.filename, pdfText);
+
+        // Only process pre-scan and post-scan PDFs for DTCs
+        if (pdfType === scanProcessor.PDF_TYPES.PRE_SCAN || pdfType === scanProcessor.PDF_TYPES.POST_SCAN) {
+          const scanType = pdfType === scanProcessor.PDF_TYPES.PRE_SCAN ? 'PRE' : 'POST';
+          const scanResult = dtcExtractor.processScanReport(pdfText, scanType);
+
+          console.log(`${LOG_TAG} ${scanType} scan processed: ${scanResult.dtcs.length} DTCs, ADAS DTCs: ${scanResult.hasADASDTCs}`);
+
+          // Merge with existing DTCs
+          if (existingDTCs) {
+            dtcsForColumn = dtcExtractor.mergeDTCs(existingDTCs, scanResult.dtcs, scanType);
+          } else if (dtcsForColumn) {
+            // Already have some DTCs from this email, merge with them
+            dtcsForColumn = dtcExtractor.mergeDTCs(dtcsForColumn, scanResult.dtcs, scanType);
+          } else {
+            dtcsForColumn = scanResult.formatted;
+          }
+
+          // Capture ADAS warning for pre-scan
+          if (scanResult.warning && scanType === 'PRE') {
+            adasDtcWarning = scanResult.warning;
+            console.log(`${LOG_TAG} ADAS DTC warning: ${adasDtcWarning}`);
+          }
+
+          // Also update VIN if not already set
+          const extractedVin = dtcExtractor.extractVIN(pdfText);
+          if (extractedVin && !mergedData.vin) {
+            mergedData.vin = extractedVin;
+            console.log(`${LOG_TAG} VIN extracted from ${scanType} scan: ${extractedVin}`);
+          }
+        }
+      } catch (scanErr) {
+        console.log(`${LOG_TAG} Could not process PDF for DTCs: ${pdf.filename} - ${scanErr.message}`);
+      }
+    }
+
+    // Set DTCs for merged data if we found any
+    if (dtcsForColumn) {
+      mergedData.dtcs = dtcsForColumn;
+      console.log(`${LOG_TAG} DTCs for Column L: ${dtcsForColumn}`);
+    }
+
     // Step 2b: Build simple notes (NO SCRUBBING)
     // All calibration analysis is done manually in RevvADAS
     // Notes are simple: vehicle info + document type received
@@ -1380,6 +1450,12 @@ async function processEmail(message) {
     // Handle synthetic RO - only if we don't have notes from scrub
     if (isSyntheticRo && !previewNotes) {
       previewNotes = `[AUTO-GENERATED] No RO/PO found. Please confirm RO number.`;
+    }
+
+    // Add ADAS DTC warning to notes if present (from pre-scan)
+    if (adasDtcWarning) {
+      previewNotes = previewNotes ? `${previewNotes} | ${adasDtcWarning}` : adasDtcWarning;
+      console.log(`${LOG_TAG} Added ADAS DTC warning to notes`);
     }
 
     // FINAL: Set notes ONCE to avoid any duplication
