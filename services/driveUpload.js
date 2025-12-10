@@ -17,6 +17,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { Readable } from 'stream';
 import dotenv from 'dotenv';
+import { getGmailTokenFromSheets, saveGmailTokenToSheets } from './sheetWriter.js';
 
 // Ensure environment variables are loaded
 dotenv.config();
@@ -79,13 +80,24 @@ async function initializeDriveClient() {
       throw new Error(`OAuth credentials not found. Set GOOGLE_OAUTH_CREDENTIALS env var or create ${OAUTH_CREDENTIALS_PATH}`);
     }
 
-    // Get token - try env var first, then file, then Google Sheets Config
-    if (process.env.GMAIL_OAUTH_TOKEN) {
+    // Get token - Priority: 1. Google Sheets Config, 2. Env var (GMAIL_OAUTH_TOKEN_JSON), 3. File
+    // This matches the token loading order used by emailListener and other services
+    try {
+      const sheetsToken = await getGmailTokenFromSheets();
+      if (sheetsToken) {
+        token = sheetsToken;
+        console.log(`${LOG_TAG} Loaded OAuth token from Google Sheets Config tab`);
+      }
+    } catch (e) {
+      console.log(`${LOG_TAG} Could not read token from Sheets: ${e.message}`);
+    }
+
+    if (!token && process.env.GMAIL_OAUTH_TOKEN_JSON) {
       try {
-        token = JSON.parse(process.env.GMAIL_OAUTH_TOKEN);
-        console.log(`${LOG_TAG} Loaded OAuth token from environment variable`);
+        token = JSON.parse(process.env.GMAIL_OAUTH_TOKEN_JSON);
+        console.log(`${LOG_TAG} Loaded OAuth token from GMAIL_OAUTH_TOKEN_JSON env var`);
       } catch (e) {
-        console.error(`${LOG_TAG} Failed to parse GMAIL_OAUTH_TOKEN:`, e.message);
+        console.error(`${LOG_TAG} Failed to parse GMAIL_OAUTH_TOKEN_JSON:`, e.message);
       }
     }
 
@@ -95,7 +107,7 @@ async function initializeDriveClient() {
     }
 
     if (!token) {
-      throw new Error(`OAuth token not found. Set GMAIL_OAUTH_TOKEN env var or run: node scripts/gmail-auth.js`);
+      throw new Error(`OAuth token not found. Set GMAIL_OAUTH_TOKEN_JSON env var or run: node scripts/gmail-auth.js`);
     }
 
     const { client_id, client_secret } = credentials.installed || credentials.web;
@@ -113,9 +125,17 @@ async function initializeDriveClient() {
       console.log(`${LOG_TAG} Token expired, refreshing...`);
       const { credentials: newCredentials } = await oauth2Client.refreshAccessToken();
       oauth2Client.setCredentials(newCredentials);
-      // Save refreshed token to file if local
-      if (fs.existsSync(path.dirname(OAUTH_TOKEN_PATH))) {
+      // Save refreshed token - Railway uses Sheets, local uses file
+      if (process.env.GMAIL_OAUTH_TOKEN_JSON || process.env.RAILWAY_ENVIRONMENT) {
+        try {
+          await saveGmailTokenToSheets(newCredentials);
+          console.log(`${LOG_TAG} Saved refreshed token to Google Sheets`);
+        } catch (e) {
+          console.error(`${LOG_TAG} Failed to save refreshed token to Sheets:`, e.message);
+        }
+      } else if (fs.existsSync(path.dirname(OAUTH_TOKEN_PATH))) {
         fs.writeFileSync(OAUTH_TOKEN_PATH, JSON.stringify(newCredentials, null, 2));
+        console.log(`${LOG_TAG} Saved refreshed token to file`);
       }
     }
 
