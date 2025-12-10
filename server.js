@@ -522,10 +522,14 @@ async function handleOpsToolCall(toolName, args) {
           return { success: false, error: `RO ${roPo} not found` };
         }
 
-        const oldDate = current.scheduledDate || current.scheduled_date || 'unscheduled';
-        const oldTime = current.scheduledTime || current.scheduled_time || '';
+        const rawOldDate = current.scheduledDate || current.scheduled_date || '';
+        const rawOldTime = current.scheduledTime || current.scheduled_time || '';
 
-        const statusChangeNote = `Rescheduled from ${oldDate} ${oldTime} to ${newDate} ${newTime || ''}: ${reason}`;
+        // Format dates for display (handles ISO strings, Date objects, and pre-formatted strings)
+        const oldScheduleFormatted = formatScheduleDateTime(rawOldDate, rawOldTime);
+        const newScheduleFormatted = formatScheduleDateTime(newDate, newTime);
+
+        const statusChangeNote = `Rescheduled from ${oldScheduleFormatted} to ${newScheduleFormatted}: ${reason}`;
 
         const result = await sheetWriter.updateScheduleRowWithFullNotes(roPo, {
           status: "Rescheduled",
@@ -535,7 +539,7 @@ async function handleOpsToolCall(toolName, args) {
         });
 
         return result.success
-          ? { success: true, message: `Rescheduled to ${newDate} ${newTime || ''}. Previous: ${oldDate} ${oldTime}` }
+          ? { success: true, message: `Rescheduled to ${newScheduleFormatted}. Previous: ${oldScheduleFormatted}` }
           : { success: false, error: result.error };
       }
 
@@ -570,7 +574,76 @@ async function handleOpsToolCall(toolName, args) {
 }
 
 /**
- * Validate and clean RO/PO number - must be 4-8 digits only
+ * Format a date/time value for display in flow history
+ * Handles Date objects, ISO strings, and pre-formatted strings
+ * @param {*} dateVal - Date value (Date object, ISO string, or formatted string)
+ * @param {*} timeVal - Time value (Date object, ISO string, or formatted string)
+ * @returns {string} Formatted string like "12/10/2025 2:00 PM" or "unscheduled"
+ */
+function formatScheduleDateTime(dateVal, timeVal) {
+  if (!dateVal && !timeVal) return 'unscheduled';
+
+  let datePart = '';
+  let timePart = '';
+
+  // Format date
+  if (dateVal) {
+    if (dateVal instanceof Date) {
+      datePart = (dateVal.getMonth() + 1) + '/' + dateVal.getDate() + '/' + dateVal.getFullYear();
+    } else if (typeof dateVal === 'string') {
+      // Handle ISO string or already formatted
+      if (dateVal.includes('T') || dateVal.match(/^\d{4}-\d{2}-\d{2}/)) {
+        const d = new Date(dateVal);
+        if (!isNaN(d.getTime())) {
+          datePart = (d.getMonth() + 1) + '/' + d.getDate() + '/' + d.getFullYear();
+        } else {
+          datePart = dateVal; // Can't parse, use as-is
+        }
+      } else {
+        datePart = dateVal; // Already formatted like "12/10/2025"
+      }
+    }
+  }
+
+  // Format time
+  if (timeVal) {
+    if (timeVal instanceof Date) {
+      let hours = timeVal.getHours();
+      const mins = String(timeVal.getMinutes()).padStart(2, '0');
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12;
+      hours = hours ? hours : 12;
+      timePart = hours + ':' + mins + ' ' + ampm;
+    } else if (typeof timeVal === 'string') {
+      if (timeVal.includes('T') || timeVal.match(/^\d{4}-\d{2}-\d{2}/)) {
+        const t = new Date(timeVal);
+        if (!isNaN(t.getTime())) {
+          let hours = t.getHours();
+          const mins = String(t.getMinutes()).padStart(2, '0');
+          const ampm = hours >= 12 ? 'PM' : 'AM';
+          hours = hours % 12;
+          hours = hours ? hours : 12;
+          timePart = hours + ':' + mins + ' ' + ampm;
+        } else {
+          timePart = timeVal; // Can't parse, use as-is
+        }
+      } else {
+        timePart = timeVal; // Already formatted like "2:00 PM"
+      }
+    }
+  }
+
+  if (datePart && timePart) {
+    return datePart + ' ' + timePart;
+  } else if (datePart) {
+    return datePart;
+  } else if (timePart) {
+    return timePart;
+  }
+  return 'unscheduled';
+}
+
+/**
  * @param {string} roPo - Raw RO/PO input
  * @returns {{valid: boolean, cleaned: string, error?: string}}
  */
