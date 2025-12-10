@@ -878,6 +878,123 @@ a:hover {
   animation: spin 0.8s linear infinite;
 }
 
+/* File Upload Styles */
+.file-upload-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.file-upload-container input[type="file"] {
+  padding: 0.5rem;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.file-upload-container input[type="file"]:hover {
+  border-color: var(--primary);
+  background: #f0f4f8;
+}
+
+.file-upload-container input[type="file"]:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(26, 54, 93, 0.1);
+}
+
+.file-upload-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+}
+
+.file-upload-info .file-name {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.file-upload-info .file-name.has-file {
+  color: var(--success);
+  font-style: normal;
+  font-weight: 500;
+}
+
+.file-upload-info .file-size {
+  color: var(--text-light);
+  font-size: 0.8rem;
+}
+
+.prescan-checkbox {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: #fffbeb;
+  border-radius: var(--radius);
+  border: 1px solid #f6e05e;
+}
+
+.prescan-checkbox label {
+  font-size: 0.875rem;
+  color: #744210;
+}
+
+.field-error {
+  color: var(--danger);
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: #fed7d7;
+  border-radius: var(--radius);
+}
+
+/* Dashboard Table Actions - Better Button Layout */
+.data-table .actions-cell {
+  white-space: nowrap;
+}
+
+.data-table td:last-child {
+  min-width: 160px;
+}
+
+.data-table td:last-child .btn {
+  margin-right: 0.375rem;
+}
+
+.data-table td:last-child .btn:last-child {
+  margin-right: 0;
+}
+
+/* Calibrations column truncation */
+.cals-col {
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* VIN column styling */
+.vin-col {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+}
+
+/* Current Schedule Display */
+.current-schedule {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  background: #ebf8ff;
+  border-radius: var(--radius);
+  border-left: 4px solid var(--info);
+}
+
+.current-schedule p {
+  margin: 0;
+  color: var(--text);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .navbar {

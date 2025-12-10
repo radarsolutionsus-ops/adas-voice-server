@@ -1246,16 +1246,28 @@ function getAllScheduleRows(shopName) {
     // Filter by shop if provided
     if (shopNameLower && rowShop !== shopNameLower) continue;
 
+    // Format date - handle Date objects from Sheets
+    let scheduledDate = row[COL.SCHEDULED_DATE] || '';
+    if (scheduledDate instanceof Date) {
+      scheduledDate = Utilities.formatDate(scheduledDate, 'America/New_York', 'M/d/yyyy');
+    }
+
+    // Format time - handle Date objects from Sheets
+    let scheduledTime = row[COL.SCHEDULED_TIME] || '';
+    if (scheduledTime instanceof Date) {
+      scheduledTime = Utilities.formatDate(scheduledTime, 'America/New_York', 'h:mm a');
+    }
+
     results.push({
       rowNumber: i + 1,
       timestampCreated: row[COL.TIMESTAMP] || '',
       shopName: row[COL.SHOP_NAME] || '',
-      roPo: row[COL.RO_PO] || '',
+      roPo: String(row[COL.RO_PO] || ''),
       vin: row[COL.VIN] || '',
       vehicle: row[COL.VEHICLE] || '',
       status: row[COL.STATUS] || '',
-      scheduledDate: formatDateForOutput(row[COL.SCHEDULED_DATE]),
-      scheduledTime: formatTimeForOutput(row[COL.SCHEDULED_TIME]),
+      scheduledDate: scheduledDate,
+      scheduledTime: scheduledTime,
       technician: row[COL.TECHNICIAN] || '',
       requiredCalibrations: row[COL.REQUIRED_CALS] || '',
       completedCalibrations: row[COL.COMPLETED_CALS] || '',

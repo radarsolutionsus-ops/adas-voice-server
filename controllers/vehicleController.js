@@ -161,16 +161,65 @@ export async function getVehicleByRO(req, res) {
 /**
  * POST /api/portal/vehicles
  * Submit a new vehicle for calibration
+ *
+ * Body:
+ *   - roPo: RO/PO number (required)
+ *   - vin: Full 17-char VIN (required)
+ *   - year, make, model: Vehicle info (required)
+ *   - notes: Additional notes
+ *   - estimatePdfUrl: Google Drive link to estimate PDF
+ *   - prescanPdfUrl: Google Drive link to pre-scan PDF (optional)
+ *   - noPrescanConfirmed: Boolean if user confirmed no DTCs
  */
 export async function submitVehicle(req, res) {
   try {
-    const { roPo, vin, year, make, model, notes } = req.body;
+    const {
+      roPo,
+      vin,
+      year,
+      make,
+      model,
+      notes,
+      estimatePdfUrl,
+      prescanPdfUrl,
+      noPrescanConfirmed
+    } = req.body;
     const shopName = req.shopFilter.shopName;
 
+    // Validate required fields
     if (!roPo) {
       return res.status(400).json({
         success: false,
         error: 'RO/PO number is required'
+      });
+    }
+
+    if (!vin || vin.length !== 17) {
+      return res.status(400).json({
+        success: false,
+        error: 'Full 17-character VIN is required'
+      });
+    }
+
+    if (!year || !make || !model) {
+      return res.status(400).json({
+        success: false,
+        error: 'Year, make, and model are required'
+      });
+    }
+
+    if (!estimatePdfUrl) {
+      return res.status(400).json({
+        success: false,
+        error: 'Estimate PDF is required'
+      });
+    }
+
+    // Validate pre-scan requirement
+    if (!prescanPdfUrl && !noPrescanConfirmed) {
+      return res.status(400).json({
+        success: false,
+        error: 'Pre-scan PDF is required, or confirm there are no active DTC codes'
       });
     }
 
@@ -180,7 +229,14 @@ export async function submitVehicle(req, res) {
     const vehicleParts = [year, make, model].filter(p => p && p.trim());
     const vehicleStr = vehicleParts.join(' ');
 
-    // Create the schedule entry
+    // Build notes with DTC confirmation if applicable
+    let fullNotes = notes || '';
+    if (noPrescanConfirmed && !prescanPdfUrl) {
+      const timestamp = new Date().toISOString();
+      fullNotes = `[${timestamp}] Shop confirmed no active DTC codes (no pre-scan provided)\n${fullNotes}`;
+    }
+
+    // Create the schedule entry with PDF links
     const result = await sheetWriter.upsertScheduleRowByRO(roPo, {
       shopName: shopName,
       vin: vin || '',
@@ -188,8 +244,11 @@ export async function submitVehicle(req, res) {
       vehicleMake: make || '',
       vehicleModel: model || '',
       vehicle: vehicleStr,
-      notes: notes || '',
-      status: 'New'
+      notes: fullNotes,
+      status: 'New',
+      // PDF links - estimate goes to the new estimate column, pre-scan to post_scan
+      estimatePdf: estimatePdfUrl || '',
+      postScanPdf: prescanPdfUrl || ''
     });
 
     if (!result.success) {
@@ -199,7 +258,7 @@ export async function submitVehicle(req, res) {
       });
     }
 
-    console.log(`${LOG_TAG} Vehicle submitted: RO ${roPo}`);
+    console.log(`${LOG_TAG} Vehicle submitted: RO ${roPo} (estimate: ${estimatePdfUrl ? 'yes' : 'no'}, prescan: ${prescanPdfUrl ? 'yes' : 'no'})`);
 
     res.json({
       success: true,

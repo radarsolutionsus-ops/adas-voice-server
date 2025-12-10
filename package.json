@@ -38,6 +38,7 @@
     "googleapis": "^144.0.0",
     "js-base64": "^3.7.7",
     "jsonwebtoken": "^9.0.3",
+    "multer": "^2.0.2",
     "openai": "^6.9.1",
     "pdf-parse": "^1.1.1",
     "twilio": "^5.4.0",

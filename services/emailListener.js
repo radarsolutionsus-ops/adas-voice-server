@@ -2242,7 +2242,8 @@ function detectPDFType(filename) {
  * Check for new unprocessed emails in "ADAS FIRST" label
  */
 async function checkNewEmails() {
-  console.log(`${LOG_TAG} Checking for new emails in "${SOURCE_LABEL_NAME}" label...`);
+  // Only log at debug level to reduce noise (this runs every 30 seconds)
+  // console.log(`${LOG_TAG} Checking for new emails in "${SOURCE_LABEL_NAME}" label...`);
 
   try {
     const gmail = await initializeGmailClient();
@@ -2269,7 +2270,11 @@ async function checkNewEmails() {
     // When Revv Report arrives before Estimate in mailbox but Estimate is processed first,
     // status would incorrectly go Ready → New. Reversing ensures proper chronological order.
     const messagesOldestFirst = [...messages].reverse();
-    console.log(`${LOG_TAG} Found ${messagesOldestFirst.length} unprocessed emails with PDFs (processing oldest first)`);
+
+    // Only log when there are emails to process (reduces noise significantly)
+    if (messagesOldestFirst.length > 0) {
+      console.log(`${LOG_TAG} Found ${messagesOldestFirst.length} unprocessed emails with PDFs (processing oldest first)`);
+    }
 
     for (const message of messagesOldestFirst) {
       // Skip if already processed locally

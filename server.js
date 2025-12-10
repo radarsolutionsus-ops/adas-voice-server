@@ -51,8 +51,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Health check - MUST be first, responds immediately for Railway
+// Silent - no logging to avoid Railway rate limits (health checks are frequent)
 app.get("/health", (req, res) => {
-  console.log("[HEALTH] Check received - responding OK");
   res.status(200).send("OK");
 });
 

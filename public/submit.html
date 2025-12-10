@@ -35,19 +35,20 @@
             <input type="text" id="ro-po" name="roPo" required placeholder="e.g., 123456" pattern="[0-9]{4,8}" title="4-8 digit number">
           </div>
           <div class="form-group">
-            <label for="vin">VIN</label>
-            <input type="text" id="vin" name="vin" placeholder="Full VIN or last 6 digits" maxlength="17">
+            <label for="vin">VIN *</label>
+            <input type="text" id="vin" name="vin" required placeholder="Full 17-character VIN" minlength="17" maxlength="17">
+            <span class="form-hint">Full 17-character VIN required</span>
           </div>
         </div>
 
         <div class="form-row">
           <div class="form-group">
-            <label for="year">Year</label>
-            <input type="text" id="year" name="year" placeholder="e.g., 2024" pattern="[0-9]{4}" maxlength="4">
+            <label for="year">Year *</label>
+            <input type="text" id="year" name="year" required placeholder="e.g., 2024" pattern="[0-9]{4}" maxlength="4">
           </div>
           <div class="form-group">
-            <label for="make">Make</label>
-            <select id="make" name="make">
+            <label for="make">Make *</label>
+            <select id="make" name="make" required>
               <option value="">Select Make</option>
               <option value="Acura">Acura</option>
               <option value="Audi">Audi</option>
@@ -84,10 +85,45 @@
             </select>
           </div>
           <div class="form-group">
-            <label for="model">Model</label>
-            <input type="text" id="model" name="model" placeholder="e.g., Camry">
+            <label for="model">Model *</label>
+            <input type="text" id="model" name="model" required placeholder="e.g., Camry">
           </div>
         </div>
+      </div>
+
+      <div class="form-section">
+        <h3>Required Documents</h3>
+
+        <div class="form-group">
+          <label for="estimate-pdf">Estimate PDF *</label>
+          <div class="file-upload-container">
+            <input type="file" id="estimate-pdf" name="estimatePdf" accept=".pdf" required>
+            <div class="file-upload-info">
+              <span class="file-name" id="estimate-file-name">No file selected</span>
+              <span class="file-size" id="estimate-file-size"></span>
+            </div>
+          </div>
+          <span class="form-hint">PDF only, max 10MB</span>
+        </div>
+
+        <div class="form-group">
+          <label for="prescan-pdf">Pre-Scan PDF</label>
+          <div class="file-upload-container">
+            <input type="file" id="prescan-pdf" name="prescanPdf" accept=".pdf" id="prescan-pdf-input">
+            <div class="file-upload-info">
+              <span class="file-name" id="prescan-file-name">No file selected</span>
+              <span class="file-size" id="prescan-file-size"></span>
+            </div>
+          </div>
+          <span class="form-hint">PDF only, max 10MB</span>
+        </div>
+
+        <div class="checkbox-item prescan-checkbox">
+          <input type="checkbox" id="no-prescan" name="noPrescan">
+          <label for="no-prescan">No pre-scan available - I confirm there are no active DTC codes on this vehicle</label>
+        </div>
+
+        <div id="prescan-error" class="field-error hidden">Please upload a pre-scan PDF or confirm there are no active DTC codes</div>
       </div>
 
       <div class="form-section">
