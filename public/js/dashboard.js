@@ -282,18 +282,26 @@ function formatSchedule(dateStr, timeStr) {
     const options = { month: 'short', day: 'numeric', year: 'numeric' };
     let formatted = date.toLocaleDateString('en-US', options);
 
-    // Add time if available and valid
-    if (timeStr && !String(timeStr).includes('1899')) {
-      // If timeStr is ISO, parse it
+    // Add time if available
+    if (timeStr) {
+      let timeFormatted = null;
+
+      // If timeStr is ISO format (includes 'T')
       if (String(timeStr).includes('T')) {
         const timeDate = new Date(timeStr);
         if (!isNaN(timeDate.getTime())) {
+          // Extract just the time portion - this works even for 1899 dates
+          // (Google Sheets uses 1899-12-30 as base date for time-only values)
           const timeOptions = { hour: 'numeric', minute: '2-digit', hour12: true };
-          formatted += ' ' + timeDate.toLocaleTimeString('en-US', timeOptions);
+          timeFormatted = timeDate.toLocaleTimeString('en-US', timeOptions);
         }
-      } else if (timeStr) {
+      } else if (!String(timeStr).includes('1899')) {
         // If it's already a time string like "10:00 AM"
-        formatted += ' ' + timeStr;
+        timeFormatted = timeStr;
+      }
+
+      if (timeFormatted) {
+        formatted += ' ' + timeFormatted;
       }
     }
 
