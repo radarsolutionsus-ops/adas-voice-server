@@ -59,6 +59,9 @@ export function authenticateToken(req, res, next) {
       coverage: decoded.coverage
     };
 
+    // Debug logging for auth issues
+    console.log(`${LOG_TAG} Authenticated: ${decoded.name} (${decoded.role})${decoded.sheetName ? ` - sheet: ${decoded.sheetName}` : ''}`);
+
     next();
   });
 }

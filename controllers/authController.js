@@ -126,7 +126,7 @@ export async function login(req, res) {
     if (user.role === ROLES.TECH) {
       redirectTo = '/tech/dashboard.html';
     } else if (user.role === ROLES.ADMIN) {
-      redirectTo = '/tech/dashboard.html'; // Admin uses tech portal for now
+      redirectTo = '/admin/dashboard.html';
     }
 
     console.log(`${LOG_TAG} Login successful: ${user.name} (${user.role})`);

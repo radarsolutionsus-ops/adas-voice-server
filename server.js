@@ -39,8 +39,8 @@ import {
 import downloadPlan from "./utils/downloadPlan.js";
 import oem from "./utils/oem/index.js";
 
-// Import portal routes (auth, legacy portal, role-based shop/tech, notifications)
-import { authRoutes, portalRoutes, shopRoutes, techRoutes, notificationRoutes } from "./routes/index.js";
+// Import portal routes (auth, legacy portal, role-based shop/tech/admin, notifications)
+import { authRoutes, portalRoutes, shopRoutes, techRoutes, adminRoutes, notificationRoutes } from "./routes/index.js";
 
 // ESM equivalent of __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -70,6 +70,7 @@ app.use("/api/portal", portalRoutes);
 // Role-based portal routes
 app.use("/api/shop", shopRoutes);
 app.use("/api/tech", techRoutes);
+app.use("/api/admin", adminRoutes);
 
 // Notification routes
 app.use("/api/notifications", notificationRoutes);

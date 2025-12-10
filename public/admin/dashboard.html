@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - ADAS F1RST</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <style>
+    /* Admin-specific styles */
+    .admin-badge {
+      background: #e53e3e;
+      color: white;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      margin-left: 0.5rem;
+    }
+
+    .admin-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .stat-card {
+      background: white;
+      border-radius: var(--radius-lg);
+      padding: 1.25rem;
+      box-shadow: var(--shadow-sm);
+      text-align: center;
+    }
+
+    .stat-card .stat-number {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .stat-card .stat-label {
+      font-size: 0.85rem;
+      color: var(--text-light);
+      margin-top: 0.25rem;
+    }
+
+    .stat-card.new .stat-number { color: var(--info); }
+    .stat-card.scheduled .stat-number { color: var(--warning); }
+    .stat-card.in-progress .stat-number { color: #805ad5; }
+    .stat-card.completed .stat-number { color: var(--success); }
+    .stat-card.attention .stat-number { color: var(--danger); }
+
+    .admin-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .card {
+      background: white;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      background: #fafbfc;
+    }
+
+    .card-header h3 {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .card-body {
+      padding: 1rem 1.25rem;
+      max-height: 350px;
+      overflow-y: auto;
+    }
+
+    .badge {
+      background: var(--primary);
+      color: white;
+      padding: 0.2rem 0.5rem;
+      border-radius: 10px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .job-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .job-item:last-child {
+      border-bottom: none;
+    }
+
+    .job-info strong {
+      display: block;
+      color: var(--text);
+    }
+
+    .job-shop {
+      font-size: 0.8rem;
+      color: var(--text-light);
+    }
+
+    .job-time {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-right: 0.5rem;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: capitalize;
+    }
+
+    .status-badge.new { background: #ebf8ff; color: #2b6cb0; }
+    .status-badge.scheduled { background: #fefcbf; color: #975a16; }
+    .status-badge.in-progress { background: #e9d8fd; color: #6b46c1; }
+    .status-badge.completed { background: #c6f6d5; color: #276749; }
+    .status-badge.needs-attention { background: #fed7d7; color: #c53030; }
+
+    .breakdown-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .breakdown-item:last-child {
+      border-bottom: none;
+    }
+
+    .breakdown-name {
+      color: var(--text);
+    }
+
+    .breakdown-count {
+      font-weight: 600;
+      color: var(--primary);
+    }
+
+    .quick-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .action-btn {
+      display: block;
+      padding: 0.75rem 1rem;
+      background: var(--bg);
+      color: var(--text);
+      border-radius: var(--radius);
+      text-align: center;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    .action-btn:hover {
+      background: var(--primary);
+      color: white;
+      text-decoration: none;
+    }
+
+    .empty-state {
+      color: var(--text-muted);
+      text-align: center;
+      padding: 2rem 0;
+    }
+
+    .page-header {
+      margin-bottom: 1.5rem;
+    }
+
+    .page-header h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .page-header .subtitle {
+      color: var(--text-light);
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <h1>ADAS F1RST</h1>
+      <span class="admin-badge">OWNER</span>
+    </div>
+    <div class="navbar-menu">
+      <a href="/admin/dashboard.html" class="nav-link active">Dashboard</a>
+      <a href="/admin/vehicles.html" class="nav-link">All Vehicles</a>
+      <a href="/admin/shops.html" class="nav-link">Shops</a>
+      <a href="/admin/techs.html" class="nav-link">Techs</a>
+      <a href="/admin/billing.html" class="nav-link">Billing</a>
+      <button class="btn btn-outline btn-sm" id="logoutBtn">Logout</button>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <div class="page-header">
+      <h1>Owner Dashboard</h1>
+      <p class="subtitle">Complete system overview</p>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="admin-stats">
+      <div class="stat-card total">
+        <div class="stat-number" id="statTotal">-</div>
+        <div class="stat-label">Total Vehicles</div>
+      </div>
+      <div class="stat-card new">
+        <div class="stat-number" id="statNew">-</div>
+        <div class="stat-label">New</div>
+      </div>
+      <div class="stat-card scheduled">
+        <div class="stat-number" id="statScheduled">-</div>
+        <div class="stat-label">Scheduled</div>
+      </div>
+      <div class="stat-card in-progress">
+        <div class="stat-number" id="statInProgress">-</div>
+        <div class="stat-label">In Progress</div>
+      </div>
+      <div class="stat-card completed">
+        <div class="stat-number" id="statCompleted">-</div>
+        <div class="stat-label">Completed</div>
+      </div>
+      <div class="stat-card attention">
+        <div class="stat-number" id="statAttention">-</div>
+        <div class="stat-label">Needs Attention</div>
+      </div>
+    </div>
+
+    <!-- Two Column Layout -->
+    <div class="admin-grid">
+      <!-- Today's Schedule -->
+      <div class="card">
+        <div class="card-header">
+          <h3>Today's Schedule</h3>
+          <span class="badge" id="todayCount">0</span>
+        </div>
+        <div class="card-body">
+          <div id="todayJobs">
+            <p class="empty-state">Loading...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- By Shop -->
+      <div class="card">
+        <div class="card-header">
+          <h3>By Shop</h3>
+        </div>
+        <div class="card-body">
+          <div id="byShop">
+            <p class="empty-state">Loading...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- By Technician -->
+      <div class="card">
+        <div class="card-header">
+          <h3>By Technician</h3>
+        </div>
+        <div class="card-body">
+          <div id="byTech">
+            <p class="empty-state">Loading...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="card">
+        <div class="card-header">
+          <h3>Quick Actions</h3>
+        </div>
+        <div class="card-body">
+          <div class="quick-actions">
+            <a href="/admin/vehicles.html?status=New" class="action-btn">
+              Process New Vehicles
+            </a>
+            <a href="/admin/billing.html" class="action-btn">
+              View Billing
+            </a>
+            <a href="/admin/shops.html" class="action-btn">
+              Manage Shops
+            </a>
+            <a href="/admin/techs.html" class="action-btn">
+              Manage Techs
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="/js/auth.js"></script>
+  <script src="/js/admin/dashboard.js"></script>
+</body>
+</html>

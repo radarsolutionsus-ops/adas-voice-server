@@ -7,22 +7,47 @@
 const LOG_TAG = '[SHOP_FILTER]';
 
 /**
- * Middleware that ensures req.shop is set and injects shopName into query params
+ * Middleware that ensures shop context is available from req.user (set by authenticateToken)
  * Must be used after authenticateToken middleware
  */
 export function requireShopContext(req, res, next) {
-  if (!req.shop) {
-    console.log(`${LOG_TAG} No shop context found`);
+  // Shop context comes from JWT via req.user (set by authenticateToken)
+  if (!req.user) {
+    console.log(`${LOG_TAG} No user context found (not authenticated)`);
     return res.status(401).json({ success: false, error: 'Authentication required' });
   }
 
-  // Inject shopName into query for filtering
-  req.shopFilter = {
-    shopName: req.shop.sheetName,
-    shopId: req.shop.id
+  // For shop users, ensure we have sheetName
+  if (req.user.role === 'shop') {
+    if (!req.user.sheetName) {
+      console.error(`${LOG_TAG} Shop user missing sheetName in token:`, {
+        userId: req.user.userId,
+        role: req.user.role,
+        name: req.user.name
+      });
+      return res.status(403).json({
+        success: false,
+        error: 'Invalid session - missing shop context',
+        code: 'MISSING_SHOP_CONTEXT'
+      });
+    }
+
+    // Inject shopFilter for use in controllers
+    req.shopFilter = {
+      shopName: req.user.sheetName,
+      shopId: req.user.userId
+    };
+
+    console.log(`${LOG_TAG} Shop context: ${req.user.name} (filter: ${req.shopFilter.shopName})`);
+  }
+
+  // Also set req.shop for backwards compatibility with any code that uses it
+  req.shop = {
+    id: req.user.userId,
+    name: req.user.name,
+    sheetName: req.user.sheetName
   };
 
-  console.log(`${LOG_TAG} Shop context: ${req.shop.name} (filter: ${req.shopFilter.shopName})`);
   next();
 }
 
