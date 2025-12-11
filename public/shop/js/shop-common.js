@@ -57,9 +57,9 @@
   window.initShopPortal = function() {
     console.log('[SHOP] initShopPortal called');
 
-    // Check auth
-    const token = localStorage.getItem('token');
-    const role = localStorage.getItem('userRole');
+    // Check auth - try both key formats for compatibility
+    const token = localStorage.getItem('adas_access_token') || localStorage.getItem('token');
+    const role = localStorage.getItem('adas_user_role') || localStorage.getItem('userRole');
 
     if (!token) {
       console.log('[SHOP] No token, redirecting to login');
