@@ -513,7 +513,7 @@ async function makeGASRequest(action, data, timeout = 15000) {
   };
 
   try {
-    console.log(`${LOG_TAG} Request: ${action}`, JSON.stringify(data, null, 2));
+    console.log(`${LOG_TAG} Request: ${action}`);
 
     // Google Apps Script returns a 302 redirect which axios follows as GET
     // We need to manually follow the redirect while keeping POST body
@@ -536,7 +536,7 @@ async function makeGASRequest(action, data, timeout = 15000) {
       return { success: false, error: finalResponse.data.error };
     }
 
-    console.log(`${LOG_TAG} Response:`, JSON.stringify(finalResponse.data, null, 2));
+    console.log(`${LOG_TAG} Response: success=${finalResponse.data?.success !== false}`);
     return { success: true, data: finalResponse.data };
   } catch (err) {
     console.error(`${LOG_TAG} Request failed:`, err.message);
@@ -943,7 +943,7 @@ export async function setSchedule(roPo, scheduleData) {
     notes: scheduleData.notes || ''
   };
 
-  console.log(`${LOG_TAG} Request: set_schedule`, JSON.stringify(requestData));
+  console.log(`${LOG_TAG} Request: set_schedule for RO ${roPo}`);
 
   const result = await makeGASRequest('set_schedule', requestData);
 
@@ -1089,7 +1089,7 @@ export async function updateBillingStatus(invoiceNumber, status) {
  * @returns {Promise<Array>} - Array of matching rows
  */
 export async function searchScheduleRows(criteria) {
-  console.log(`${LOG_TAG} Searching schedule rows with criteria:`, JSON.stringify(criteria));
+  console.log(`${LOG_TAG} Searching schedule rows with criteria:`, Object.keys(criteria).join(', '));
 
   try {
     const rows = await readSheetData(SCHEDULE_SHEET_NAME, 'A:U');

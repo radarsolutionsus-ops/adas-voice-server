@@ -2790,7 +2790,6 @@ async function logOpsData(data, callerName = null, sessionLanguage = "en") {
 
   if (!GAS_WEBHOOK_URL) {
     console.log("⚠️  Google Sheets webhook not configured");
-    console.log("📋 Would log:", JSON.stringify(data, null, 2));
     return false;
   }
 
@@ -2820,7 +2819,7 @@ async function logOpsData(data, callerName = null, sessionLanguage = "en") {
   };
 
   try {
-    console.log("📤 Logging to Operations Log:", JSON.stringify(payload, null, 2));
+    console.log("📤 Logging to Operations Log: RO", data.ro_number);
     const response = await axios.post(GAS_WEBHOOK_URL, payload, {
       timeout: 10000,
       headers: { "Content-Type": "application/json" }
@@ -2868,7 +2867,7 @@ async function lookupRO(roNumber) {
     });
 
     if (response.data && response.data.success) {
-      console.log("✅ RO found:", JSON.stringify(response.data.data, null, 2));
+      console.log("✅ RO found: ", roNumber);
       return response.data.data;
     } else {
       console.log(`⚠️  RO ${roNumber} not found:`, response.data?.error || "Unknown error");
@@ -2948,7 +2947,6 @@ async function updateTechData(data, existingTechNotes = "") {
 
   if (!GAS_WEBHOOK_URL) {
     console.log("⚠️  Google Sheets webhook not configured");
-    console.log("📋 Would update:", JSON.stringify(data, null, 2));
     return false;
   }
 
@@ -2980,7 +2978,7 @@ async function updateTechData(data, existingTechNotes = "") {
   };
 
   try {
-    console.log("📤 Updating Tech Log:", JSON.stringify(payload, null, 2));
+    console.log("📤 Updating Tech Log: RO", data.ro_number);
     const response = await axios.post(GAS_WEBHOOK_URL, payload, {
       timeout: 10000,
       headers: { "Content-Type": "application/json" }
