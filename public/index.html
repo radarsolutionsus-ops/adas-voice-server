@@ -5,20 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ADAS F1RST - Login</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/theme.css">
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
       padding: 20px;
     }
 
@@ -28,9 +20,9 @@
     }
 
     .login-card {
-      background: #ffffff;
-      border-radius: 16px;
-      box-shadow: 0 25px 80px rgba(0, 0, 0, 0.5);
+      background: var(--bg-card);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-card);
       padding: 48px 40px;
     }
 
@@ -42,21 +34,21 @@
     .login-logo h1 {
       font-size: 32px;
       font-weight: 700;
-      color: #1a1a2e;
+      color: var(--accent-primary);
       letter-spacing: -1px;
     }
 
     .login-logo p {
       font-size: 15px;
-      color: #6b7280;
+      color: var(--text-secondary);
       margin-top: 8px;
     }
 
     .login-error {
-      background: rgba(220, 38, 38, 0.1);
-      color: #dc2626;
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--status-attention);
       padding: 12px 16px;
-      border-radius: 10px;
+      border-radius: var(--radius-md);
       font-size: 14px;
       margin-bottom: 20px;
       display: none;
@@ -67,67 +59,14 @@
       display: block;
     }
 
-    .form-group {
-      margin-bottom: 20px;
-    }
-
-    .form-group label {
-      display: block;
-      font-size: 13px;
-      font-weight: 600;
-      color: #374151;
-      margin-bottom: 8px;
-    }
-
-    .form-group input {
-      width: 100%;
-      padding: 14px 16px;
-      border: 2px solid #e5e7eb;
-      border-radius: 10px;
-      font-size: 16px;
-      font-family: inherit;
-      transition: all 0.2s ease;
-      background: #f9fafb;
-    }
-
-    .form-group input:focus {
-      outline: none;
-      border-color: #1a1a2e;
-      box-shadow: 0 0 0 4px rgba(26, 26, 46, 0.1);
-      background: white;
-    }
-
-    .form-group input::placeholder {
-      color: #9ca3af;
-    }
-
     .login-btn {
       width: 100%;
       padding: 16px;
-      background: #1a1a2e;
-      color: white;
-      border: none;
-      border-radius: 10px;
-      font-size: 16px;
-      font-weight: 600;
-      font-family: inherit;
-      cursor: pointer;
-      transition: all 0.2s ease;
       margin-top: 10px;
     }
 
-    .login-btn:hover {
-      background: #2d2d4a;
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(26, 26, 46, 0.4);
-    }
-
-    .login-btn:active {
-      transform: translateY(0);
-    }
-
     .login-btn:disabled {
-      background: #6b7280;
+      background: var(--text-tertiary);
       cursor: not-allowed;
       transform: none;
       box-shadow: none;
@@ -137,47 +76,22 @@
       text-align: center;
       margin-top: 32px;
       padding-top: 24px;
-      border-top: 1px solid #e5e7eb;
+      border-top: 1px solid var(--border-light);
     }
 
     .login-help p {
       font-size: 14px;
-      color: #6b7280;
+      color: var(--text-secondary);
     }
 
     .login-help a {
-      color: #1a1a2e;
-      text-decoration: none;
+      color: var(--accent-primary);
       font-weight: 600;
-    }
-
-    .login-help a:hover {
-      text-decoration: underline;
-    }
-
-    .spinner {
-      display: inline-block;
-      width: 18px;
-      height: 18px;
-      border: 2px solid rgba(255,255,255,0.3);
-      border-top-color: white;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin-right: 8px;
-      vertical-align: middle;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
     }
 
     @media (max-width: 480px) {
       .login-card {
         padding: 36px 24px;
-      }
-
-      .login-logo h1 {
-        font-size: 28px;
       }
     }
   </style>
@@ -194,11 +108,11 @@
 
       <form id="loginForm">
         <div class="form-group">
-          <label for="username">Username</label>
+          <label class="form-label" for="username">Username</label>
           <input
             type="text"
             id="username"
-            name="username"
+            class="form-input"
             required
             autocomplete="username"
             placeholder="Enter your username"
@@ -207,18 +121,18 @@
         </div>
 
         <div class="form-group">
-          <label for="password">Password</label>
+          <label class="form-label" for="password">Password</label>
           <input
             type="password"
             id="password"
-            name="password"
+            class="form-input"
             required
             autocomplete="current-password"
             placeholder="Enter your password"
           >
         </div>
 
-        <button type="submit" class="login-btn" id="loginBtn">
+        <button type="submit" class="btn btn-primary login-btn" id="loginBtn">
           Sign In
         </button>
       </form>
@@ -230,38 +144,20 @@
   </div>
 
   <script>
-    // Prevent redirect loops - only check once
-    (function() {
-      // If we just got redirected here, don't auto-redirect back
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('logout') === 'true') {
-        // User explicitly logged out, clear everything and stay here
-        localStorage.clear();
-        sessionStorage.clear();
-        // Clean URL
-        window.history.replaceState({}, '', '/');
-        return;
-      }
+    // Check for logout flag
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('logout') === 'true') {
+      localStorage.clear();
+      sessionStorage.clear();
+      window.history.replaceState({}, '', '/');
+    }
 
-      // Check if we have valid auth
-      const token = localStorage.getItem('token');
-      const role = localStorage.getItem('userRole');
-
-      if (token && role) {
-        // We have credentials, redirect to appropriate portal
-        // But add a flag to prevent loops
-        const redirectAttempts = sessionStorage.getItem('redirectAttempts') || 0;
-        if (parseInt(redirectAttempts) < 2) {
-          sessionStorage.setItem('redirectAttempts', parseInt(redirectAttempts) + 1);
-          redirectToPortal(role);
-        } else {
-          // Too many redirect attempts, clear auth and stay on login
-          console.log('Too many redirects, clearing auth');
-          localStorage.clear();
-          sessionStorage.clear();
-        }
-      }
-    })();
+    // Check if already logged in
+    const token = localStorage.getItem('token');
+    const role = localStorage.getItem('userRole');
+    if (token && role) {
+      redirectToPortal(role);
+    }
 
     document.getElementById('loginForm').addEventListener('submit', async function(e) {
       e.preventDefault();
@@ -277,7 +173,6 @@
         return;
       }
 
-      // Disable button and show loading
       btn.disabled = true;
       btn.innerHTML = '<span class="spinner"></span> Signing in...';
       errorEl.classList.remove('show');
@@ -295,31 +190,26 @@
           throw new Error(data.error || 'Invalid username or password');
         }
 
-        // Clear any previous redirect attempts
-        sessionStorage.removeItem('redirectAttempts');
-
         // Store auth data
         localStorage.setItem('token', data.token);
         localStorage.setItem('userRole', data.user.role);
         localStorage.setItem('userName', data.user.name);
         localStorage.setItem('userShopName', data.user.shopName || '');
 
-        // Small delay to ensure localStorage is written
-        setTimeout(() => {
-          redirectToPortal(data.user.role);
-        }, 100);
+        // Redirect
+        redirectToPortal(data.user.role);
 
       } catch (err) {
-        showError(err.message || 'Login failed. Please try again.');
+        showError(err.message || 'Login failed');
         btn.disabled = false;
         btn.textContent = 'Sign In';
       }
     });
 
     function showError(msg) {
-      const errorEl = document.getElementById('errorMsg');
-      errorEl.textContent = msg;
-      errorEl.classList.add('show');
+      const el = document.getElementById('errorMsg');
+      el.textContent = msg;
+      el.classList.add('show');
     }
 
     function redirectToPortal(role) {
@@ -328,10 +218,7 @@
         'tech': '/tech/dashboard.html',
         'shop': '/shop/dashboard.html'
       };
-
-      const target = portals[role] || portals['shop'];
-      console.log('Redirecting to:', target);
-      window.location.replace(target); // Use replace to prevent back-button loops
+      window.location.href = portals[role] || portals['shop'];
     }
   </script>
 </body>
