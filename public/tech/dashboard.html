@@ -4,7 +4,128 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard - ADAS F1RST Tech Portal</title>
+  <link rel="stylesheet" href="/css/apple-style.css">
   <link rel="stylesheet" href="/css/portal.css">
+  <style>
+    /* Tech Portal - Apple Style Enhancements */
+    .job-status-tabs {
+      display: flex;
+      gap: 4px;
+      padding: 4px;
+      background: var(--bg-grouped, #f2f2f7);
+      border-radius: 12px;
+      margin-bottom: 20px;
+    }
+
+    .status-tab {
+      padding: 10px 20px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-secondary, #86868b);
+      background: transparent;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-tab:hover {
+      color: var(--text-primary, #1d1d1f);
+      background: rgba(0, 0, 0, 0.04);
+    }
+
+    .status-tab.active {
+      color: var(--text-primary, #1d1d1f);
+      background: #ffffff;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      font-weight: 600;
+    }
+
+    .status-tab .count {
+      background: rgba(0, 0, 0, 0.08);
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .status-tab.active .count {
+      background: var(--color-primary, #007aff);
+      color: #fff;
+    }
+
+    /* Job Cards */
+    .job-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 16px;
+    }
+
+    .job-card {
+      background: #ffffff;
+      border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.06));
+      border-radius: 12px;
+      padding: 20px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .job-card:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      transform: translateY(-1px);
+    }
+
+    .job-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+
+    .job-card-ro {
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--text-primary, #1d1d1f);
+    }
+
+    .job-card-shop {
+      font-size: 15px;
+      color: var(--text-secondary, #86868b);
+      margin-bottom: 8px;
+    }
+
+    .job-card-vehicle {
+      font-size: 14px;
+      color: var(--text-tertiary, #aeaeb2);
+    }
+
+    .job-card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.06));
+      margin-top: 12px;
+    }
+
+    .job-card-time {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--color-primary, #007aff);
+    }
+
+    /* Priority indicator */
+    .job-card.priority-high {
+      border-left: 3px solid #ff3b30;
+    }
+
+    .job-card.priority-today {
+      border-left: 3px solid #ff9500;
+    }
+  </style>
 </head>
 <body>
   <div class="portal-layout">

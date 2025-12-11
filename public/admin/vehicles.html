@@ -113,16 +113,16 @@
       </header>
 
       <div class="content-area">
-        <!-- Filters -->
+        <!-- Filters - Apple Style -->
         <div class="card" style="margin-bottom:24px;">
-          <div class="card-body" style="padding:16px;">
-            <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;">
-              <div style="flex:1;min-width:200px;position:relative;">
+          <div class="card-body" style="padding:16px 20px;">
+            <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+              <div style="flex:1;min-width:220px;position:relative;">
                 <span class="icon search-input-icon" id="searchInputIcon"></span>
                 <input type="text" class="form-input form-input-with-icon" id="searchInput" placeholder="Search RO, VIN, or vehicle...">
               </div>
               <div>
-                <select class="form-select" id="statusFilter" style="min-width:150px;">
+                <select class="form-select" id="statusFilter" style="min-width:140px;">
                   <option value="">All Statuses</option>
                   <option value="New">New</option>
                   <option value="Ready">Ready</option>
@@ -133,11 +133,21 @@
                 </select>
               </div>
               <div>
-                <select class="form-select" id="shopFilter" style="min-width:180px;">
+                <select class="form-select" id="shopFilter" style="min-width:160px;">
                   <option value="">All Shops</option>
                 </select>
               </div>
-              <button class="btn btn-secondary" id="clearFilters">
+              <div>
+                <select class="form-select" id="techFilter" style="min-width:160px;">
+                  <option value="">All Techs</option>
+                </select>
+              </div>
+              <div>
+                <select class="form-select" id="monthFilter" style="min-width:140px;">
+                  <option value="">All Months</option>
+                </select>
+              </div>
+              <button class="btn btn-secondary" id="clearFilters" style="padding:10px 16px;">
                 <span class="icon icon-sm" id="clearIcon"></span>
                 Clear
               </button>

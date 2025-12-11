@@ -10,6 +10,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   setTimeout(async () => {
     await loadVehicles();
     await loadShopFilter();
+    await loadTechFilter();
+    buildMonthFilter();
     setupFilters();
     applyUrlFilters();
   }, 100);
@@ -55,10 +57,61 @@ async function loadShopFilter() {
   }
 }
 
+async function loadTechFilter() {
+  try {
+    const data = await AdminAPI.get('/api/admin/techs');
+    if (!data.success) return;
+
+    const select = document.getElementById('techFilter');
+    if (!select) return;
+
+    (data.techs || []).forEach(tech => {
+      const option = document.createElement('option');
+      option.value = tech.name;
+      option.textContent = tech.name;
+      select.appendChild(option);
+    });
+  } catch (err) {
+    console.error('Load techs error:', err);
+  }
+}
+
+function buildMonthFilter() {
+  const select = document.getElementById('monthFilter');
+  if (!select || allVehicles.length === 0) return;
+
+  const months = new Set();
+  allVehicles.forEach(v => {
+    const date = v.createdAt || v.scheduledDate;
+    if (date && !date.includes('1899')) {
+      try {
+        const d = new Date(date);
+        const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        const monthName = d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        months.add(JSON.stringify({ key: monthKey, name: monthName }));
+      } catch {}
+    }
+  });
+
+  const sortedMonths = Array.from(months)
+    .map(m => JSON.parse(m))
+    .sort((a, b) => b.key.localeCompare(a.key))
+    .slice(0, 12);
+
+  sortedMonths.forEach(m => {
+    const option = document.createElement('option');
+    option.value = m.key;
+    option.textContent = m.name;
+    select.appendChild(option);
+  });
+}
+
 function setupFilters() {
   const searchInput = document.getElementById('searchInput');
   const statusFilter = document.getElementById('statusFilter');
   const shopFilter = document.getElementById('shopFilter');
+  const techFilter = document.getElementById('techFilter');
+  const monthFilter = document.getElementById('monthFilter');
   const clearBtn = document.getElementById('clearFilters');
 
   let searchTimeout;
@@ -69,11 +122,15 @@ function setupFilters() {
 
   statusFilter?.addEventListener('change', applyFilters);
   shopFilter?.addEventListener('change', applyFilters);
+  techFilter?.addEventListener('change', applyFilters);
+  monthFilter?.addEventListener('change', applyFilters);
 
   clearBtn?.addEventListener('click', () => {
     searchInput.value = '';
     statusFilter.value = '';
     shopFilter.value = '';
+    if (techFilter) techFilter.value = '';
+    if (monthFilter) monthFilter.value = '';
     window.history.replaceState({}, '', '/admin/vehicles.html');
     applyFilters();
   });
@@ -103,6 +160,8 @@ function applyFilters() {
   const search = document.getElementById('searchInput').value.toLowerCase().trim();
   const status = document.getElementById('statusFilter').value;
   const shop = document.getElementById('shopFilter').value.toLowerCase();
+  const tech = (document.getElementById('techFilter')?.value || '').toLowerCase();
+  const month = document.getElementById('monthFilter')?.value || '';
 
   filteredVehicles = allVehicles.filter(v => {
     // Search filter
@@ -123,6 +182,27 @@ function applyFilters() {
     // Shop filter
     if (shop && !(v.shopName || '').toLowerCase().includes(shop)) {
       return false;
+    }
+
+    // Tech filter
+    if (tech) {
+      const vTech = (v.technician || v.technicianAssigned || '').toLowerCase();
+      if (!vTech.includes(tech)) {
+        return false;
+      }
+    }
+
+    // Month filter
+    if (month) {
+      const date = v.createdAt || v.scheduledDate;
+      if (!date || date.includes('1899')) return false;
+      try {
+        const d = new Date(date);
+        const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        if (monthKey !== month) return false;
+      } catch {
+        return false;
+      }
     }
 
     return true;

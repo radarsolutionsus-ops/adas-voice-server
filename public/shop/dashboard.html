@@ -4,7 +4,151 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard - ADAS F1RST Shop Portal</title>
+  <link rel="stylesheet" href="/css/apple-style.css">
   <link rel="stylesheet" href="/css/portal.css">
+  <style>
+    /* Month Tabs - Apple Style */
+    .month-tabs {
+      display: flex;
+      gap: 4px;
+      padding: 4px;
+      background: var(--bg-grouped, #f2f2f7);
+      border-radius: var(--radius-md, 12px);
+      margin-bottom: 20px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .month-tab {
+      flex: 0 0 auto;
+      padding: 10px 16px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-secondary, #86868b);
+      background: transparent;
+      border: none;
+      border-radius: var(--radius-sm, 8px);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .month-tab:hover {
+      color: var(--text-primary, #1d1d1f);
+      background: rgba(0, 0, 0, 0.04);
+    }
+
+    .month-tab.active {
+      color: var(--text-primary, #1d1d1f);
+      background: #ffffff;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      font-weight: 600;
+    }
+
+    /* Vehicle Cards - Enhanced Apple Style */
+    .vehicle-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 16px;
+    }
+
+    .vehicle-card {
+      background: #ffffff;
+      border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.06));
+      border-radius: var(--radius-md, 12px);
+      padding: 20px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .vehicle-card:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      transform: translateY(-1px);
+    }
+
+    .vehicle-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+
+    .vehicle-card-ro {
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--text-primary, #1d1d1f);
+    }
+
+    .vehicle-card-body {
+      margin-bottom: 12px;
+    }
+
+    .vehicle-card-name {
+      font-size: 15px;
+      color: var(--text-secondary, #86868b);
+      margin-bottom: 4px;
+    }
+
+    .vehicle-card-vin {
+      font-size: 12px;
+      font-family: 'SF Mono', Monaco, monospace;
+      color: var(--text-tertiary, #aeaeb2);
+    }
+
+    .vehicle-card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.06));
+    }
+
+    .vehicle-card-date {
+      font-size: 13px;
+      color: var(--text-secondary, #86868b);
+    }
+
+    /* View toggle */
+    .view-toggle {
+      display: flex;
+      gap: 4px;
+      background: var(--bg-grouped, #f2f2f7);
+      padding: 4px;
+      border-radius: 8px;
+    }
+
+    .view-toggle-btn {
+      padding: 6px 10px;
+      border: none;
+      background: transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      color: var(--text-secondary, #86868b);
+      transition: all 0.15s ease;
+    }
+
+    .view-toggle-btn:hover {
+      color: var(--text-primary, #1d1d1f);
+    }
+
+    .view-toggle-btn.active {
+      background: #ffffff;
+      color: var(--text-primary, #1d1d1f);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+    }
+
+    @media (max-width: 768px) {
+      .month-tabs {
+        margin: 0 -16px 20px;
+        padding: 4px 16px;
+        border-radius: 0;
+      }
+
+      .vehicle-cards-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
 </head>
 <body>
   <div class="portal-layout">
@@ -155,13 +299,28 @@
             </div>
           </div>
 
-          <!-- Vehicles Table -->
+          <!-- Vehicles Section with Month Tabs -->
           <div class="card" id="vehiclesCard" style="grid-column: span 2;">
             <div class="card-header">
               <h3 class="card-title" id="vehiclesCardTitle">Recent Vehicles</h3>
-              <a href="/shop/dashboard.html" class="btn btn-sm btn-secondary" id="viewAllBtn">View All</a>
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <div class="view-toggle" id="viewToggle">
+                  <button class="view-toggle-btn active" data-view="table" title="Table view">
+                    <span class="icon" id="tableViewIcon"></span>
+                  </button>
+                  <button class="view-toggle-btn" data-view="cards" title="Card view">
+                    <span class="icon" id="cardViewIcon"></span>
+                  </button>
+                </div>
+                <a href="/shop/dashboard.html" class="btn btn-sm btn-secondary" id="viewAllBtn">View All</a>
+              </div>
             </div>
-            <div class="card-body no-padding">
+            <div class="card-body">
+              <!-- Month Tabs -->
+              <div class="month-tabs" id="monthTabs">
+                <button class="month-tab active" data-month="all">All</button>
+              </div>
+              <!-- Vehicles Content -->
               <div id="recentVehicles">
                 <div class="loading"><div class="spinner"></div></div>
               </div>
@@ -273,6 +432,10 @@
       document.getElementById('qaNewIcon').innerHTML = Icons.sparkles;
       document.getElementById('qaProgressIcon').innerHTML = Icons.wrench;
       document.getElementById('qaCompletedIcon').innerHTML = Icons.checkCircle;
+
+      // View toggle icons
+      document.getElementById('tableViewIcon').innerHTML = Icons.list;
+      document.getElementById('cardViewIcon').innerHTML = Icons.dashboard;
     }
 
     function setupSidebar() {
@@ -374,11 +537,82 @@
       `).join('');
     }
 
+    // Global state for view and month filter
+    let allVehicles = [];
+    let currentView = 'table';
+    let currentMonth = 'all';
+
     function updateRecentVehicles(vehicles) {
+      allVehicles = vehicles;
+
+      // Build month tabs
+      buildMonthTabs(vehicles);
+
+      // Setup view toggle
+      setupViewToggle();
+
+      // Setup month tab clicks
+      setupMonthTabs();
+
+      // Render with current filters
+      renderVehicles();
+    }
+
+    function buildMonthTabs(vehicles) {
+      const months = new Set();
+      vehicles.forEach(v => {
+        const date = v.createdAt || v.scheduledDate;
+        if (date && !date.includes('1899')) {
+          try {
+            const d = new Date(date);
+            const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            const monthName = d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+            months.add(JSON.stringify({ key: monthKey, name: monthName }));
+          } catch {}
+        }
+      });
+
+      const sortedMonths = Array.from(months)
+        .map(m => JSON.parse(m))
+        .sort((a, b) => b.key.localeCompare(a.key))
+        .slice(0, 6);
+
+      const monthTabsEl = document.getElementById('monthTabs');
+      monthTabsEl.innerHTML = `
+        <button class="month-tab ${currentMonth === 'all' ? 'active' : ''}" data-month="all">All</button>
+        ${sortedMonths.map(m => `
+          <button class="month-tab ${currentMonth === m.key ? 'active' : ''}" data-month="${m.key}">${m.name}</button>
+        `).join('')}
+      `;
+    }
+
+    function setupMonthTabs() {
+      document.querySelectorAll('.month-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          currentMonth = tab.dataset.month;
+          document.querySelectorAll('.month-tab').forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          renderVehicles();
+        });
+      });
+    }
+
+    function setupViewToggle() {
+      document.querySelectorAll('.view-toggle-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          currentView = btn.dataset.view;
+          document.querySelectorAll('.view-toggle-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          renderVehicles();
+        });
+      });
+    }
+
+    function renderVehicles() {
       // Apply status filter if set
-      let filtered = vehicles;
+      let filtered = allVehicles;
       if (statusFilter) {
-        filtered = vehicles.filter(v => {
+        filtered = allVehicles.filter(v => {
           if (statusFilter === 'Scheduled') {
             return v.status === 'Scheduled' || v.status === 'Rescheduled';
           }
@@ -386,8 +620,21 @@
         });
       }
 
-      // Show all when filtering, limit to 20 on dashboard
-      const recent = statusFilter ? filtered : filtered.slice(0, 20);
+      // Apply month filter
+      if (currentMonth !== 'all') {
+        filtered = filtered.filter(v => {
+          const date = v.createdAt || v.scheduledDate;
+          if (!date || date.includes('1899')) return false;
+          try {
+            const d = new Date(date);
+            const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            return monthKey === currentMonth;
+          } catch { return false; }
+        });
+      }
+
+      // Show all when filtering, limit to 30 on dashboard
+      const recent = statusFilter ? filtered : filtered.slice(0, 30);
 
       // Update page title if filtering
       const pageTitle = document.querySelector('.page-title');
@@ -405,6 +652,14 @@
         return;
       }
 
+      if (currentView === 'cards') {
+        renderCardView(recent);
+      } else {
+        renderTableView(recent);
+      }
+    }
+
+    function renderTableView(vehicles) {
       document.getElementById('recentVehicles').innerHTML = `
         <table class="data-table">
           <thead>
@@ -417,7 +672,7 @@
             </tr>
           </thead>
           <tbody>
-            ${recent.map(v => `
+            ${vehicles.map(v => `
               <tr class="clickable" onclick="window.location='/shop/vehicle.html?ro=${encodeURIComponent(v.roPo)}'">
                 <td><strong>${escapeHtml(v.roPo)}</strong></td>
                 <td>${escapeHtml(v.vehicle || 'Unknown')}</td>
@@ -428,6 +683,29 @@
             `).join('')}
           </tbody>
         </table>
+      `;
+    }
+
+    function renderCardView(vehicles) {
+      document.getElementById('recentVehicles').innerHTML = `
+        <div class="vehicle-cards-grid">
+          ${vehicles.map(v => `
+            <div class="vehicle-card" onclick="window.location='/shop/vehicle.html?ro=${encodeURIComponent(v.roPo)}'">
+              <div class="vehicle-card-header">
+                <span class="vehicle-card-ro">RO #${escapeHtml(v.roPo)}</span>
+                <span class="status-badge ${getStatusClass(v.status)}">${v.status || 'New'}</span>
+              </div>
+              <div class="vehicle-card-body">
+                <div class="vehicle-card-name">${escapeHtml(v.vehicle || 'Unknown Vehicle')}</div>
+                ${v.vin ? `<div class="vehicle-card-vin">${escapeHtml(v.vin)}</div>` : ''}
+              </div>
+              <div class="vehicle-card-footer">
+                <span class="vehicle-card-date">${v.scheduledDate ? formatDate(v.scheduledDate) : 'Not scheduled'}</span>
+                <span class="icon">${Icons.chevronRight}</span>
+              </div>
+            </div>
+          `).join('')}
+        </div>
       `;
     }
 
