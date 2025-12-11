@@ -665,6 +665,98 @@ export async function getStats(req, res) {
   }
 }
 
+/**
+ * POST /api/tech/vehicles/:roPo/upload
+ * Upload a document (postScan, invoice, revvReport) for a vehicle
+ */
+export async function uploadDocument(req, res) {
+  try {
+    const { roPo } = req.params;
+    const { docType } = req.body;
+    const user = req.user;
+
+    // Validate docType
+    const validDocTypes = ['postScan', 'invoice', 'revvReport'];
+    if (!validDocTypes.includes(docType)) {
+      return res.status(400).json({
+        success: false,
+        error: `Invalid document type. Must be one of: ${validDocTypes.join(', ')}`
+      });
+    }
+
+    // Check file exists
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: 'No file uploaded' });
+    }
+
+    // Verify vehicle exists
+    const row = await sheetWriter.getScheduleRowByRO(roPo);
+    if (!row) {
+      return res.status(404).json({ success: false, error: 'Vehicle not found' });
+    }
+
+    console.log(`${LOG_TAG} Uploading ${docType} for RO ${roPo} by tech: ${user.techName}`);
+
+    // Import drive upload service dynamically
+    const { uploadPDF } = await import('../services/driveUpload.js');
+
+    // Map docType to drive folder type
+    const folderTypeMap = {
+      'postScan': 'scan_report',
+      'invoice': 'invoice',
+      'revvReport': 'revv_report'
+    };
+
+    // Upload to Drive
+    const uploadResult = await uploadPDF(
+      req.file.buffer,
+      req.file.originalname,
+      roPo,
+      folderTypeMap[docType]
+    );
+
+    if (!uploadResult.success) {
+      console.error(`${LOG_TAG} Failed to upload ${docType}:`, uploadResult.error);
+      return res.status(500).json({ success: false, error: 'Failed to upload file' });
+    }
+
+    const fileUrl = uploadResult.webViewLink;
+    console.log(`${LOG_TAG} ${docType} uploaded: ${fileUrl}`);
+
+    // Map docType to sheet column
+    const columnMap = {
+      'postScan': 'postScanPdf',
+      'invoice': 'invoicePdf',
+      'revvReport': 'revvReportPdf'
+    };
+
+    // Update sheet with URL
+    const updateData = {};
+    updateData[columnMap[docType]] = fileUrl;
+
+    const result = await sheetWriter.upsertScheduleRowByRO(roPo, updateData);
+
+    if (!result.success) {
+      return res.status(500).json({
+        success: false,
+        error: result.error || 'Failed to update document URL'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `${docType} uploaded successfully`,
+      url: fileUrl
+    });
+  } catch (err) {
+    console.error(`${LOG_TAG} Error uploading document:`, err.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to upload document'
+    });
+  }
+}
+
 export default {
   getAllVehicles,
   getMyVehicles,
@@ -675,5 +767,6 @@ export default {
   markComplete,
   addTechNote,
   getDocuments,
-  getStats
+  getStats,
+  uploadDocument
 };

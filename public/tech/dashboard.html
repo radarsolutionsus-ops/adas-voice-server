@@ -215,6 +215,38 @@
           </div>
         </div>
 
+        <!-- Upload Documents -->
+        <div class="modal-section">
+          <h4>Upload Documents</h4>
+          <div class="upload-grid">
+            <div class="upload-item">
+              <label class="upload-label" for="uploadPostScan">
+                <span class="upload-icon" id="uploadIconPostScan"></span>
+                Post-Scan
+              </label>
+              <input type="file" id="uploadPostScan" accept=".pdf" style="display:none;" onchange="uploadDoc('postScan', this.files[0])">
+              <button class="btn btn-sm btn-secondary" onclick="document.getElementById('uploadPostScan').click()">Upload</button>
+            </div>
+            <div class="upload-item">
+              <label class="upload-label" for="uploadInvoice">
+                <span class="upload-icon" id="uploadIconInvoice"></span>
+                Invoice
+              </label>
+              <input type="file" id="uploadInvoice" accept=".pdf" style="display:none;" onchange="uploadDoc('invoice', this.files[0])">
+              <button class="btn btn-sm btn-secondary" onclick="document.getElementById('uploadInvoice').click()">Upload</button>
+            </div>
+            <div class="upload-item">
+              <label class="upload-label" for="uploadRevv">
+                <span class="upload-icon" id="uploadIconRevv"></span>
+                Revv Report
+              </label>
+              <input type="file" id="uploadRevv" accept=".pdf" style="display:none;" onchange="uploadDoc('revvReport', this.files[0])">
+              <button class="btn btn-sm btn-secondary" onclick="document.getElementById('uploadRevv').click()">Upload</button>
+            </div>
+          </div>
+          <div id="uploadStatus" style="margin-top:8px;font-size:13px;color:var(--text-secondary);"></div>
+        </div>
+
         <!-- Notes -->
         <div class="modal-section">
           <h4>Notes</h4>
@@ -395,6 +427,11 @@
       document.getElementById('closeModalIcon').innerHTML = Icons.x;
       document.getElementById('statusWrenchIcon').innerHTML = Icons.wrench;
       document.getElementById('statusCheckIcon').innerHTML = Icons.checkCircle;
+
+      // Upload icons
+      document.getElementById('uploadIconPostScan').innerHTML = Icons.clipboard;
+      document.getElementById('uploadIconInvoice').innerHTML = Icons.receipt || Icons.file;
+      document.getElementById('uploadIconRevv').innerHTML = Icons.barChart;
     }
 
     function setupSidebar() {
@@ -613,6 +650,42 @@
       }
     }
 
+    async function uploadDoc(docType, file) {
+      if (!currentJob || !file) return;
+
+      const statusEl = document.getElementById('uploadStatus');
+      statusEl.textContent = `Uploading ${docType}...`;
+      statusEl.style.color = 'var(--text-secondary)';
+
+      try {
+        const token = getStorageItem('adas_access_token') || getStorageItem('token');
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('docType', docType);
+
+        const response = await fetch(`/api/tech/vehicles/${currentJob.roPo}/upload`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formData
+        });
+
+        const data = await response.json();
+        if (!data.success) throw new Error(data.error);
+
+        statusEl.textContent = `${docType} uploaded successfully!`;
+        statusEl.style.color = 'var(--success)';
+
+        // Refresh job data to show new document
+        await loadJobs();
+        openJobModal(currentJob.roPo);
+      } catch (err) {
+        statusEl.textContent = `Failed to upload: ${err.message}`;
+        statusEl.style.color = 'var(--danger)';
+      }
+    }
+
     function formatDate(dateStr) {
       if (!dateStr || dateStr.includes('1899')) return '';
       try {
@@ -794,6 +867,46 @@
       background: var(--primary);
       color: white;
       border-color: var(--primary);
+    }
+
+    /* Upload Grid */
+    .upload-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .upload-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      padding: 12px;
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      background: var(--bg);
+    }
+
+    .upload-label {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    .upload-icon {
+      width: 24px;
+      height: 24px;
+      color: var(--text-tertiary);
+    }
+
+    @media (max-width: 500px) {
+      .upload-grid {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </body>

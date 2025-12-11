@@ -5,12 +5,26 @@
  */
 
 import express from 'express';
+import multer from 'multer';
 import { authenticateToken } from '../middleware/authMiddleware.js';
 import { requireRole, requirePermission } from '../middleware/roleGuard.js';
 import { ROLES } from '../config/roles.js';
 import * as techController from '../controllers/techController.js';
 
 const router = express.Router();
+
+// Configure multer for file uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'application/pdf') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF files are allowed'), false);
+    }
+  }
+});
 
 // All tech routes require authentication and tech or admin role
 router.use(authenticateToken);
@@ -45,5 +59,22 @@ router.post('/vehicles/:roPo/notes', requirePermission('canAddNotes'), techContr
 
 // Documents
 router.get('/vehicles/:roPo/documents', techController.getDocuments);
+
+// Upload document (postScan, invoice, revvReport)
+router.post('/vehicles/:roPo/upload', upload.single('file'), techController.uploadDocument);
+
+// Multer error handler
+router.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ success: false, error: 'File size must be less than 10MB' });
+    }
+    return res.status(400).json({ success: false, error: err.message });
+  }
+  if (err.message === 'Only PDF files are allowed') {
+    return res.status(400).json({ success: false, error: err.message });
+  }
+  next(err);
+});
 
 export default router;

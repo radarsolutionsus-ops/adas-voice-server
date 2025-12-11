@@ -14,6 +14,7 @@
 
 import sheetWriter from '../services/sheetWriter.js';
 import { filterVehiclesByUser, canAccessVehicle } from '../middleware/dataFilter.js';
+import { parsePDF } from '../services/pdfParser.js';
 
 const LOG_TAG = '[SHOP_CTRL]';
 
@@ -312,6 +313,32 @@ export async function submitVehicleWithFiles(req, res) {
       return res.status(500).json({ success: false, error: 'Failed to upload estimate PDF' });
     }
 
+    // Extract VIN and vehicle info from estimate PDF
+    let extractedVin = '';
+    let extractedVehicle = vehicle || '';
+    try {
+      console.log(`${LOG_TAG} Extracting data from estimate PDF...`);
+      const parseResult = await parsePDF(estimateFile.buffer, estimateFile.originalname, cleanRoPo);
+      if (parseResult.success && parseResult.data) {
+        const data = parseResult.data;
+        if (data.vin) {
+          extractedVin = data.vin;
+          console.log(`${LOG_TAG} Extracted VIN: ${extractedVin.substring(0, 5)}***`);
+        }
+        // Use extracted vehicle info if shop didn't provide one
+        if (!vehicle && data.vehicle) {
+          extractedVehicle = data.vehicle;
+          console.log(`${LOG_TAG} Extracted vehicle: ${extractedVehicle}`);
+        } else if (!vehicle && (data.vehicleYear || data.vehicleMake || data.vehicleModel)) {
+          extractedVehicle = `${data.vehicleYear || ''} ${data.vehicleMake || ''} ${data.vehicleModel || ''}`.trim();
+          console.log(`${LOG_TAG} Built vehicle from parts: ${extractedVehicle}`);
+        }
+      }
+    } catch (parseErr) {
+      console.warn(`${LOG_TAG} Failed to extract data from estimate:`, parseErr.message);
+      // Continue anyway - we can still submit without extracted data
+    }
+
     // Upload pre-scan PDF if provided
     let preScanPdfUrl = '';
     if (preScanFile) {
@@ -337,11 +364,11 @@ export async function submitVehicleWithFiles(req, res) {
       fullNotes = `[${timestamp}] Shop confirmed no active DTC codes\n${fullNotes}`;
     }
 
-    // Create the schedule entry
+    // Create the schedule entry with extracted data
     const result = await sheetWriter.upsertScheduleRowByRO(cleanRoPo, {
       shopName: user.sheetName,
-      vin: '', // Will be extracted later
-      vehicle: vehicle || '',
+      vin: extractedVin,
+      vehicle: extractedVehicle,
       notes: fullNotes.trim(),
       status: 'New',
       estimatePdf: estimatePdfUrl,
