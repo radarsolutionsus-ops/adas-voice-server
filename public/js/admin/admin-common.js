@@ -5,36 +5,29 @@
 // Initialize admin portal
 document.addEventListener('DOMContentLoaded', () => {
   // Check auth - must be admin
-  const token = Auth.getToken();
+  const token = localStorage.getItem('token');
+  const role = localStorage.getItem('userRole');
+
   if (!token) {
-    window.location.href = '/';
+    console.log('[ADMIN] No token, redirecting to login');
+    window.location.replace('/?logout=true');
     return;
   }
 
-  // Verify role from token
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    if (payload.role !== 'admin') {
-      console.error('Access denied: Admin role required');
-      Auth.logout();
-      window.location.href = '/';
-      return;
-    }
-
-    // Set user info
-    const userName = payload.name || 'Admin';
-    const userAvatar = document.getElementById('userAvatar');
-    const userNameEl = document.getElementById('userName');
-
-    if (userAvatar) userAvatar.textContent = userName.charAt(0).toUpperCase();
-    if (userNameEl) userNameEl.textContent = userName;
-
-  } catch (e) {
-    console.error('Invalid token');
-    Auth.logout();
-    window.location.href = '/';
+  if (role !== 'admin') {
+    console.log('[ADMIN] Wrong role:', role);
+    localStorage.clear();
+    window.location.replace('/?logout=true');
     return;
   }
+
+  // Set user info
+  const userName = localStorage.getItem('userName') || 'Admin';
+  const userAvatar = document.getElementById('userAvatar');
+  const userNameEl = document.getElementById('userName');
+
+  if (userAvatar) userAvatar.textContent = userName.charAt(0).toUpperCase();
+  if (userNameEl) userNameEl.textContent = userName;
 
   // Setup sidebar toggle
   setupSidebar();
@@ -70,9 +63,12 @@ function setupSidebar() {
 function setupLogout() {
   const logoutBtn = document.getElementById('logoutBtn');
   if (logoutBtn) {
-    logoutBtn.addEventListener('click', async () => {
-      await Auth.logout();
-      window.location.href = '/';
+    logoutBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      localStorage.clear();
+      sessionStorage.clear();
+      window.location.replace('/?logout=true');
     });
   }
 }
@@ -124,8 +120,9 @@ const AdminAPI = {
     });
 
     if (response.status === 401 || response.status === 403) {
-      Auth.logout();
-      window.location.href = '/';
+      localStorage.clear();
+      sessionStorage.clear();
+      window.location.replace('/?logout=true');
       throw new Error('Session expired');
     }
 

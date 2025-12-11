@@ -20,8 +20,9 @@
         });
 
         if (response.status === 401 || response.status === 403) {
-          Auth.logout();
-          window.location.href = '/';
+          localStorage.clear();
+          sessionStorage.clear();
+          window.location.replace('/?logout=true');
           throw new Error('Session expired');
         }
 
@@ -57,37 +58,31 @@
     console.log('[SHOP] initShopPortal called');
 
     // Check auth
-    const token = Auth.getToken();
+    const token = localStorage.getItem('token');
+    const role = localStorage.getItem('userRole');
+
     if (!token) {
       console.log('[SHOP] No token, redirecting to login');
-      window.location.href = '/';
+      window.location.replace('/?logout=true');
       return false;
     }
 
-    // Verify role from token
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      if (payload.role !== 'shop') {
-        console.error('[SHOP] Access denied: Shop role required');
-        Auth.logout();
-        window.location.href = '/';
-        return false;
-      }
-
-      // Set shop name
-      const shopNameEl = document.getElementById('shopName');
-      if (shopNameEl) {
-        shopNameEl.textContent = payload.name || 'Your Shop';
-      }
-
-      console.log('[SHOP] Portal initialized for:', payload.name);
-      return true;
-    } catch (e) {
-      console.error('[SHOP] Invalid token:', e.message);
-      Auth.logout();
-      window.location.href = '/';
+    if (role !== 'shop') {
+      console.log('[SHOP] Wrong role:', role);
+      localStorage.clear();
+      window.location.replace('/?logout=true');
       return false;
     }
+
+    // Set shop name in header
+    const shopName = localStorage.getItem('userName') || localStorage.getItem('userShopName') || 'Shop';
+    const shopNameEl = document.getElementById('shopName');
+    if (shopNameEl) {
+      shopNameEl.textContent = shopName;
+    }
+
+    console.log('[SHOP] Portal initialized for:', shopName);
+    return true;
   };
 
   // Setup common event listeners
@@ -108,7 +103,7 @@
         console.log('[SHOP] Storage cleared');
 
         // Redirect to login
-        window.location.href = '/';
+        window.location.replace('/?logout=true');
       };
       console.log('[SHOP] Logout handler attached');
     }

@@ -19,8 +19,9 @@
       });
 
       if (response.status === 401 || response.status === 403) {
-        Auth.logout();
-        window.location.href = '/';
+        localStorage.clear();
+        sessionStorage.clear();
+        window.location.replace('/?logout=true');
         throw new Error('Session expired');
       }
 
@@ -51,37 +52,31 @@
     console.log('[TECH] initTechPortal called');
 
     // Check auth
-    const token = Auth.getToken();
+    const token = localStorage.getItem('token');
+    const role = localStorage.getItem('userRole');
+
     if (!token) {
       console.log('[TECH] No token, redirecting to login');
-      window.location.href = '/';
+      window.location.replace('/?logout=true');
       return false;
     }
 
-    // Verify role from token
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      if (payload.role !== 'tech' && payload.role !== 'admin') {
-        console.error('[TECH] Access denied: Tech role required');
-        Auth.logout();
-        window.location.href = '/';
-        return false;
-      }
-
-      // Set tech name
-      const techNameEl = document.getElementById('techName');
-      if (techNameEl) {
-        techNameEl.textContent = payload.name || payload.techName || 'Technician';
-      }
-
-      console.log('[TECH] Portal initialized for:', payload.name);
-      return true;
-    } catch (e) {
-      console.error('[TECH] Invalid token:', e.message);
-      Auth.logout();
-      window.location.href = '/';
+    if (role !== 'tech' && role !== 'admin') {
+      console.log('[TECH] Wrong role:', role);
+      localStorage.clear();
+      window.location.replace('/?logout=true');
       return false;
     }
+
+    // Set tech name in header
+    const techName = localStorage.getItem('userName') || 'Technician';
+    const techNameEl = document.getElementById('techName');
+    if (techNameEl) {
+      techNameEl.textContent = techName;
+    }
+
+    console.log('[TECH] Portal initialized for:', techName);
+    return true;
   };
 
   // Setup common event listeners
@@ -102,7 +97,7 @@
         console.log('[TECH] Storage cleared');
 
         // Redirect to login
-        window.location.href = '/';
+        window.location.replace('/?logout=true');
       };
       console.log('[TECH] Logout handler attached');
     }

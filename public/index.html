@@ -18,7 +18,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
       padding: 20px;
     }
 
@@ -28,9 +28,9 @@
     }
 
     .login-card {
-      background: white;
-      border-radius: 20px;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 25px 80px rgba(0, 0, 0, 0.5);
       padding: 48px 40px;
     }
 
@@ -42,19 +42,19 @@
     .login-logo h1 {
       font-size: 32px;
       font-weight: 700;
-      color: #1d1d1f;
+      color: #1a1a2e;
       letter-spacing: -1px;
     }
 
     .login-logo p {
       font-size: 15px;
-      color: #86868b;
+      color: #6b7280;
       margin-top: 8px;
     }
 
     .login-error {
-      background: rgba(255, 59, 48, 0.1);
-      color: #ff3b30;
+      background: rgba(220, 38, 38, 0.1);
+      color: #dc2626;
       padding: 12px 16px;
       border-radius: 10px;
       font-size: 14px;
@@ -75,39 +75,39 @@
       display: block;
       font-size: 13px;
       font-weight: 600;
-      color: #1d1d1f;
+      color: #374151;
       margin-bottom: 8px;
     }
 
     .form-group input {
       width: 100%;
       padding: 14px 16px;
-      border: 1px solid #d2d2d7;
-      border-radius: 12px;
+      border: 2px solid #e5e7eb;
+      border-radius: 10px;
       font-size: 16px;
       font-family: inherit;
       transition: all 0.2s ease;
-      background: #fbfbfd;
+      background: #f9fafb;
     }
 
     .form-group input:focus {
       outline: none;
-      border-color: #0071e3;
-      box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.1);
+      border-color: #1a1a2e;
+      box-shadow: 0 0 0 4px rgba(26, 26, 46, 0.1);
       background: white;
     }
 
     .form-group input::placeholder {
-      color: #86868b;
+      color: #9ca3af;
     }
 
     .login-btn {
       width: 100%;
       padding: 16px;
-      background: #0071e3;
+      background: #1a1a2e;
       color: white;
       border: none;
-      border-radius: 12px;
+      border-radius: 10px;
       font-size: 16px;
       font-weight: 600;
       font-family: inherit;
@@ -117,9 +117,9 @@
     }
 
     .login-btn:hover {
-      background: #0077ed;
+      background: #2d2d4a;
       transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(0, 113, 227, 0.4);
+      box-shadow: 0 4px 12px rgba(26, 26, 46, 0.4);
     }
 
     .login-btn:active {
@@ -127,7 +127,7 @@
     }
 
     .login-btn:disabled {
-      background: #86868b;
+      background: #6b7280;
       cursor: not-allowed;
       transform: none;
       box-shadow: none;
@@ -137,18 +137,18 @@
       text-align: center;
       margin-top: 32px;
       padding-top: 24px;
-      border-top: 1px solid #e8e8ed;
+      border-top: 1px solid #e5e7eb;
     }
 
     .login-help p {
       font-size: 14px;
-      color: #86868b;
+      color: #6b7280;
     }
 
     .login-help a {
-      color: #0071e3;
+      color: #1a1a2e;
       text-decoration: none;
-      font-weight: 500;
+      font-weight: 600;
     }
 
     .login-help a:hover {
@@ -171,7 +171,6 @@
       to { transform: rotate(360deg); }
     }
 
-    /* Responsive */
     @media (max-width: 480px) {
       .login-card {
         padding: 36px 24px;
@@ -231,12 +230,36 @@
   </div>
 
   <script>
-    // Check if already logged in
+    // Prevent redirect loops - only check once
     (function() {
+      // If we just got redirected here, don't auto-redirect back
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('logout') === 'true') {
+        // User explicitly logged out, clear everything and stay here
+        localStorage.clear();
+        sessionStorage.clear();
+        // Clean URL
+        window.history.replaceState({}, '', '/');
+        return;
+      }
+
+      // Check if we have valid auth
       const token = localStorage.getItem('token');
       const role = localStorage.getItem('userRole');
+
       if (token && role) {
-        redirectToPortal(role);
+        // We have credentials, redirect to appropriate portal
+        // But add a flag to prevent loops
+        const redirectAttempts = sessionStorage.getItem('redirectAttempts') || 0;
+        if (parseInt(redirectAttempts) < 2) {
+          sessionStorage.setItem('redirectAttempts', parseInt(redirectAttempts) + 1);
+          redirectToPortal(role);
+        } else {
+          // Too many redirect attempts, clear auth and stay on login
+          console.log('Too many redirects, clearing auth');
+          localStorage.clear();
+          sessionStorage.clear();
+        }
       }
     })();
 
@@ -272,14 +295,19 @@
           throw new Error(data.error || 'Invalid username or password');
         }
 
+        // Clear any previous redirect attempts
+        sessionStorage.removeItem('redirectAttempts');
+
         // Store auth data
         localStorage.setItem('token', data.token);
         localStorage.setItem('userRole', data.user.role);
         localStorage.setItem('userName', data.user.name);
         localStorage.setItem('userShopName', data.user.shopName || '');
 
-        // Redirect based on role
-        redirectToPortal(data.user.role);
+        // Small delay to ensure localStorage is written
+        setTimeout(() => {
+          redirectToPortal(data.user.role);
+        }, 100);
 
       } catch (err) {
         showError(err.message || 'Login failed. Please try again.');
@@ -295,18 +323,15 @@
     }
 
     function redirectToPortal(role) {
-      switch (role) {
-        case 'admin':
-          window.location.href = '/admin/dashboard.html';
-          break;
-        case 'tech':
-          window.location.href = '/tech/dashboard.html';
-          break;
-        case 'shop':
-        default:
-          window.location.href = '/shop/dashboard.html';
-          break;
-      }
+      const portals = {
+        'admin': '/admin/dashboard.html',
+        'tech': '/tech/dashboard.html',
+        'shop': '/shop/dashboard.html'
+      };
+
+      const target = portals[role] || portals['shop'];
+      console.log('Redirecting to:', target);
+      window.location.replace(target); // Use replace to prevent back-button loops
     }
   </script>
 </body>
