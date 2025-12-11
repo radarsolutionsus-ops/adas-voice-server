@@ -1818,6 +1818,36 @@ a:hover {
   color: var(--status-completed);
 }
 
+.review-value.warning {
+  color: var(--status-in-progress);
+  font-style: italic;
+}
+
+/* Extracted info badges */
+.extracted-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.extracted-badge {
+  display: inline-block;
+  background: rgba(52, 199, 89, 0.15);
+  color: var(--status-completed);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Small spinner for inline use */
+.spinner-sm {
+  width: 20px;
+  height: 20px;
+  border-width: 2px;
+}
+
 /* ========================================
    INFO BANNER
    ======================================== */

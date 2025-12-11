@@ -49,6 +49,9 @@ router.get('/vehicles/:roPo', shopController.getVehicleDetail);
 // Submit new vehicle with file uploads
 router.post('/vehicles', requirePermission('canSubmitVehicle'), vehicleUpload, shopController.submitVehicleWithFiles);
 
+// Extract VIN/vehicle from estimate PDF (called before review step)
+router.post('/extract-estimate', upload.single('estimate'), shopController.extractEstimate);
+
 // Schedule/Reschedule
 router.post('/vehicles/:roPo/schedule', requirePermission('canReschedule'), shopController.scheduleVehicle);
 

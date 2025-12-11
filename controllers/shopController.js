@@ -600,6 +600,85 @@ export async function addShopNote(req, res) {
 }
 
 /**
+ * POST /api/shop/extract-estimate
+ * Extract VIN and vehicle info from uploaded estimate PDF
+ * Called immediately when user uploads estimate, BEFORE review step
+ */
+export async function extractEstimate(req, res) {
+  try {
+    const estimateFile = req.file;
+
+    if (!estimateFile) {
+      return res.status(400).json({
+        success: false,
+        error: 'Estimate PDF is required'
+      });
+    }
+
+    console.log(`${LOG_TAG} Extracting data from estimate: ${estimateFile.originalname}`);
+
+    try {
+      const parseResult = await parsePDF(estimateFile.buffer, estimateFile.originalname);
+
+      if (parseResult.success && parseResult.data) {
+        const data = parseResult.data;
+
+        // Build vehicle string from parts if full vehicle not available
+        let vehicleStr = data.vehicle || '';
+        if (!vehicleStr && (data.vehicleYear || data.vehicleMake || data.vehicleModel)) {
+          vehicleStr = `${data.vehicleYear || ''} ${data.vehicleMake || ''} ${data.vehicleModel || ''}`.trim();
+        }
+
+        console.log(`${LOG_TAG} Extraction result - VIN: ${data.vin ? data.vin.substring(0, 5) + '***' : 'none'}, Vehicle: ${vehicleStr || 'none'}`);
+
+        return res.json({
+          success: true,
+          extracted: {
+            vin: data.vin || '',
+            vehicle: vehicleStr,
+            vehicleYear: data.vehicleYear || '',
+            vehicleMake: data.vehicleMake || '',
+            vehicleModel: data.vehicleModel || ''
+          }
+        });
+      } else {
+        console.warn(`${LOG_TAG} PDF parsing returned no data`);
+        return res.json({
+          success: true,
+          extracted: {
+            vin: '',
+            vehicle: '',
+            vehicleYear: '',
+            vehicleMake: '',
+            vehicleModel: ''
+          },
+          warning: 'Could not extract data from PDF'
+        });
+      }
+    } catch (parseErr) {
+      console.warn(`${LOG_TAG} Failed to parse estimate PDF:`, parseErr.message);
+      return res.json({
+        success: true,
+        extracted: {
+          vin: '',
+          vehicle: '',
+          vehicleYear: '',
+          vehicleMake: '',
+          vehicleModel: ''
+        },
+        warning: 'Failed to parse PDF: ' + parseErr.message
+      });
+    }
+  } catch (err) {
+    console.error(`${LOG_TAG} Error extracting estimate:`, err.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to extract data from estimate'
+    });
+  }
+}
+
+/**
  * GET /api/shop/stats
  * Get dashboard statistics for the shop
  */
@@ -653,6 +732,7 @@ export default {
   getVehicleDetail,
   submitVehicle,
   submitVehicleWithFiles,
+  extractEstimate,
   scheduleVehicle,
   cancelVehicle,
   getDocuments,

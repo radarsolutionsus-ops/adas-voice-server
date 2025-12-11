@@ -149,7 +149,7 @@
     }
   }
 
-  function handleFileSelect(type, file) {
+  async function handleFileSelect(type, file) {
     if (!file) return;
 
     if (file.type !== 'application/pdf') {
@@ -176,6 +176,94 @@
     const upload = document.getElementById(`${type}Upload`);
     if (upload) {
       upload.classList.add('has-file');
+    }
+
+    // If this is an estimate, extract VIN/vehicle info immediately
+    if (type === 'estimate') {
+      await extractEstimateData(file);
+    }
+  }
+
+  /**
+   * Extract VIN and vehicle info from estimate PDF
+   * Called immediately when user uploads estimate
+   */
+  async function extractEstimateData(file) {
+    const content = document.getElementById('estimateContent');
+
+    try {
+      // Show extracting status
+      if (content) {
+        content.innerHTML = `
+          <div class="spinner spinner-sm"></div>
+          <p class="upload-text">Extracting vehicle info...</p>
+          <p class="upload-hint">${escapeHtml(file.name)}</p>
+        `;
+      }
+
+      const formData = new FormData();
+      formData.append('estimate', file);
+
+      const token = await Auth.getValidToken();
+      const response = await fetch('/api/shop/extract-estimate', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      const result = await response.json();
+
+      if (result.success && result.extracted) {
+        extractedData = {
+          vin: result.extracted.vin || '',
+          vehicle: result.extracted.vehicle || ''
+        };
+
+        console.log('[SUBMIT] Extracted from estimate:', extractedData);
+
+        // Update UI with success and extracted info
+        if (content) {
+          let extractedInfo = '';
+          if (extractedData.vin) {
+            extractedInfo += `<span class="extracted-badge">VIN: ${extractedData.vin.substring(0, 6)}...</span>`;
+          }
+          if (extractedData.vehicle) {
+            extractedInfo += `<span class="extracted-badge">${escapeHtml(extractedData.vehicle)}</span>`;
+          }
+
+          content.innerHTML = `
+            <span class="icon upload-success">${Icons.checkCircle}</span>
+            <p class="upload-text">${escapeHtml(file.name)}</p>
+            ${extractedInfo ? `<div class="extracted-info">${extractedInfo}</div>` : ''}
+            <p class="upload-hint">${(file.size / 1024 / 1024).toFixed(2)} MB</p>
+          `;
+        }
+
+        if (result.warning) {
+          Toast.warning(result.warning);
+        }
+      } else {
+        // Show file uploaded but no extraction
+        if (content) {
+          content.innerHTML = `
+            <span class="icon upload-success">${Icons.checkCircle}</span>
+            <p class="upload-text">${escapeHtml(file.name)}</p>
+            <p class="upload-hint">${(file.size / 1024 / 1024).toFixed(2)} MB</p>
+          `;
+        }
+      }
+    } catch (err) {
+      console.error('[SUBMIT] Extraction error:', err);
+      // Still show file as uploaded even if extraction fails
+      if (content) {
+        content.innerHTML = `
+          <span class="icon upload-success">${Icons.checkCircle}</span>
+          <p class="upload-text">${escapeHtml(file.name)}</p>
+          <p class="upload-hint">${(file.size / 1024 / 1024).toFixed(2)} MB</p>
+        `;
+      }
     }
   }
 
@@ -275,17 +363,18 @@
   window.processDocuments = async function() {
     if (!validateStep2()) return;
 
-    showProcessing('Processing documents...');
+    showProcessing('Preparing review...');
 
     try {
-      // For now, we just populate the review section without server processing
-      // The actual VIN extraction happens during submission
-      extractedData = {
-        vin: '',
-        vehicle: document.getElementById('vehicleDesc').value.trim() || ''
-      };
+      // If no VIN was extracted but user provided vehicle info, use that
+      if (!extractedData.vehicle) {
+        const userVehicle = document.getElementById('vehicleDesc').value.trim();
+        if (userVehicle) {
+          extractedData.vehicle = userVehicle;
+        }
+      }
 
-      // Populate review section
+      // Populate review section with extracted data
       populateReview();
 
       hideProcessing();
@@ -305,8 +394,32 @@
     const noDtcConfirm = document.getElementById('noDtcConfirm')?.checked;
 
     document.getElementById('reviewRoPo').textContent = roPo || '-';
-    document.getElementById('reviewVin').textContent = extractedData.vin || 'Will be extracted from estimate';
-    document.getElementById('reviewVehicle').textContent = extractedData.vehicle || vehicle || 'Will be extracted';
+
+    // Show extracted VIN or indicate it wasn't found
+    const reviewVin = document.getElementById('reviewVin');
+    if (extractedData.vin) {
+      reviewVin.textContent = extractedData.vin;
+      reviewVin.classList.add('success');
+      reviewVin.classList.remove('warning');
+    } else {
+      reviewVin.textContent = 'Not found in estimate';
+      reviewVin.classList.add('warning');
+      reviewVin.classList.remove('success');
+    }
+
+    // Show extracted vehicle or user-provided value
+    const reviewVehicle = document.getElementById('reviewVehicle');
+    const displayVehicle = extractedData.vehicle || vehicle;
+    if (displayVehicle) {
+      reviewVehicle.textContent = displayVehicle;
+      reviewVehicle.classList.add('success');
+      reviewVehicle.classList.remove('warning');
+    } else {
+      reviewVehicle.textContent = 'Not found in estimate';
+      reviewVehicle.classList.add('warning');
+      reviewVehicle.classList.remove('success');
+    }
+
     document.getElementById('reviewEstimate').textContent = uploadedFiles.estimate ? 'Uploaded' : '-';
 
     const reviewPrescan = document.getElementById('reviewPrescan');
