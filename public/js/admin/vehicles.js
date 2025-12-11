@@ -184,115 +184,128 @@ async function showVehicleDetail(roPo) {
 
     const v = data.vehicle;
 
-    // Build documents section - handle both snake_case and camelCase from API
+    // Normalize field names (GAS returns snake_case, we prefer camelCase)
+    const roPo = v.roPo || v.ro_po || '';
+    const shopName = v.shopName || v.shop_name || '';
+    const scheduledDate = v.scheduledDate || v.scheduled_date || '';
+    const scheduledTime = v.scheduledTime || v.scheduled_time || '';
+    const technician = v.technician || v.technicianAssigned || v.technician_assigned || '';
+    const requiredCals = v.requiredCalibrations || v.required_calibrations || '';
+    const flowHistory = v.flowHistory || v.flow_history || '';
+
+    // Format scheduled display
+    const scheduleDisplay = scheduledDate
+      ? formatDate(scheduledDate) + (scheduledTime ? ` at ${formatTime(scheduledTime)}` : '')
+      : 'Not scheduled';
+
+    // Build documents section
     const docs = [
       { name: 'Estimate', url: v.estimatePdf || v.estimate_pdf, icon: Icons.fileText },
-      { name: 'Pre-Scan', url: v.preScanPdf || v.prescan_pdf || v.postScanPdf || v.postscan_pdf, icon: Icons.clipboard },
+      { name: 'Pre-Scan', url: v.preScanPdf || v.prescan_pdf, icon: Icons.clipboard },
       { name: 'Revv Report', url: v.revvReportPdf || v.revv_pdf || v.revvPdf, icon: Icons.barChart },
       { name: 'Post-Scan', url: v.postScanPdf || v.postscan_pdf, icon: Icons.clipboard },
       { name: 'Invoice', url: v.invoicePdf || v.invoice_pdf, icon: Icons.receipt }
-    ].filter(d => d.url && d.url.startsWith('http'));
+    ];
 
     // Render flow history entries
-    const flowHistory = v.flowHistory || v.flow_history || '';
     const flowEntries = flowHistory ? flowHistory.split('\n').filter(e => e.trim()) : [];
 
     modalBody.innerHTML = `
-      <div style="display:grid;gap:16px;">
-        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;">
-          <div>
-            <label class="form-label">RO/PO</label>
-            <p style="font-weight:600;">${escapeHtml(v.roPo)}</p>
-          </div>
-          <div>
+      <div class="modal-grid">
+        <!-- Status & Schedule Row -->
+        <div class="modal-row-2">
+          <div class="modal-field">
             <label class="form-label">Status</label>
             <p><span class="status-badge ${getStatusClass(v.status)}">${escapeHtml(v.status || 'New')}</span></p>
           </div>
+          <div class="modal-field">
+            <label class="form-label">Scheduled</label>
+            <p style="font-weight:500;">${escapeHtml(scheduleDisplay)}</p>
+          </div>
         </div>
 
-        <div>
+        <!-- Vehicle Info -->
+        <div class="modal-field">
           <label class="form-label">Vehicle</label>
-          <p>${escapeHtml(v.vehicle || '-')}</p>
+          <p style="font-weight:500;">${escapeHtml(v.vehicle || '-')}</p>
         </div>
 
-        <div>
+        <div class="modal-field">
           <label class="form-label">VIN</label>
-          <p style="font-family:monospace;">${escapeHtml(v.vin || '-')}</p>
+          <p style="font-family:monospace;font-size:13px;">${escapeHtml(v.vin || '-')}</p>
         </div>
 
-        <div>
-          <label class="form-label">Shop</label>
-          <p>${escapeHtml(v.shopName || v.shop_name || '-')}</p>
-        </div>
-
-        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;">
-          <div>
-            <label class="form-label">Scheduled Date</label>
-            <p>${v.scheduledDate ? formatDate(v.scheduledDate) : '-'}</p>
+        <!-- Shop & Tech Row -->
+        <div class="modal-row-2">
+          <div class="modal-field">
+            <label class="form-label">Shop</label>
+            <p>${escapeHtml(shopName || '-')}</p>
           </div>
-          <div>
-            <label class="form-label">Scheduled Time</label>
-            <p>${v.scheduledTime ? formatTime(v.scheduledTime) : '-'}</p>
+          <div class="modal-field">
+            <label class="form-label">Technician</label>
+            <p>${escapeHtml(technician || 'Unassigned')}</p>
           </div>
         </div>
 
-        <div>
-          <label class="form-label">Technician</label>
-          <p>${escapeHtml(v.technician || v.technicianAssigned || v.technician_assigned || 'Unassigned')}</p>
-        </div>
-
-        <div>
+        <!-- Calibrations -->
+        <div class="modal-field">
           <label class="form-label">Required Calibrations</label>
-          <p>${escapeHtml(v.requiredCalibrations || v.required_calibrations || '-')}</p>
+          <p>${escapeHtml(requiredCals || '-')}</p>
         </div>
 
-        ${docs.length > 0 ? `
-          <div>
-            <label class="form-label">Documents</label>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;">
-              ${docs.map(d => `
-                <a href="${d.url}" target="_blank" class="btn btn-sm btn-secondary" style="display:inline-flex;align-items:center;gap:4px;">
-                  <span style="width:14px;height:14px;">${d.icon}</span>
-                  ${d.name}
-                </a>
-              `).join('')}
-            </div>
+        <!-- Documents -->
+        <div class="modal-field">
+          <label class="form-label">Documents</label>
+          <div class="doc-cards-grid">
+            ${docs.map(d => {
+              const hasUrl = d.url && d.url.startsWith('http');
+              return `
+                <div class="doc-card ${hasUrl ? 'available' : 'unavailable'}" ${hasUrl ? `onclick="window.open('${d.url}', '_blank')"` : ''}>
+                  <div class="doc-card-icon">${d.icon}</div>
+                  <div class="doc-card-name">${d.name}</div>
+                  <div class="doc-card-status">${hasUrl ? 'View PDF' : 'N/A'}</div>
+                </div>
+              `;
+            }).join('')}
           </div>
-        ` : ''}
-
-        <div>
-          <label class="form-label">Notes</label>
-          <p style="white-space:pre-wrap;background:var(--bg);padding:12px;border-radius:8px;max-height:150px;overflow-y:auto;">${escapeHtml(v.notes || 'No notes')}</p>
         </div>
 
+        <!-- Notes -->
+        <div class="modal-field">
+          <label class="form-label">Notes</label>
+          <div class="notes-box">${escapeHtml(v.notes || 'No notes')}</div>
+        </div>
+
+        <!-- Activity Log -->
         ${flowEntries.length > 0 ? `
-          <div>
+          <div class="modal-field">
             <label class="form-label">Activity Log</label>
-            <div style="background:var(--bg);padding:12px;border-radius:8px;max-height:200px;overflow-y:auto;">
+            <div class="activity-log">
               ${flowEntries.map(entry => {
                 const parts = entry.match(/^(\d{1,2}\/\d{1,2}\s+\d{1,2}:\d{2}[ap]?)\s+(\w+)\s+(.*)$/i);
                 if (parts) {
-                  return `<div style="display:flex;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);font-size:13px;">
-                    <span style="color:var(--text-tertiary);min-width:80px;">${escapeHtml(parts[1])}</span>
-                    <span class="status-badge ${getStatusClass(parts[2])}" style="font-size:11px;padding:2px 6px;">${escapeHtml(parts[2])}</span>
-                    <span style="flex:1;">${escapeHtml(parts[3])}</span>
+                  return `<div class="activity-entry">
+                    <span class="activity-time">${escapeHtml(parts[1])}</span>
+                    <span class="status-badge ${getStatusClass(parts[2])}" style="font-size:10px;padding:2px 6px;">${escapeHtml(parts[2])}</span>
+                    <span class="activity-text">${escapeHtml(parts[3])}</span>
                   </div>`;
                 }
-                return `<div style="padding:4px 0;font-size:13px;">${escapeHtml(entry)}</div>`;
+                return `<div class="activity-entry"><span class="activity-text">${escapeHtml(entry)}</span></div>`;
               }).join('')}
             </div>
           </div>
         ` : ''}
 
-        <div style="border-top:1px solid var(--border);padding-top:16px;">
+        <!-- Status Change -->
+        <div class="modal-field" style="border-top:1px solid var(--border);padding-top:16px;">
           <label class="form-label">Change Status</label>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <button class="btn btn-sm btn-secondary" onclick="updateStatus('${v.roPo}','New')">New</button>
-            <button class="btn btn-sm btn-secondary" onclick="updateStatus('${v.roPo}','Ready')">Ready</button>
-            <button class="btn btn-sm btn-secondary" onclick="updateStatus('${v.roPo}','Scheduled')">Scheduled</button>
-            <button class="btn btn-sm btn-secondary" onclick="updateStatus('${v.roPo}','In Progress')">In Progress</button>
-            <button class="btn btn-sm btn-success" onclick="updateStatus('${v.roPo}','Completed')">Completed</button>
-            <button class="btn btn-sm btn-danger" onclick="updateStatus('${v.roPo}','Cancelled')">Cancelled</button>
+          <div class="status-buttons">
+            <button class="btn btn-sm btn-secondary" onclick="updateStatus('${roPo}','New')">New</button>
+            <button class="btn btn-sm btn-secondary" onclick="updateStatus('${roPo}','Ready')">Ready</button>
+            <button class="btn btn-sm btn-secondary" onclick="updateStatus('${roPo}','Scheduled')">Scheduled</button>
+            <button class="btn btn-sm btn-secondary" onclick="updateStatus('${roPo}','In Progress')">In Progress</button>
+            <button class="btn btn-sm btn-success" onclick="updateStatus('${roPo}','Completed')">Completed</button>
+            <button class="btn btn-sm btn-danger" onclick="updateStatus('${roPo}','Cancelled')">Cancelled</button>
           </div>
         </div>
       </div>
