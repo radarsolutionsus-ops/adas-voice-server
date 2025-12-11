@@ -373,46 +373,84 @@ function extractShopNameFromPDF(text, pdfType = null) {
 
 /**
  * Extract RO/PO number from estimate text content
- * Looks for common patterns like "RO: 12317-PM-FOX", "RO #12317", "Repair Order: 12317"
+ * Priority order: RO Number > PO Number > Work Order > Claim # (last resort)
  * @param {string} text - PDF text content
  * @returns {string|null} - RO/PO number or null
  */
 function extractRoPoFromText(text) {
   if (!text) return null;
 
-  // Get first 3000 chars (header area where RO is usually found)
-  const header = text.substring(0, 3000);
+  // Get first 5000 chars (header area where RO is usually found)
+  const header = text.substring(0, 5000);
+  console.log(`${LOG_TAG} Searching for RO/PO in ${header.length} chars of text`);
 
-  // Patterns to match RO/PO numbers (in order of specificity)
-  const patterns = [
-    // "RO: 12317-PM-FOX" or "RO #12317-PM-FOX" or "RO Number: 12317-PM-FOX"
-    /(?:RO|R\.O\.|Repair Order)[\s:#]*([A-Za-z0-9]+-[A-Za-z0-9]+-?[A-Za-z0-9]*)/i,
-    // "PO: 12317-PM-FOX" or "PO #12317-PM-FOX"
-    /(?:PO|P\.O\.|Purchase Order)[\s:#]*([A-Za-z0-9]+-[A-Za-z0-9]+-?[A-Za-z0-9]*)/i,
-    // "WO: 12317-PM-FOX" or "Work Order: 12317-PM-FOX"
-    /(?:WO|W\.O\.|Work Order)[\s:#]*([A-Za-z0-9]+-[A-Za-z0-9]+-?[A-Za-z0-9]*)/i,
-    // "RO: 12317" or "RO #12317" (simpler pattern)
-    /(?:RO|R\.O\.|Repair Order)[\s:#]*(\d{4,10}(?:-[A-Za-z0-9]+)*)/i,
-    // "PO: 12317" or "PO #12317"
-    /(?:PO|P\.O\.|Purchase Order)[\s:#]*(\d{4,10}(?:-[A-Za-z0-9]+)*)/i,
-    // Claim Number patterns
-    /(?:Claim|Claim\s*#|Claim\s*Number)[\s:#]*([A-Za-z0-9]+-?[A-Za-z0-9]*-?[A-Za-z0-9]*)/i,
-    // File Number / Reference Number
-    /(?:File|File\s*#|Reference)[\s:#]*(\d{4,10}(?:-[A-Za-z0-9]+)*)/i,
+  // PRIORITY 1: RO Number patterns (most specific, try these first)
+  // "RO Number: 12317-PM-FOX" or "RO#: 12317" or "R.O. Number: 12317"
+  const roNumberPatterns = [
+    /RO\s*Number[\s:]+([A-Z0-9][A-Z0-9\-]+)/i,
+    /R\.O\.\s*Number[\s:]+([A-Z0-9][A-Z0-9\-]+)/i,
+    /RO\s*#[\s:]*([A-Z0-9][A-Z0-9\-]+)/i,
+    /R\.O\.\s*#[\s:]*([A-Z0-9][A-Z0-9\-]+)/i,
+    /RO\s*No\.?[\s:]+([A-Z0-9][A-Z0-9\-]+)/i,
+    /Repair\s*Order[\s:#]+([A-Z0-9][A-Z0-9\-]+)/i,
   ];
 
-  for (const pattern of patterns) {
+  for (const pattern of roNumberPatterns) {
     const match = header.match(pattern);
-    if (match && match[1]) {
-      const roPo = match[1].trim();
-      // Skip very short matches (likely false positives)
-      if (roPo.length >= 4) {
-        console.log(`${LOG_TAG} Extracted RO/PO from text: ${roPo}`);
-        return roPo;
-      }
+    if (match && match[1] && match[1].length >= 4) {
+      console.log(`${LOG_TAG} Found RO Number: ${match[1]}`);
+      return match[1].trim();
     }
   }
 
+  // PRIORITY 2: PO Number patterns
+  const poNumberPatterns = [
+    /PO\s*Number[\s:]+([A-Z0-9][A-Z0-9\-]+)/i,
+    /P\.O\.\s*Number[\s:]+([A-Z0-9][A-Z0-9\-]+)/i,
+    /PO\s*#[\s:]*([A-Z0-9][A-Z0-9\-]+)/i,
+    /P\.O\.\s*#[\s:]*([A-Z0-9][A-Z0-9\-]+)/i,
+    /PO\s*No\.?[\s:]+([A-Z0-9][A-Z0-9\-]+)/i,
+    /Purchase\s*Order[\s:#]+([A-Z0-9][A-Z0-9\-]+)/i,
+  ];
+
+  for (const pattern of poNumberPatterns) {
+    const match = header.match(pattern);
+    if (match && match[1] && match[1].length >= 4) {
+      console.log(`${LOG_TAG} Found PO Number: ${match[1]}`);
+      return match[1].trim();
+    }
+  }
+
+  // PRIORITY 3: Work Order patterns
+  const woPatterns = [
+    /Work\s*Order[\s:#]+([A-Z0-9][A-Z0-9\-]+)/i,
+    /WO\s*#[\s:]*([A-Z0-9][A-Z0-9\-]+)/i,
+    /W\.O\.\s*#[\s:]*([A-Z0-9][A-Z0-9\-]+)/i,
+  ];
+
+  for (const pattern of woPatterns) {
+    const match = header.match(pattern);
+    if (match && match[1] && match[1].length >= 4) {
+      console.log(`${LOG_TAG} Found Work Order: ${match[1]}`);
+      return match[1].trim();
+    }
+  }
+
+  // PRIORITY 4 (LAST RESORT): Claim Number - only if nothing else found
+  const claimPatterns = [
+    /Claim\s*#[\s:]*([A-Z0-9][A-Z0-9\-]+)/i,
+    /Claim\s*Number[\s:]+([A-Z0-9][A-Z0-9\-]+)/i,
+  ];
+
+  for (const pattern of claimPatterns) {
+    const match = header.match(pattern);
+    if (match && match[1] && match[1].length >= 4) {
+      console.log(`${LOG_TAG} Found Claim # (fallback): ${match[1]}`);
+      return match[1].trim();
+    }
+  }
+
+  console.log(`${LOG_TAG} No RO/PO found in text content`);
   return null;
 }
 

@@ -586,7 +586,9 @@ function createNewRow(sheet, data, roPo) {
   const oemPosition = data.oem_position || data.oemPosition || data.oem_links || '';
 
   // Auto-assign technician based on shop region if not already specified
+  Logger.log('[CREATE_ROW] About to assign tech for shop: "' + shopName + '"');
   const technician = data.technician || getAssignedTechForShop(shopName);
+  Logger.log('[CREATE_ROW] Technician assigned: "' + technician + '" for shop: "' + shopName + '"');
 
   // Build new row (A through U = 21 columns)
   const newRow = [
@@ -5426,4 +5428,68 @@ function adminReassignJob(data) {
   }
 
   return { success: false, error: 'RO not found' };
+}
+
+/**
+ * TEST FUNCTION: Test tech assignment for a specific shop
+ * Run this from the Apps Script editor to verify tech assignment is working
+ * @param {string} testShopName - Shop name to test (default: 'PAINT MAX INC')
+ */
+function testTechAssignment(testShopName) {
+  testShopName = testShopName || 'PAINT MAX INC';
+  Logger.log('=== TEST: Tech Assignment ===');
+  Logger.log('Testing shop: ' + testShopName);
+
+  const result = getAssignedTechForShop(testShopName);
+
+  Logger.log('=== RESULT ===');
+  Logger.log('Shop: ' + testShopName + ' → Assigned Tech: ' + result);
+
+  return { shop: testShopName, assignedTech: result };
+}
+
+/**
+ * TEST FUNCTION: Dump Shops sheet data to verify columns
+ */
+function testDumpShopsData() {
+  Logger.log('=== Dumping Shops Sheet Data ===');
+  const sheet = SpreadsheetApp.getActive().getSheetByName(SHOPS_SHEET);
+  if (!sheet) {
+    Logger.log('ERROR: Shops sheet not found');
+    return;
+  }
+
+  const data = sheet.getDataRange().getValues();
+  Logger.log('Total rows: ' + data.length);
+
+  // Show header
+  Logger.log('Header: ' + JSON.stringify(data[0]));
+
+  // Show first 5 data rows
+  for (let i = 1; i < Math.min(6, data.length); i++) {
+    Logger.log('Row ' + i + ': Name="' + data[i][0] + '", Col G (Region)="' + data[i][6] + '"');
+  }
+}
+
+/**
+ * TEST FUNCTION: Dump Technicians sheet data to verify columns
+ */
+function testDumpTechniciansData() {
+  Logger.log('=== Dumping Technicians Sheet Data ===');
+  const sheet = SpreadsheetApp.getActive().getSheetByName(TECHNICIANS_SHEET);
+  if (!sheet) {
+    Logger.log('ERROR: Technicians sheet not found');
+    return;
+  }
+
+  const data = sheet.getDataRange().getValues();
+  Logger.log('Total rows: ' + data.length);
+
+  // Show header
+  Logger.log('Header: ' + JSON.stringify(data[0]));
+
+  // Show all tech rows
+  for (let i = 1; i < data.length; i++) {
+    Logger.log('Row ' + i + ': Name="' + data[i][0] + '", Col F (Regions)="' + data[i][5] + '", Col H (Active)="' + data[i][7] + '"');
+  }
 }
