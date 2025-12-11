@@ -4,29 +4,150 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Vehicle Details - ADAS F1RST</title>
-  <link rel="stylesheet" href="/shop/css/shop.css">
+  <link rel="stylesheet" href="/css/apple-style.css">
+  <style>
+    .documents-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 16px;
+    }
+
+    .document-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      text-decoration: none;
+      color: var(--text-primary);
+      transition: all var(--transition-fast);
+      cursor: default;
+    }
+
+    .document-card.available {
+      cursor: pointer;
+    }
+
+    .document-card.available:hover {
+      border-color: var(--color-primary);
+      background: rgba(0, 113, 227, 0.02);
+      box-shadow: var(--shadow-md);
+    }
+
+    .document-card.unavailable {
+      opacity: 0.5;
+    }
+
+    .doc-icon {
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-secondary);
+      border-radius: var(--radius-md);
+      margin-bottom: 12px;
+      color: var(--text-secondary);
+    }
+
+    .document-card.available .doc-icon {
+      background: rgba(0, 113, 227, 0.1);
+      color: var(--color-primary);
+    }
+
+    .doc-name {
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 4px;
+      text-align: center;
+    }
+
+    .doc-status {
+      font-size: 12px;
+      color: var(--text-tertiary);
+    }
+
+    .doc-status.available {
+      color: var(--color-primary);
+    }
+
+    .scheduled-banner {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px;
+      background: rgba(0, 113, 227, 0.08);
+      border-radius: var(--radius-md);
+      margin-top: 16px;
+    }
+
+    .scheduled-banner .icon {
+      color: var(--color-primary);
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 24px;
+    }
+
+    .info-item {
+      margin-bottom: 16px;
+    }
+
+    .info-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      color: var(--text-tertiary);
+      margin-bottom: 4px;
+      letter-spacing: 0.5px;
+    }
+
+    .info-value {
+      font-size: 15px;
+      color: var(--text-primary);
+    }
+
+    .info-value.mono {
+      font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+    }
+
+    .notes-box {
+      background: var(--bg-secondary);
+      padding: 12px 16px;
+      border-radius: var(--radius-md);
+      max-height: 200px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      font-size: 14px;
+    }
+  </style>
 </head>
 <body>
-  <header class="shop-header">
-    <div class="header-left">
-      <span class="logo">ADAS F1RST</span>
-    </div>
+  <!-- Header -->
+  <header class="app-header">
+    <div class="app-logo">ADAS F1RST</div>
     <div class="header-center">
-      <span class="shop-name" id="shopName">Loading...</span>
+      <span class="shop-badge" id="shopName">Loading...</span>
     </div>
-    <div class="header-right">
-      <button class="btn-icon" id="helpBtn" title="Need Help?">&#10067;</button>
-      <button class="btn-logout" id="logoutBtn">Logout</button>
+    <div class="header-actions">
+      <button class="header-btn" id="helpBtn" title="Help">
+        <span class="icon" id="helpIcon"></span>
+      </button>
+      <button class="btn-logout" id="logoutBtn">
+        <span class="icon icon-sm" id="logoutIcon"></span>
+        Sign Out
+      </button>
     </div>
   </header>
 
-  <main class="shop-main">
-    <!-- Back Button -->
-    <div style="margin-bottom:24px;">
-      <a href="/shop/dashboard.html" class="btn-secondary" style="display:inline-flex;align-items:center;gap:8px;">
-        &#8592; Back to Dashboard
-      </a>
-    </div>
+  <main class="app-main">
+    <!-- Back Link -->
+    <a href="/shop/dashboard.html" class="back-link">
+      <span class="icon" id="backIcon"></span>
+      Back to Dashboard
+    </a>
 
     <!-- Loading State -->
     <div id="loadingState" class="card">
@@ -45,42 +166,42 @@
         <div class="card-body">
           <div style="display:flex;justify-content:space-between;align-items:start;flex-wrap:wrap;gap:16px;">
             <div>
-              <h1 style="font-size:28px;margin-bottom:8px;">RO #<span id="vehicleRo"></span></h1>
+              <h1 style="font-size:28px;font-weight:600;margin-bottom:8px;">RO #<span id="vehicleRo"></span></h1>
               <p style="font-size:18px;color:var(--text-secondary);" id="vehicleName"></p>
             </div>
-            <span class="vehicle-status" id="vehicleStatus" style="font-size:16px;padding:10px 24px;"></span>
+            <span class="status-badge" id="vehicleStatus"></span>
           </div>
 
           <!-- Scheduled Date Banner -->
-          <div id="scheduledBanner" class="scheduled-info" style="display:none;margin-top:20px;">
-            <span class="icon">&#128197;</span>
-            <span class="date" id="scheduledDate"></span>
-            <span class="time" id="scheduledTime"></span>
+          <div id="scheduledBanner" class="scheduled-banner" style="display:none;">
+            <span class="icon" id="calendarIcon"></span>
+            <div>
+              <strong id="scheduledDate"></strong>
+              <span id="scheduledTime" style="color:var(--text-secondary);margin-left:8px;"></span>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- Info Grid -->
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;margin-bottom:24px;">
+      <div class="info-grid" style="margin-bottom:24px;">
         <!-- Vehicle Info -->
         <div class="card">
           <div class="card-header">
-            <h2>Vehicle Information</h2>
+            <h2 style="font-size:17px;font-weight:600;">Vehicle Information</h2>
           </div>
           <div class="card-body">
-            <div style="display:flex;flex-direction:column;gap:16px;">
-              <div>
-                <label style="font-size:13px;color:var(--text-muted);text-transform:uppercase;">VIN</label>
-                <p style="font-family:monospace;font-size:16px;" id="vehicleVin">-</p>
-              </div>
-              <div>
-                <label style="font-size:13px;color:var(--text-muted);text-transform:uppercase;">Required Calibrations</label>
-                <p id="vehicleCalibrations">-</p>
-              </div>
-              <div>
-                <label style="font-size:13px;color:var(--text-muted);text-transform:uppercase;">Notes</label>
-                <p id="vehicleNotes" style="white-space:pre-wrap;background:var(--background);padding:12px;border-radius:8px;max-height:200px;overflow-y:auto;">-</p>
-              </div>
+            <div class="info-item">
+              <div class="info-label">VIN</div>
+              <div class="info-value mono" id="vehicleVin">-</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Required Calibrations</div>
+              <div class="info-value" id="vehicleCalibrations">-</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Notes</div>
+              <div class="notes-box" id="vehicleNotes">-</div>
             </div>
           </div>
         </div>
@@ -88,10 +209,10 @@
         <!-- Documents -->
         <div class="card">
           <div class="card-header">
-            <h2>Documents</h2>
+            <h2 style="font-size:17px;font-weight:600;">Documents</h2>
           </div>
           <div class="card-body">
-            <div class="document-grid" id="documentGrid">
+            <div class="documents-grid" id="documentGrid">
               <!-- Populated by JS -->
             </div>
           </div>
@@ -101,7 +222,7 @@
       <!-- Actions -->
       <div class="card">
         <div class="card-header">
-          <h2>Actions</h2>
+          <h2 style="font-size:17px;font-weight:600;">Actions</h2>
         </div>
         <div class="card-body">
           <div style="display:flex;gap:16px;flex-wrap:wrap;" id="actionButtons">
@@ -115,33 +236,35 @@
     <div id="errorState" class="card" style="display:none;">
       <div class="card-body">
         <div class="empty-state">
-          <div class="empty-icon">&#9888;</div>
+          <span class="icon icon-xl" id="errorIcon"></span>
           <h2>Vehicle Not Found</h2>
           <p id="errorMessage">The requested vehicle could not be found.</p>
-          <a href="/shop/dashboard.html" class="btn-primary" style="margin-top:16px;">Back to Dashboard</a>
+          <a href="/shop/dashboard.html" class="btn-accent" style="margin-top:16px;">Back to Dashboard</a>
         </div>
       </div>
     </div>
   </main>
 
   <!-- Help Modal -->
-  <div class="modal" id="helpModal">
-    <div class="modal-content">
+  <div class="modal-overlay" id="helpModal">
+    <div class="modal">
       <div class="modal-header">
         <h3>Need Help?</h3>
-        <button class="modal-close">&times;</button>
+        <button class="modal-close" id="helpModalClose">
+          <span class="icon icon-sm" id="closeIcon"></span>
+        </button>
       </div>
       <div class="modal-body">
         <div class="help-item">
-          <span class="help-icon">&#128222;</span>
-          <div>
+          <span class="icon" id="helpPhoneIcon"></span>
+          <div class="help-item-content">
             <strong>Call Us</strong>
             <p><a href="tel:+13055551234">305-555-1234</a></p>
           </div>
         </div>
         <div class="help-item">
-          <span class="help-icon">&#128231;</span>
-          <div>
+          <span class="icon" id="helpMailIcon"></span>
+          <div class="help-item-content">
             <strong>Email Support</strong>
             <p><a href="mailto:adasf1rstservice@gmail.com">adasf1rstservice@gmail.com</a></p>
           </div>
@@ -150,6 +273,7 @@
     </div>
   </div>
 
+  <script src="/js/icons.js"></script>
   <script src="/js/auth.js"></script>
   <script src="/js/api.js"></script>
   <script src="/shop/js/shop-common.js"></script>
@@ -159,6 +283,7 @@
     document.addEventListener('DOMContentLoaded', async () => {
       if (!initShopPortal()) return;
       setupCommonHandlers();
+      initializeIcons();
 
       // Get RO from URL
       const params = new URLSearchParams(window.location.search);
@@ -171,6 +296,21 @@
 
       await loadVehicle(ro);
     });
+
+    function initializeIcons() {
+      // Header icons
+      document.getElementById('helpIcon').innerHTML = Icons.help;
+      document.getElementById('logoutIcon').innerHTML = Icons.logout;
+      document.getElementById('backIcon').innerHTML = Icons.arrowLeft;
+
+      // Modal icons
+      document.getElementById('closeIcon').innerHTML = Icons.x;
+      document.getElementById('helpPhoneIcon').innerHTML = Icons.phone;
+      document.getElementById('helpMailIcon').innerHTML = Icons.mail;
+
+      // Other icons
+      document.getElementById('errorIcon').innerHTML = Icons.alertCircle;
+    }
 
     async function loadVehicle(ro) {
       try {
@@ -200,7 +340,7 @@
 
       const statusEl = document.getElementById('vehicleStatus');
       statusEl.textContent = v.status || 'New';
-      statusEl.className = `vehicle-status ${getStatusClass(v.status)}`;
+      statusEl.className = `status-badge ${getStatusClass(v.status)}`;
 
       document.getElementById('vehicleVin').textContent = v.vin || '-';
       document.getElementById('vehicleCalibrations').textContent = v.requiredCalibrations || 'Not determined';
@@ -209,6 +349,7 @@
       // Scheduled date
       if ((v.status === 'Scheduled' || v.status === 'Rescheduled') && v.scheduledDate) {
         document.getElementById('scheduledBanner').style.display = 'flex';
+        document.getElementById('calendarIcon').innerHTML = Icons.calendar;
         document.getElementById('scheduledDate').textContent = formatDate(v.scheduledDate);
         document.getElementById('scheduledTime').textContent = v.scheduledTime ? `at ${formatTime(v.scheduledTime)}` : '';
       }
@@ -223,20 +364,24 @@
     function renderDocuments(v) {
       const grid = document.getElementById('documentGrid');
       const docs = [
-        { name: 'Estimate', url: v.estimatePdf, icon: '&#128196;' },
-        { name: 'Pre-Scan', url: v.preScanPdf || v.postScanPdf, icon: '&#128203;' },
-        { name: 'Revv Report', url: v.revvReportPdf, icon: '&#128202;' },
-        { name: 'Post-Scan', url: v.postScanPdf, icon: '&#128203;' },
-        { name: 'Invoice', url: v.invoicePdf, icon: '&#128179;' }
+        { name: 'Estimate', url: v.estimatePdf, icon: 'fileText' },
+        { name: 'Pre-Scan', url: v.preScanPdf, icon: 'clipboard' },
+        { name: 'Revv Report', url: v.revvReportPdf, icon: 'barChart' },
+        { name: 'Post-Scan', url: v.postScanPdf, icon: 'clipboard' },
+        { name: 'Invoice', url: v.invoicePdf, icon: 'invoice' }
       ];
 
-      grid.innerHTML = docs.map(doc => `
-        <div class="document-card ${doc.url ? 'available' : ''}" ${doc.url ? `onclick="window.open('${doc.url}', '_blank')"` : ''}>
-          <div class="doc-icon">${doc.icon}</div>
-          <div class="doc-name">${doc.name}</div>
-          <div class="doc-status">${doc.url ? 'Available' : 'Not uploaded'}</div>
-        </div>
-      `).join('');
+      grid.innerHTML = docs.map(doc => {
+        const hasUrl = doc.url && doc.url.startsWith('http');
+        return `
+          <div class="document-card ${hasUrl ? 'available' : 'unavailable'}"
+               ${hasUrl ? `onclick="window.open('${doc.url}', '_blank')"` : ''}>
+            <div class="doc-icon">${Icons[doc.icon] || Icons.file}</div>
+            <div class="doc-name">${doc.name}</div>
+            <div class="doc-status ${hasUrl ? 'available' : ''}">${hasUrl ? 'View PDF' : 'Not uploaded'}</div>
+          </div>
+        `;
+      }).join('');
     }
 
     function renderActions(v) {
@@ -245,15 +390,21 @@
 
       if (v.status !== 'Completed' && v.status !== 'In Progress' && v.status !== 'Cancelled') {
         const scheduleText = (v.status === 'Scheduled' || v.status === 'Rescheduled') ? 'Reschedule' : 'Schedule Calibration';
-        actions.push(`<a href="/shop/schedule.html?ro=${encodeURIComponent(v.roPo)}" class="btn-action btn-schedule">${scheduleText}</a>`);
+        actions.push(`<a href="/shop/schedule.html?ro=${encodeURIComponent(v.roPo)}" class="btn-accent">
+          ${Icons.calendar}
+          ${scheduleText}
+        </a>`);
       }
 
       if (v.status === 'Scheduled' || v.status === 'Rescheduled') {
-        actions.push(`<button class="btn-action btn-view" onclick="cancelAppointment('${v.roPo}')">Cancel Appointment</button>`);
+        actions.push(`<button class="btn-secondary" onclick="cancelAppointment('${v.roPo}')">
+          ${Icons.x}
+          Cancel Appointment
+        </button>`);
       }
 
       if (actions.length === 0) {
-        actions.push('<p style="color:var(--text-muted);">No actions available for this vehicle.</p>');
+        actions.push('<p style="color:var(--text-tertiary);">No actions available for this vehicle.</p>');
       }
 
       container.innerHTML = actions.join('');

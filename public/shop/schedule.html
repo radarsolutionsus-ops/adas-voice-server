@@ -4,37 +4,34 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Schedule Calibration - ADAS F1RST</title>
-  <link rel="stylesheet" href="/shop/css/shop.css">
+  <link rel="stylesheet" href="/css/apple-style.css">
   <style>
     .vehicle-summary {
-      background: var(--background);
-      border-radius: 12px;
+      background: var(--bg-secondary);
+      border-radius: var(--radius-lg);
       padding: 20px;
-      margin-bottom: 24px;
     }
+
     .vehicle-summary h2 {
       font-size: 20px;
+      font-weight: 600;
       margin-bottom: 4px;
     }
+
     .vehicle-summary .ro {
-      color: var(--text-muted);
+      color: var(--text-secondary);
       font-size: 14px;
     }
-    .vehicle-summary .current-schedule {
+
+    .current-schedule {
       margin-top: 16px;
       padding: 12px 16px;
       background: rgba(234, 179, 8, 0.1);
-      border-left: 4px solid var(--warning);
-      border-radius: 8px;
-    }
-
-    .date-picker-section {
-      margin-bottom: 32px;
-    }
-    .date-picker-section h3 {
-      font-size: 16px;
-      margin-bottom: 16px;
-      color: var(--text-secondary);
+      border-left: 4px solid var(--color-warning);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
 
     .date-grid {
@@ -42,38 +39,40 @@
       grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
       gap: 12px;
     }
+
     .date-option {
       padding: 16px 12px;
-      border: 2px solid var(--border);
-      border-radius: 12px;
+      border: 2px solid var(--border-color);
+      border-radius: var(--radius-lg);
       text-align: center;
       cursor: pointer;
-      transition: all 0.2s;
-      background: white;
+      transition: all var(--transition-fast);
+      background: var(--bg-primary);
     }
+
     .date-option:hover {
-      border-color: var(--primary);
+      border-color: var(--color-primary);
       transform: translateY(-2px);
     }
+
     .date-option.selected {
-      border-color: var(--primary);
-      background: rgba(26, 115, 232, 0.1);
+      border-color: var(--color-primary);
+      background: rgba(0, 113, 227, 0.08);
     }
-    .date-option.unavailable {
-      opacity: 0.5;
-      cursor: not-allowed;
-      background: var(--background);
-    }
+
     .date-option .day-name {
-      font-size: 12px;
-      color: var(--text-muted);
+      font-size: 11px;
+      color: var(--text-tertiary);
       text-transform: uppercase;
       margin-bottom: 4px;
+      letter-spacing: 0.5px;
     }
+
     .date-option .day-num {
       font-size: 24px;
-      font-weight: 700;
+      font-weight: 600;
     }
+
     .date-option .month {
       font-size: 12px;
       color: var(--text-secondary);
@@ -84,69 +83,71 @@
       grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
       gap: 12px;
     }
+
     .time-option {
       padding: 16px;
-      border: 2px solid var(--border);
-      border-radius: 12px;
+      border: 2px solid var(--border-color);
+      border-radius: var(--radius-lg);
       text-align: center;
       cursor: pointer;
-      transition: all 0.2s;
-      background: white;
-      font-size: 16px;
+      transition: all var(--transition-fast);
+      background: var(--bg-primary);
+      font-size: 15px;
       font-weight: 500;
     }
+
     .time-option:hover {
-      border-color: var(--primary);
-    }
-    .time-option.selected {
-      border-color: var(--primary);
-      background: rgba(26, 115, 232, 0.1);
-    }
-    .time-option.unavailable {
-      opacity: 0.5;
-      cursor: not-allowed;
-      text-decoration: line-through;
-      background: var(--background);
+      border-color: var(--color-primary);
     }
 
-    .notes-section {
-      margin-bottom: 32px;
+    .time-option.selected {
+      border-color: var(--color-primary);
+      background: rgba(0, 113, 227, 0.08);
     }
+
     .notes-input {
       width: 100%;
       padding: 16px;
-      font-size: 16px;
-      border: 2px solid var(--border);
-      border-radius: 12px;
+      font-size: 15px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
       resize: vertical;
       min-height: 100px;
+      font-family: inherit;
     }
+
     .notes-input:focus {
       outline: none;
-      border-color: var(--primary);
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.1);
     }
 
     .schedule-summary {
-      background: var(--surface);
-      border-radius: 12px;
+      background: var(--bg-secondary);
+      border-radius: var(--radius-lg);
       padding: 20px;
       margin-bottom: 24px;
       display: none;
     }
+
     .schedule-summary.visible {
       display: block;
     }
+
     .schedule-summary h3 {
-      font-size: 14px;
+      font-size: 12px;
       text-transform: uppercase;
-      color: var(--text-muted);
+      color: var(--text-tertiary);
       margin-bottom: 12px;
+      letter-spacing: 0.5px;
     }
+
     .schedule-summary .summary-date {
       font-size: 20px;
       font-weight: 600;
       margin-bottom: 4px;
     }
+
     .schedule-summary .summary-time {
       font-size: 16px;
       color: var(--text-secondary);
@@ -154,25 +155,9 @@
 
     .btn-schedule {
       width: 100%;
-      padding: 20px 32px;
-      font-size: 20px;
-      font-weight: 700;
-      border: none;
-      border-radius: 12px;
-      background: var(--primary);
-      color: white;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .btn-schedule:hover:not(:disabled) {
-      background: var(--primary-dark);
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(26, 115, 232, 0.3);
-    }
-    .btn-schedule:disabled {
-      background: var(--border);
-      cursor: not-allowed;
-      transform: none;
+      padding: 18px 32px;
+      font-size: 17px;
+      font-weight: 600;
     }
 
     .calendar-nav {
@@ -181,43 +166,65 @@
       align-items: center;
       margin-bottom: 16px;
     }
+
     .calendar-nav button {
       padding: 10px 16px;
-      border: 2px solid var(--border);
-      border-radius: 8px;
-      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      background: var(--bg-primary);
       cursor: pointer;
-      font-size: 16px;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all var(--transition-fast);
     }
+
     .calendar-nav button:hover {
-      border-color: var(--primary);
+      border-color: var(--color-primary);
+      color: var(--color-primary);
     }
+
     .calendar-nav .week-label {
       font-weight: 600;
+      font-size: 15px;
+    }
+
+    .success-modal-content {
+      text-align: center;
+      padding: 40px;
+    }
+
+    .success-modal-content .icon {
+      color: var(--color-primary);
+      margin-bottom: 16px;
     }
   </style>
 </head>
 <body>
-  <header class="shop-header">
-    <div class="header-left">
-      <span class="logo">ADAS F1RST</span>
-    </div>
+  <!-- Header -->
+  <header class="app-header">
+    <div class="app-logo">ADAS F1RST</div>
     <div class="header-center">
-      <span class="shop-name" id="shopName">Loading...</span>
+      <span class="shop-badge" id="shopName">Loading...</span>
     </div>
-    <div class="header-right">
-      <button class="btn-icon" id="helpBtn" title="Need Help?">&#10067;</button>
-      <button class="btn-logout" id="logoutBtn">Logout</button>
+    <div class="header-actions">
+      <button class="header-btn" id="helpBtn" title="Help">
+        <span class="icon" id="helpIcon"></span>
+      </button>
+      <button class="btn-logout" id="logoutBtn">
+        <span class="icon icon-sm" id="logoutIcon"></span>
+        Sign Out
+      </button>
     </div>
   </header>
 
-  <main class="shop-main">
-    <!-- Back Button -->
-    <div style="margin-bottom:24px;">
-      <a href="/shop/dashboard.html" class="btn-secondary" style="display:inline-flex;align-items:center;gap:8px;">
-        &#8592; Back to Dashboard
-      </a>
-    </div>
+  <main class="app-main">
+    <!-- Back Link -->
+    <a href="/shop/dashboard.html" class="back-link">
+      <span class="icon" id="backIcon"></span>
+      Back to Dashboard
+    </a>
 
     <!-- Loading State -->
     <div id="loadingState" class="card">
@@ -238,7 +245,10 @@
             <h2 id="vehicleName">Loading...</h2>
             <p class="ro">RO #<span id="vehicleRo"></span></p>
             <div class="current-schedule" id="currentSchedule" style="display:none;">
-              <strong>Currently Scheduled:</strong> <span id="currentDate"></span>
+              <span class="icon" id="currentScheduleIcon"></span>
+              <div>
+                <strong>Currently Scheduled:</strong> <span id="currentDate"></span>
+              </div>
             </div>
           </div>
         </div>
@@ -247,13 +257,19 @@
       <!-- Date Selection -->
       <div class="card" style="margin-bottom:24px;">
         <div class="card-header">
-          <h2>Select a Date</h2>
+          <h2 style="font-size:17px;font-weight:600;">Select a Date</h2>
         </div>
         <div class="card-body">
           <div class="calendar-nav">
-            <button type="button" id="prevWeek">&#8592; Previous</button>
+            <button type="button" id="prevWeek">
+              <span class="icon icon-sm" id="prevIcon"></span>
+              Previous
+            </button>
             <span class="week-label" id="weekLabel"></span>
-            <button type="button" id="nextWeek">Next &#8594;</button>
+            <button type="button" id="nextWeek">
+              Next
+              <span class="icon icon-sm" id="nextIcon"></span>
+            </button>
           </div>
           <div class="date-grid" id="dateGrid">
             <!-- Populated by JS -->
@@ -264,7 +280,7 @@
       <!-- Time Selection -->
       <div class="card" style="margin-bottom:24px;">
         <div class="card-header">
-          <h2>Select a Time</h2>
+          <h2 style="font-size:17px;font-weight:600;">Select a Time</h2>
         </div>
         <div class="card-body">
           <div class="time-grid" id="timeGrid">
@@ -276,7 +292,7 @@
       <!-- Notes -->
       <div class="card" style="margin-bottom:24px;">
         <div class="card-header">
-          <h2>Additional Notes (Optional)</h2>
+          <h2 style="font-size:17px;font-weight:600;">Additional Notes (Optional)</h2>
         </div>
         <div class="card-body">
           <textarea class="notes-input" id="scheduleNotes" placeholder="Any special instructions for the technician..."></textarea>
@@ -290,7 +306,8 @@
         <p class="summary-time" id="summaryTime">-</p>
       </div>
 
-      <button type="button" class="btn-schedule" id="scheduleBtn" disabled>
+      <button type="button" class="btn-accent btn-schedule" id="scheduleBtn" disabled>
+        <span class="icon" id="confirmIcon"></span>
         Confirm Appointment
       </button>
     </div>
@@ -299,33 +316,35 @@
     <div id="errorState" class="card" style="display:none;">
       <div class="card-body">
         <div class="empty-state">
-          <div class="empty-icon">&#9888;</div>
+          <span class="icon icon-xl" id="errorIcon"></span>
           <h2>Vehicle Not Found</h2>
           <p id="errorMessage">The requested vehicle could not be found.</p>
-          <a href="/shop/dashboard.html" class="btn-primary" style="margin-top:16px;">Back to Dashboard</a>
+          <a href="/shop/dashboard.html" class="btn-accent" style="margin-top:16px;">Back to Dashboard</a>
         </div>
       </div>
     </div>
   </main>
 
   <!-- Help Modal -->
-  <div class="modal" id="helpModal">
-    <div class="modal-content">
+  <div class="modal-overlay" id="helpModal">
+    <div class="modal">
       <div class="modal-header">
         <h3>Need Help?</h3>
-        <button class="modal-close">&times;</button>
+        <button class="modal-close" id="helpModalClose">
+          <span class="icon icon-sm" id="closeIcon"></span>
+        </button>
       </div>
       <div class="modal-body">
         <div class="help-item">
-          <span class="help-icon">&#128222;</span>
-          <div>
+          <span class="icon" id="helpPhoneIcon"></span>
+          <div class="help-item-content">
             <strong>Call Us</strong>
             <p><a href="tel:+13055551234">305-555-1234</a></p>
           </div>
         </div>
         <div class="help-item">
-          <span class="help-icon">&#128231;</span>
-          <div>
+          <span class="icon" id="helpMailIcon"></span>
+          <div class="help-item-content">
             <strong>Email Support</strong>
             <p><a href="mailto:adasf1rstservice@gmail.com">adasf1rstservice@gmail.com</a></p>
           </div>
@@ -335,18 +354,21 @@
   </div>
 
   <!-- Success Modal -->
-  <div class="modal" id="successModal">
-    <div class="modal-content" style="text-align:center;padding:40px;">
-      <div style="font-size:64px;margin-bottom:16px;">&#128197;</div>
-      <h2 style="margin-bottom:8px;">Appointment Scheduled!</h2>
-      <p style="color:var(--text-secondary);margin-bottom:8px;">Your calibration has been scheduled for:</p>
-      <p style="font-size:20px;font-weight:600;margin-bottom:24px;" id="successDateTime"></p>
-      <a href="/shop/dashboard.html" class="btn-primary" style="display:inline-block;padding:16px 32px;font-size:18px;">
-        Back to Dashboard
-      </a>
+  <div class="modal-overlay" id="successModal">
+    <div class="modal">
+      <div class="success-modal-content">
+        <span class="icon icon-xl" id="successIcon"></span>
+        <h2 style="margin-bottom:8px;">Appointment Scheduled!</h2>
+        <p style="color:var(--text-secondary);margin-bottom:8px;">Your calibration has been scheduled for:</p>
+        <p style="font-size:20px;font-weight:600;margin-bottom:24px;" id="successDateTime"></p>
+        <a href="/shop/dashboard.html" class="btn-accent btn-large">
+          Back to Dashboard
+        </a>
+      </div>
     </div>
   </div>
 
+  <script src="/js/icons.js"></script>
   <script src="/js/auth.js"></script>
   <script src="/js/api.js"></script>
   <script src="/shop/js/shop-common.js"></script>
@@ -371,6 +393,7 @@
     document.addEventListener('DOMContentLoaded', async () => {
       if (!initShopPortal()) return;
       setupCommonHandlers();
+      initializeIcons();
 
       // Get RO from URL
       const params = new URLSearchParams(window.location.search);
@@ -384,6 +407,25 @@
       await loadVehicle(ro);
       setupEventListeners();
     });
+
+    function initializeIcons() {
+      // Header icons
+      document.getElementById('helpIcon').innerHTML = Icons.help;
+      document.getElementById('logoutIcon').innerHTML = Icons.logout;
+      document.getElementById('backIcon').innerHTML = Icons.arrowLeft;
+
+      // Navigation icons
+      document.getElementById('prevIcon').innerHTML = Icons.chevronLeft;
+      document.getElementById('nextIcon').innerHTML = Icons.chevronRight;
+      document.getElementById('confirmIcon').innerHTML = Icons.check;
+
+      // Modal icons
+      document.getElementById('closeIcon').innerHTML = Icons.x;
+      document.getElementById('helpPhoneIcon').innerHTML = Icons.phone;
+      document.getElementById('helpMailIcon').innerHTML = Icons.mail;
+      document.getElementById('successIcon').innerHTML = Icons.calendar;
+      document.getElementById('errorIcon').innerHTML = Icons.alertCircle;
+    }
 
     async function loadVehicle(ro) {
       try {
@@ -413,7 +455,8 @@
       document.getElementById('vehicleRo').textContent = currentVehicle.roPo;
 
       if ((currentVehicle.status === 'Scheduled' || currentVehicle.status === 'Rescheduled') && currentVehicle.scheduledDate) {
-        document.getElementById('currentSchedule').style.display = 'block';
+        document.getElementById('currentSchedule').style.display = 'flex';
+        document.getElementById('currentScheduleIcon').innerHTML = Icons.calendar;
         const dateStr = formatDate(currentVehicle.scheduledDate);
         const timeStr = currentVehicle.scheduledTime ? formatTime(currentVehicle.scheduledTime) : '';
         document.getElementById('currentDate').textContent = `${dateStr}${timeStr ? ' at ' + timeStr : ''}`;
@@ -542,7 +585,7 @@
 
       const btn = document.getElementById('scheduleBtn');
       btn.disabled = true;
-      btn.textContent = 'Scheduling...';
+      btn.innerHTML = '<div class="spinner" style="width:20px;height:20px;margin-right:8px;"></div> Scheduling...';
 
       try {
         const response = await ShopAPI.post(`/api/shop/vehicles/${encodeURIComponent(currentVehicle.roPo)}/schedule`, {
@@ -560,13 +603,13 @@
         } else {
           Toast.error(response.error || 'Failed to schedule');
           btn.disabled = false;
-          btn.textContent = 'Confirm Appointment';
+          btn.innerHTML = `${Icons.check} Confirm Appointment`;
         }
       } catch (err) {
         console.error('Schedule error:', err);
         Toast.error('Failed to schedule appointment');
         btn.disabled = false;
-        btn.textContent = 'Confirm Appointment';
+        btn.innerHTML = `${Icons.check} Confirm Appointment`;
       }
     }
 

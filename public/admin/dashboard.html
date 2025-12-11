@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard - ADAS F1RST Admin</title>
+  <link rel="stylesheet" href="/css/apple-style.css">
   <link rel="stylesheet" href="/admin/css/admin.css">
 </head>
 <body>
@@ -16,14 +17,14 @@
           <span class="logo-text">ADAS F1RST</span>
         </div>
         <button class="sidebar-toggle" id="sidebarToggle" title="Toggle Sidebar">
-          <span id="toggleIcon">&#9776;</span>
+          <span class="icon" id="toggleIcon"></span>
         </button>
       </div>
 
       <nav class="sidebar-nav">
         <div class="nav-section">
           <a href="/admin/dashboard.html" class="nav-item active">
-            <span class="nav-icon">&#128200;</span>
+            <span class="nav-icon" id="navDashboard"></span>
             <span class="nav-text">Dashboard</span>
           </a>
         </div>
@@ -31,24 +32,24 @@
         <div class="nav-section">
           <div class="nav-section-title">Vehicles</div>
           <a href="/admin/vehicles.html" class="nav-item">
-            <span class="nav-icon">&#128663;</span>
+            <span class="nav-icon" id="navAllVehicles"></span>
             <span class="nav-text">All Vehicles</span>
           </a>
           <a href="/admin/vehicles.html?status=New" class="nav-item">
-            <span class="nav-icon">&#10024;</span>
+            <span class="nav-icon" id="navNew"></span>
             <span class="nav-text">New</span>
             <span class="nav-badge" id="newCount">0</span>
           </a>
           <a href="/admin/vehicles.html?status=Scheduled" class="nav-item">
-            <span class="nav-icon">&#128197;</span>
+            <span class="nav-icon" id="navScheduled"></span>
             <span class="nav-text">Scheduled</span>
           </a>
           <a href="/admin/vehicles.html?status=In%20Progress" class="nav-item">
-            <span class="nav-icon">&#128295;</span>
+            <span class="nav-icon" id="navInProgress"></span>
             <span class="nav-text">In Progress</span>
           </a>
           <a href="/admin/vehicles.html?status=Completed" class="nav-item">
-            <span class="nav-icon">&#9989;</span>
+            <span class="nav-icon" id="navCompleted"></span>
             <span class="nav-text">Completed</span>
           </a>
         </div>
@@ -56,11 +57,11 @@
         <div class="nav-section">
           <div class="nav-section-title">Management</div>
           <a href="/admin/shops.html" class="nav-item">
-            <span class="nav-icon">&#127978;</span>
+            <span class="nav-icon" id="navShops"></span>
             <span class="nav-text">Shops</span>
           </a>
           <a href="/admin/techs.html" class="nav-item">
-            <span class="nav-icon">&#128119;</span>
+            <span class="nav-icon" id="navTechs"></span>
             <span class="nav-text">Technicians</span>
           </a>
         </div>
@@ -68,11 +69,11 @@
         <div class="nav-section">
           <div class="nav-section-title">Billing</div>
           <a href="/admin/billing.html" class="nav-item">
-            <span class="nav-icon">&#128176;</span>
+            <span class="nav-icon" id="navBilling"></span>
             <span class="nav-text">Overview</span>
           </a>
           <a href="/admin/billing.html?filter=unpaid" class="nav-item">
-            <span class="nav-icon">&#128203;</span>
+            <span class="nav-icon" id="navUnpaid"></span>
             <span class="nav-text">Unpaid</span>
           </a>
         </div>
@@ -80,11 +81,11 @@
         <div class="nav-section">
           <div class="nav-section-title">System</div>
           <a href="/admin/settings.html" class="nav-item">
-            <span class="nav-icon">&#9881;</span>
+            <span class="nav-icon" id="navSettings"></span>
             <span class="nav-text">Settings</span>
           </a>
           <a href="/admin/logs.html" class="nav-item">
-            <span class="nav-icon">&#128203;</span>
+            <span class="nav-icon" id="navLogs"></span>
             <span class="nav-text">Logs</span>
           </a>
         </div>
@@ -107,15 +108,20 @@
     <main class="main-content">
       <header class="top-header">
         <div class="header-left">
-          <button class="mobile-menu-btn" id="mobileMenuBtn">&#9776;</button>
+          <button class="mobile-menu-btn" id="mobileMenuBtn">
+            <span class="icon" id="mobileMenuIcon"></span>
+          </button>
           <h1 class="page-title">Dashboard</h1>
         </div>
         <div class="header-right">
-          <button class="header-btn" title="Notifications">
-            &#128276;
+          <button class="header-btn" title="Notifications" id="notifBtn">
+            <span class="icon" id="bellIcon"></span>
             <span class="badge" id="notifBadge" style="display:none;">0</span>
           </button>
-          <button class="btn-logout" id="logoutBtn">Logout</button>
+          <button class="btn-logout" id="logoutBtn">
+            <span class="icon icon-sm" id="logoutIcon"></span>
+            Sign Out
+          </button>
         </div>
       </header>
 
@@ -123,28 +129,28 @@
         <!-- Stats Grid -->
         <div class="stats-grid">
           <div class="stat-card">
-            <div class="stat-icon blue">&#128663;</div>
+            <div class="stat-icon blue" id="statIconTotal"></div>
             <div class="stat-content">
               <div class="stat-value" id="statTotal">-</div>
               <div class="stat-label">Total Vehicles</div>
             </div>
           </div>
           <div class="stat-card">
-            <div class="stat-icon purple">&#10024;</div>
+            <div class="stat-icon purple" id="statIconNew"></div>
             <div class="stat-content">
               <div class="stat-value" id="statNew">-</div>
               <div class="stat-label">New (Needs Processing)</div>
             </div>
           </div>
           <div class="stat-card">
-            <div class="stat-icon yellow">&#128197;</div>
+            <div class="stat-icon yellow" id="statIconScheduled"></div>
             <div class="stat-content">
               <div class="stat-value" id="statScheduled">-</div>
               <div class="stat-label">Scheduled</div>
             </div>
           </div>
           <div class="stat-card">
-            <div class="stat-icon green">&#9989;</div>
+            <div class="stat-icon green" id="statIconCompleted"></div>
             <div class="stat-content">
               <div class="stat-value" id="statCompleted">-</div>
               <div class="stat-label">Completed</div>
@@ -172,19 +178,19 @@
             </div>
             <div class="card-body">
               <a href="/admin/vehicles.html?status=New" class="quick-action">
-                <div class="icon" style="background:#ebf8ff;">&#10024;</div>
+                <div class="quick-action-icon blue" id="qaNewIcon"></div>
                 <span class="text">Process New Vehicles</span>
               </a>
               <a href="/admin/billing.html" class="quick-action">
-                <div class="icon" style="background:#f0fff4;">&#128176;</div>
+                <div class="quick-action-icon green" id="qaBillingIcon"></div>
                 <span class="text">View Billing</span>
               </a>
               <a href="/admin/shops.html" class="quick-action">
-                <div class="icon" style="background:#faf5ff;">&#127978;</div>
+                <div class="quick-action-icon purple" id="qaShopsIcon"></div>
                 <span class="text">Manage Shops</span>
               </a>
               <a href="/admin/techs.html" class="quick-action">
-                <div class="icon" style="background:#fffff0;">&#128119;</div>
+                <div class="quick-action-icon orange" id="qaTechsIcon"></div>
                 <span class="text">Manage Techs</span>
               </a>
             </div>
@@ -214,8 +220,47 @@
     </main>
   </div>
 
+  <script src="/js/icons.js"></script>
   <script src="/js/auth.js"></script>
   <script src="/js/admin/admin-common.js"></script>
   <script src="/js/admin/dashboard.js"></script>
+  <script>
+    // Initialize icons after DOM load
+    document.addEventListener('DOMContentLoaded', () => {
+      // Sidebar toggle icon
+      document.getElementById('toggleIcon').innerHTML = Icons.menu;
+      document.getElementById('mobileMenuIcon').innerHTML = Icons.menu;
+
+      // Navigation icons
+      document.getElementById('navDashboard').innerHTML = Icons.chart;
+      document.getElementById('navAllVehicles').innerHTML = Icons.car;
+      document.getElementById('navNew').innerHTML = Icons.sparkles;
+      document.getElementById('navScheduled').innerHTML = Icons.calendar;
+      document.getElementById('navInProgress').innerHTML = Icons.wrench;
+      document.getElementById('navCompleted').innerHTML = Icons.checkCircle;
+      document.getElementById('navShops').innerHTML = Icons.building;
+      document.getElementById('navTechs').innerHTML = Icons.users;
+      document.getElementById('navBilling').innerHTML = Icons.wallet;
+      document.getElementById('navUnpaid').innerHTML = Icons.creditCard;
+      document.getElementById('navSettings').innerHTML = Icons.settings;
+      document.getElementById('navLogs').innerHTML = Icons.list;
+
+      // Header icons
+      document.getElementById('bellIcon').innerHTML = Icons.bell;
+      document.getElementById('logoutIcon').innerHTML = Icons.logout;
+
+      // Stat card icons
+      document.getElementById('statIconTotal').innerHTML = Icons.car;
+      document.getElementById('statIconNew').innerHTML = Icons.sparkles;
+      document.getElementById('statIconScheduled').innerHTML = Icons.calendar;
+      document.getElementById('statIconCompleted').innerHTML = Icons.checkCircle;
+
+      // Quick action icons
+      document.getElementById('qaNewIcon').innerHTML = Icons.sparkles;
+      document.getElementById('qaBillingIcon').innerHTML = Icons.wallet;
+      document.getElementById('qaShopsIcon').innerHTML = Icons.building;
+      document.getElementById('qaTechsIcon').innerHTML = Icons.users;
+    });
+  </script>
 </body>
 </html>

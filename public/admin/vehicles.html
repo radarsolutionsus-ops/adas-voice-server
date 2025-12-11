@@ -4,11 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Vehicles - ADAS F1RST Admin</title>
+  <link rel="stylesheet" href="/css/apple-style.css">
   <link rel="stylesheet" href="/admin/css/admin.css">
 </head>
 <body>
   <div class="admin-layout">
-    <!-- Sidebar (same as dashboard) -->
+    <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
         <div class="sidebar-logo">
@@ -16,14 +17,14 @@
           <span class="logo-text">ADAS F1RST</span>
         </div>
         <button class="sidebar-toggle" id="sidebarToggle" title="Toggle Sidebar">
-          <span id="toggleIcon">&#9776;</span>
+          <span class="icon" id="toggleIcon"></span>
         </button>
       </div>
 
       <nav class="sidebar-nav">
         <div class="nav-section">
           <a href="/admin/dashboard.html" class="nav-item">
-            <span class="nav-icon">&#128200;</span>
+            <span class="nav-icon" id="navDashboard"></span>
             <span class="nav-text">Dashboard</span>
           </a>
         </div>
@@ -31,23 +32,23 @@
         <div class="nav-section">
           <div class="nav-section-title">Vehicles</div>
           <a href="/admin/vehicles.html" class="nav-item active">
-            <span class="nav-icon">&#128663;</span>
+            <span class="nav-icon" id="navAllVehicles"></span>
             <span class="nav-text">All Vehicles</span>
           </a>
           <a href="/admin/vehicles.html?status=New" class="nav-item">
-            <span class="nav-icon">&#10024;</span>
+            <span class="nav-icon" id="navNew"></span>
             <span class="nav-text">New</span>
           </a>
           <a href="/admin/vehicles.html?status=Scheduled" class="nav-item">
-            <span class="nav-icon">&#128197;</span>
+            <span class="nav-icon" id="navScheduled"></span>
             <span class="nav-text">Scheduled</span>
           </a>
           <a href="/admin/vehicles.html?status=In%20Progress" class="nav-item">
-            <span class="nav-icon">&#128295;</span>
+            <span class="nav-icon" id="navInProgress"></span>
             <span class="nav-text">In Progress</span>
           </a>
           <a href="/admin/vehicles.html?status=Completed" class="nav-item">
-            <span class="nav-icon">&#9989;</span>
+            <span class="nav-icon" id="navCompleted"></span>
             <span class="nav-text">Completed</span>
           </a>
         </div>
@@ -55,11 +56,11 @@
         <div class="nav-section">
           <div class="nav-section-title">Management</div>
           <a href="/admin/shops.html" class="nav-item">
-            <span class="nav-icon">&#127978;</span>
+            <span class="nav-icon" id="navShops"></span>
             <span class="nav-text">Shops</span>
           </a>
           <a href="/admin/techs.html" class="nav-item">
-            <span class="nav-icon">&#128119;</span>
+            <span class="nav-icon" id="navTechs"></span>
             <span class="nav-text">Technicians</span>
           </a>
         </div>
@@ -67,7 +68,7 @@
         <div class="nav-section">
           <div class="nav-section-title">Billing</div>
           <a href="/admin/billing.html" class="nav-item">
-            <span class="nav-icon">&#128176;</span>
+            <span class="nav-icon" id="navBilling"></span>
             <span class="nav-text">Overview</span>
           </a>
         </div>
@@ -75,7 +76,7 @@
         <div class="nav-section">
           <div class="nav-section-title">System</div>
           <a href="/admin/settings.html" class="nav-item">
-            <span class="nav-icon">&#9881;</span>
+            <span class="nav-icon" id="navSettings"></span>
             <span class="nav-text">Settings</span>
           </a>
         </div>
@@ -98,11 +99,16 @@
     <main class="main-content">
       <header class="top-header">
         <div class="header-left">
-          <button class="mobile-menu-btn" id="mobileMenuBtn">&#9776;</button>
+          <button class="mobile-menu-btn" id="mobileMenuBtn">
+            <span class="icon" id="mobileMenuIcon"></span>
+          </button>
           <h1 class="page-title">Vehicles</h1>
         </div>
         <div class="header-right">
-          <button class="btn-logout" id="logoutBtn">Logout</button>
+          <button class="btn-logout" id="logoutBtn">
+            <span class="icon icon-sm" id="logoutIcon"></span>
+            Sign Out
+          </button>
         </div>
       </header>
 
@@ -111,8 +117,9 @@
         <div class="card" style="margin-bottom:24px;">
           <div class="card-body" style="padding:16px;">
             <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;">
-              <div style="flex:1;min-width:200px;">
-                <input type="text" class="form-input" id="searchInput" placeholder="Search RO, VIN, or vehicle...">
+              <div style="flex:1;min-width:200px;position:relative;">
+                <span class="icon search-input-icon" id="searchInputIcon"></span>
+                <input type="text" class="form-input form-input-with-icon" id="searchInput" placeholder="Search RO, VIN, or vehicle...">
               </div>
               <div>
                 <select class="form-select" id="statusFilter" style="min-width:150px;">
@@ -130,7 +137,10 @@
                   <option value="">All Shops</option>
                 </select>
               </div>
-              <button class="btn btn-secondary" id="clearFilters">Clear Filters</button>
+              <button class="btn btn-secondary" id="clearFilters">
+                <span class="icon icon-sm" id="clearIcon"></span>
+                Clear
+              </button>
             </div>
           </div>
         </div>
@@ -168,24 +178,56 @@
   </div>
 
   <!-- Vehicle Detail Modal -->
-  <div class="modal" id="vehicleModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;align-items:center;justify-content:center;">
-    <div class="modal-content" style="background:white;border-radius:12px;width:90%;max-width:600px;max-height:90vh;overflow-y:auto;">
-      <div class="modal-header" style="padding:20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+  <div class="modal-overlay" id="vehicleModal">
+    <div class="modal" style="max-width:600px;">
+      <div class="modal-header">
         <h3 id="modalTitle">Vehicle Details</h3>
-        <button class="modal-close" style="background:none;border:none;font-size:24px;cursor:pointer;" onclick="closeModal()">&times;</button>
+        <button class="modal-close" onclick="closeModal()">
+          <span class="icon" id="modalCloseIcon"></span>
+        </button>
       </div>
-      <div class="modal-body" style="padding:20px;" id="modalBody">
+      <div class="modal-body" id="modalBody">
         Loading...
       </div>
-      <div class="modal-footer" style="padding:20px;border-top:1px solid var(--border);display:flex;gap:12px;justify-content:flex-end;">
-        <button class="btn btn-secondary" onclick="closeModal()">Close</button>
-        <button class="btn btn-primary" id="saveChangesBtn" style="display:none;">Save Changes</button>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeModal()">Close</button>
+        <button class="btn-accent" id="saveChangesBtn" style="display:none;">Save Changes</button>
       </div>
     </div>
   </div>
 
+  <script src="/js/icons.js"></script>
   <script src="/js/auth.js"></script>
   <script src="/js/admin/admin-common.js"></script>
   <script src="/js/admin/vehicles.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Sidebar toggle icon
+      document.getElementById('toggleIcon').innerHTML = Icons.menu;
+      document.getElementById('mobileMenuIcon').innerHTML = Icons.menu;
+
+      // Navigation icons
+      document.getElementById('navDashboard').innerHTML = Icons.chart;
+      document.getElementById('navAllVehicles').innerHTML = Icons.car;
+      document.getElementById('navNew').innerHTML = Icons.sparkles;
+      document.getElementById('navScheduled').innerHTML = Icons.calendar;
+      document.getElementById('navInProgress').innerHTML = Icons.wrench;
+      document.getElementById('navCompleted').innerHTML = Icons.checkCircle;
+      document.getElementById('navShops').innerHTML = Icons.building;
+      document.getElementById('navTechs').innerHTML = Icons.users;
+      document.getElementById('navBilling').innerHTML = Icons.wallet;
+      document.getElementById('navSettings').innerHTML = Icons.settings;
+
+      // Header icons
+      document.getElementById('logoutIcon').innerHTML = Icons.logout;
+
+      // Filter icons
+      document.getElementById('searchInputIcon').innerHTML = Icons.search;
+      document.getElementById('clearIcon').innerHTML = Icons.x;
+
+      // Modal icons
+      document.getElementById('modalCloseIcon').innerHTML = Icons.x;
+    });
+  </script>
 </body>
 </html>

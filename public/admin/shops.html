@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Shops - ADAS F1RST Admin</title>
+  <link rel="stylesheet" href="/css/apple-style.css">
   <link rel="stylesheet" href="/admin/css/admin.css">
 </head>
 <body>
@@ -15,44 +16,46 @@
           <div class="logo-icon">A</div>
           <span class="logo-text">ADAS F1RST</span>
         </div>
-        <button class="sidebar-toggle" id="sidebarToggle">&#9776;</button>
+        <button class="sidebar-toggle" id="sidebarToggle">
+          <span class="icon" id="toggleIcon"></span>
+        </button>
       </div>
       <nav class="sidebar-nav">
         <div class="nav-section">
           <a href="/admin/dashboard.html" class="nav-item">
-            <span class="nav-icon">&#128200;</span>
+            <span class="nav-icon" id="navDashboard"></span>
             <span class="nav-text">Dashboard</span>
           </a>
         </div>
         <div class="nav-section">
           <div class="nav-section-title">Vehicles</div>
           <a href="/admin/vehicles.html" class="nav-item">
-            <span class="nav-icon">&#128663;</span>
+            <span class="nav-icon" id="navVehicles"></span>
             <span class="nav-text">All Vehicles</span>
           </a>
         </div>
         <div class="nav-section">
           <div class="nav-section-title">Management</div>
           <a href="/admin/shops.html" class="nav-item active">
-            <span class="nav-icon">&#127978;</span>
+            <span class="nav-icon" id="navShops"></span>
             <span class="nav-text">Shops</span>
           </a>
           <a href="/admin/techs.html" class="nav-item">
-            <span class="nav-icon">&#128119;</span>
+            <span class="nav-icon" id="navTechs"></span>
             <span class="nav-text">Technicians</span>
           </a>
         </div>
         <div class="nav-section">
           <div class="nav-section-title">Billing</div>
           <a href="/admin/billing.html" class="nav-item">
-            <span class="nav-icon">&#128176;</span>
+            <span class="nav-icon" id="navBilling"></span>
             <span class="nav-text">Overview</span>
           </a>
         </div>
         <div class="nav-section">
           <div class="nav-section-title">System</div>
           <a href="/admin/settings.html" class="nav-item">
-            <span class="nav-icon">&#9881;</span>
+            <span class="nav-icon" id="navSettings"></span>
             <span class="nav-text">Settings</span>
           </a>
         </div>
@@ -74,11 +77,16 @@
     <main class="main-content">
       <header class="top-header">
         <div class="header-left">
-          <button class="mobile-menu-btn" id="mobileMenuBtn">&#9776;</button>
+          <button class="mobile-menu-btn" id="mobileMenuBtn">
+            <span class="icon" id="mobileMenuIcon"></span>
+          </button>
           <h1 class="page-title">Shops</h1>
         </div>
         <div class="header-right">
-          <button class="btn-logout" id="logoutBtn">Logout</button>
+          <button class="btn-logout" id="logoutBtn">
+            <span class="icon icon-sm" id="logoutIcon"></span>
+            Sign Out
+          </button>
         </div>
       </header>
 
@@ -91,10 +99,22 @@
     </main>
   </div>
 
+  <script src="/js/icons.js"></script>
   <script src="/js/auth.js"></script>
   <script src="/js/admin/admin-common.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
+      // Initialize icons
+      document.getElementById('toggleIcon').innerHTML = Icons.menu;
+      document.getElementById('mobileMenuIcon').innerHTML = Icons.menu;
+      document.getElementById('navDashboard').innerHTML = Icons.chart;
+      document.getElementById('navVehicles').innerHTML = Icons.car;
+      document.getElementById('navShops').innerHTML = Icons.building;
+      document.getElementById('navTechs').innerHTML = Icons.users;
+      document.getElementById('navBilling').innerHTML = Icons.wallet;
+      document.getElementById('navSettings').innerHTML = Icons.settings;
+      document.getElementById('logoutIcon').innerHTML = Icons.logout;
+
       setTimeout(loadShops, 100);
     });
 
@@ -110,17 +130,34 @@
         container.innerHTML = data.shops.map(shop => `
           <div class="card">
             <div class="card-body">
-              <h3 style="margin-bottom:8px;">${escapeHtml(shop.name)}</h3>
-              <p style="color:var(--text-secondary);font-size:14px;margin-bottom:16px;">
-                Sheet: ${escapeHtml(shop.sheetName || '-')}
-              </p>
-              <div style="display:flex;flex-direction:column;gap:8px;font-size:14px;">
-                <div><strong>Username:</strong> ${escapeHtml(shop.username)}</div>
-                <div><strong>Email:</strong> ${escapeHtml(shop.email || '-')}</div>
-                <div><strong>Phone:</strong> ${escapeHtml(shop.phone || '-')}</div>
+              <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+                <div style="width:48px;height:48px;background:var(--color-primary);color:white;border-radius:12px;display:flex;align-items:center;justify-content:center;">
+                  ${Icons.building}
+                </div>
+                <div>
+                  <h3 style="margin:0;font-size:18px;">${escapeHtml(shop.name)}</h3>
+                  <span style="color:var(--text-secondary);font-size:13px;">${escapeHtml(shop.sheetName || '-')}</span>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:8px;font-size:14px;color:var(--text-secondary);">
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <span class="icon icon-sm">${Icons.user}</span>
+                  ${escapeHtml(shop.username)}
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <span class="icon icon-sm">${Icons.mail}</span>
+                  ${escapeHtml(shop.email || '-')}
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <span class="icon icon-sm">${Icons.phone}</span>
+                  ${escapeHtml(shop.phone || '-')}
+                </div>
               </div>
               <div style="margin-top:16px;">
-                <a href="/admin/vehicles.html?shop=${encodeURIComponent(shop.sheetName || shop.name)}" class="btn btn-sm btn-secondary">View Vehicles</a>
+                <a href="/admin/vehicles.html?shop=${encodeURIComponent(shop.sheetName || shop.name)}" class="btn-secondary btn-sm">
+                  <span class="icon icon-sm">${Icons.car}</span>
+                  View Vehicles
+                </a>
               </div>
             </div>
           </div>
