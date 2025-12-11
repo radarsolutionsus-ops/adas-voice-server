@@ -1,439 +1,357 @@
 /**
- * dashboard.js - Tech dashboard page logic
+ * dashboard.js - Tech Dashboard (Apple Style)
  */
+(function() {
+  'use strict';
 
-// Require authentication
-TechAuth.requireAuth();
+  let allJobs = [];
+  let currentJob = null;
+  let currentFilter = 'all';
+  let searchTerm = '';
 
-// State
-let vehicles = [];
-let currentTab = 'all';
-let currentStatus = 'all';
-let currentSearch = '';
-let currentShop = '';
+  document.addEventListener('DOMContentLoaded', async () => {
+    if (!initTechPortal()) return;
 
-// Elements
-const techNameEl = document.getElementById('tech-name');
-const vehiclesTbody = document.getElementById('vehicles-tbody');
-const statusFilter = document.getElementById('status-filter');
-const shopFilter = document.getElementById('shop-filter');
-const searchInput = document.getElementById('search-input');
-const searchBtn = document.getElementById('search-btn');
-const refreshBtn = document.getElementById('refresh-btn');
-const emptyState = document.getElementById('empty-state');
-const tableContainer = document.querySelector('.table-container');
-const vehicleModal = document.getElementById('vehicle-modal');
-const statusModal = document.getElementById('status-modal');
-const completeModal = document.getElementById('complete-modal');
+    initializeIcons();
+    setupTechCommonHandlers();
+    setupFilters();
+    setupSearch();
+    await loadJobs();
+  });
 
-// Init
-async function init() {
-  const user = TechAuth.getUser();
-  if (user) {
-    techNameEl.textContent = user.techName || user.name || '';
+  function initializeIcons() {
+    // Header
+    if (document.getElementById('logoutIcon')) {
+      document.getElementById('logoutIcon').innerHTML = Icons.logout;
+    }
+    if (document.getElementById('searchIcon')) {
+      document.getElementById('searchIcon').innerHTML = Icons.search;
+    }
+
+    // Modal icons
+    if (document.getElementById('closeModalIcon')) {
+      document.getElementById('closeModalIcon').innerHTML = Icons.x;
+    }
+    if (document.getElementById('statusWrenchIcon')) {
+      document.getElementById('statusWrenchIcon').innerHTML = Icons.wrench;
+    }
+    if (document.getElementById('statusCheckIcon')) {
+      document.getElementById('statusCheckIcon').innerHTML = Icons.checkCircle;
+    }
+    if (document.getElementById('addNoteIcon')) {
+      document.getElementById('addNoteIcon').innerHTML = Icons.plus;
+    }
   }
 
-  await Promise.all([loadStats(), loadVehicles()]);
-  setupEventListeners();
-}
-
-// Load stats
-async function loadStats() {
-  try {
-    const stats = await TechAPI.getStats();
-    document.getElementById('stat-today').textContent = stats.todayTotal || 0;
-    document.getElementById('stat-my-jobs').textContent = stats.myAssigned || 0;
-    document.getElementById('stat-new').textContent = stats.byStatus?.new || 0;
-    document.getElementById('stat-ready').textContent = stats.byStatus?.ready || 0;
-    document.getElementById('stat-scheduled').textContent = stats.byStatus?.scheduled || 0;
-    document.getElementById('stat-completed').textContent = stats.byStatus?.completed || 0;
-  } catch (err) {
-    console.error('Failed to load stats:', err);
-  }
-}
-
-// Load vehicles
-async function loadVehicles() {
-  showLoading();
-
-  try {
-    if (currentTab === 'mine') {
-      vehicles = await TechAPI.getMyVehicles({
-        status: currentStatus !== 'all' ? currentStatus : undefined
+  function setupFilters() {
+    document.querySelectorAll('.filter-pills .pill').forEach(pill => {
+      pill.addEventListener('click', () => {
+        document.querySelectorAll('.filter-pills .pill').forEach(p => p.classList.remove('active'));
+        pill.classList.add('active');
+        currentFilter = pill.dataset.status;
+        filterAndRenderJobs();
       });
-    } else {
-      vehicles = await TechAPI.getVehicles({
-        status: currentStatus !== 'all' ? currentStatus : undefined,
-        search: currentSearch || undefined,
-        shop: currentShop || undefined
+    });
+  }
+
+  function setupSearch() {
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+      let debounce;
+      searchInput.addEventListener('input', (e) => {
+        clearTimeout(debounce);
+        debounce = setTimeout(() => {
+          searchTerm = e.target.value.trim().toLowerCase();
+          filterAndRenderJobs();
+        }, 300);
+      });
+    }
+  }
+
+  async function loadJobs() {
+    try {
+      const response = await TechAPI.get('/api/tech/vehicles');
+
+      if (!response.success) {
+        Toast.error(response.error || 'Failed to load jobs');
+        return;
+      }
+
+      allJobs = response.vehicles || [];
+
+      updateStats();
+      renderTodayJobs();
+      filterAndRenderJobs();
+
+    } catch (err) {
+      console.error('Load error:', err);
+      Toast.error('Failed to load jobs');
+    }
+  }
+
+  function updateStats() {
+    const today = new Date().toISOString().split('T')[0];
+
+    const todayJobs = allJobs.filter(job => {
+      const jobDate = (job.scheduledDate || '').split('T')[0];
+      return jobDate === today;
+    });
+
+    const scheduled = allJobs.filter(j => {
+      const s = (j.status || '').toLowerCase();
+      return s === 'scheduled' || s === 'rescheduled';
+    });
+
+    const inProgress = allJobs.filter(j => {
+      const s = (j.status || '').toLowerCase();
+      return s === 'in progress';
+    });
+
+    const completed = allJobs.filter(j => {
+      const s = (j.status || '').toLowerCase();
+      return s === 'completed';
+    });
+
+    document.getElementById('statToday').textContent = todayJobs.length;
+    document.getElementById('statScheduled').textContent = scheduled.length;
+    document.getElementById('statInProgress').textContent = inProgress.length;
+    document.getElementById('statCompleted').textContent = completed.length;
+  }
+
+  function renderTodayJobs() {
+    const container = document.getElementById('todayJobs');
+    const today = new Date().toISOString().split('T')[0];
+
+    const todayJobs = allJobs.filter(job => {
+      const jobDate = (job.scheduledDate || '').split('T')[0];
+      const status = (job.status || '').toLowerCase();
+      return jobDate === today && status !== 'completed';
+    });
+
+    document.getElementById('todayCount').textContent = todayJobs.length;
+
+    if (todayJobs.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state-inline">
+          <span class="icon">${Icons.calendar}</span>
+          <p>No jobs scheduled for today</p>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = todayJobs.map(job => renderJobCard(job, true)).join('');
+  }
+
+  function filterAndRenderJobs() {
+    let filtered = [...allJobs];
+
+    // Apply status filter
+    if (currentFilter !== 'all') {
+      filtered = filtered.filter(j => {
+        const jobStatus = (j.status || '').toLowerCase();
+        return jobStatus === currentFilter.toLowerCase();
       });
     }
 
-    renderVehicles();
-  } catch (err) {
-    console.error('Failed to load vehicles:', err);
-    Toast.error('Failed to load vehicles');
-    showEmpty();
-  }
-}
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter(j => {
+        const ro = (j.roPo || '').toLowerCase();
+        const vehicle = (j.vehicle || '').toLowerCase();
+        const shop = (j.shopName || '').toLowerCase();
+        const vin = (j.vin || '').toLowerCase();
+        return ro.includes(searchTerm) || vehicle.includes(searchTerm) ||
+               shop.includes(searchTerm) || vin.includes(searchTerm);
+      });
+    }
 
-// Show loading state
-function showLoading() {
-  vehiclesTbody.innerHTML = `
-    <tr class="loading-row">
-      <td colspan="7">
-        <div class="loading-spinner"></div>
-        <span>Loading vehicles...</span>
-      </td>
-    </tr>
-  `;
-  emptyState.classList.add('hidden');
-  tableContainer.classList.remove('hidden');
-}
-
-// Show empty state
-function showEmpty() {
-  tableContainer.classList.add('hidden');
-  emptyState.classList.remove('hidden');
-}
-
-// Render vehicles
-function renderVehicles() {
-  if (vehicles.length === 0) {
-    showEmpty();
-    return;
+    renderAllJobs(filtered);
   }
 
-  tableContainer.classList.remove('hidden');
-  emptyState.classList.add('hidden');
+  function renderAllJobs(jobs) {
+    const container = document.getElementById('allJobs');
 
-  vehiclesTbody.innerHTML = vehicles.map(v => {
-    const status = v.status || 'New';
-    const statusClass = status.toLowerCase().replace(/\s+/g, '-');
+    if (jobs.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state-inline">
+          <span class="icon">${Icons.car}</span>
+          <p>No jobs found</p>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = jobs.map(job => renderJobCard(job)).join('');
+  }
+
+  function renderJobCard(job, isToday = false) {
+    const time = formatTime(job.scheduledTime);
+    const statusClass = getStatusClass(job.status);
+    const roPo = escapeHtml(job.roPo || '');
 
     return `
-    <tr data-ro="${escapeHtml(v.roPo)}" data-status="${escapeHtml(status)}">
-      <td><strong>${escapeHtml(v.roPo)}</strong></td>
-      <td>${escapeHtml(v.shopName) || '-'}</td>
-      <td>${escapeHtml(v.vehicle) || '-'}</td>
-      <td class="cals-col">${escapeHtml(truncate(v.requiredCalibrations, 25)) || '-'}</td>
-      <td><span class="status-badge status-${statusClass}">${escapeHtml(status)}</span></td>
-      <td>${formatSchedule(v.scheduledDate, v.scheduledTime)}</td>
-      <td>
-        <button class="btn btn-sm btn-secondary view-btn" data-ro="${escapeHtml(v.roPo)}">View</button>
-        <button class="btn btn-sm btn-secondary status-btn" data-ro="${escapeHtml(v.roPo)}">Status</button>
-        ${status.toLowerCase() !== 'completed' ? `<button class="btn btn-sm btn-primary complete-btn" data-ro="${escapeHtml(v.roPo)}" style="background: var(--success);">Complete</button>` : ''}
-      </td>
-    </tr>
-  `;
-  }).join('');
-
-  // Add click handlers
-  document.querySelectorAll('.view-btn').forEach(btn => {
-    btn.addEventListener('click', () => showVehicleModal(btn.dataset.ro));
-  });
-
-  document.querySelectorAll('.status-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      showStatusModal(btn.dataset.ro);
-    });
-  });
-
-  document.querySelectorAll('.complete-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      showCompleteModal(btn.dataset.ro);
-    });
-  });
-
-  // Row click
-  document.querySelectorAll('#vehicles-tbody tr').forEach(row => {
-    row.style.cursor = 'pointer';
-    row.addEventListener('click', (e) => {
-      if (e.target.tagName === 'BUTTON') return;
-      showVehicleModal(row.dataset.ro);
-    });
-  });
-}
-
-// Show vehicle modal
-function showVehicleModal(roPo) {
-  const vehicle = vehicles.find(v => v.roPo === roPo);
-  if (!vehicle) return;
-
-  const content = document.getElementById('vehicle-detail-content');
-  content.innerHTML = `
-    <div class="detail-grid">
-      <div class="detail-item">
-        <label>RO/PO</label>
-        <span>${escapeHtml(vehicle.roPo)}</span>
+      <div class="job-card ${isToday ? 'today' : ''}" onclick="openJobModal('${roPo}')">
+        <div class="job-main">
+          <div class="job-time">${time || '--:--'}</div>
+          <div class="job-info">
+            <div class="job-ro">RO #${roPo}</div>
+            <div class="job-vehicle">${escapeHtml(job.vehicle) || 'Unknown'}</div>
+            <div class="job-shop">${escapeHtml(job.shopName) || '-'}</div>
+          </div>
+        </div>
+        <div class="job-meta">
+          <span class="status-badge ${statusClass}">${escapeHtml(job.status) || 'New'}</span>
+          ${job.requiredCalibrations ? `
+            <div class="job-cals">${escapeHtml(truncate(job.requiredCalibrations, 30))}</div>
+          ` : ''}
+        </div>
       </div>
-      <div class="detail-item">
-        <label>Shop</label>
-        <span>${escapeHtml(vehicle.shopName) || '-'}</span>
-      </div>
-      <div class="detail-item">
-        <label>VIN</label>
-        <span>${escapeHtml(vehicle.vin) || '-'}</span>
-      </div>
-      <div class="detail-item">
-        <label>Vehicle</label>
-        <span>${escapeHtml(vehicle.vehicle) || '-'}</span>
-      </div>
-      <div class="detail-item">
-        <label>Status</label>
-        <span class="status-badge status-${(vehicle.status || 'new').toLowerCase().replace(/\s+/g, '-')}">${escapeHtml(vehicle.status || 'New')}</span>
-      </div>
-      <div class="detail-item">
-        <label>Technician</label>
-        <span>${escapeHtml(vehicle.technician) || 'Not assigned'}</span>
-      </div>
-      <div class="detail-item">
-        <label>Scheduled</label>
-        <span>${formatSchedule(vehicle.scheduledDate, vehicle.scheduledTime)}</span>
-      </div>
-      <div class="detail-item full-width">
-        <label>Required Calibrations</label>
-        <span>${escapeHtml(vehicle.requiredCalibrations) || 'Pending review'}</span>
-      </div>
-      <div class="detail-item full-width">
-        <label>Notes</label>
-        <pre class="notes-display">${escapeHtml(vehicle.notes) || 'No notes'}</pre>
-      </div>
-    </div>
-    <div class="detail-actions">
-      <div class="quick-actions">
-        <button class="btn btn-sm btn-secondary" onclick="showStatusModal('${escapeHtml(vehicle.roPo)}'); closeModal(vehicleModal);">Change Status</button>
-        <button class="btn btn-sm btn-secondary" onclick="handleQuickArrive('${escapeHtml(vehicle.roPo)}')">Mark Arrived</button>
-        <button class="btn btn-sm btn-primary" onclick="showCompleteModal('${escapeHtml(vehicle.roPo)}'); closeModal(vehicleModal);" style="background: var(--success);">Complete Job</button>
-      </div>
-    </div>
-  `;
-
-  vehicleModal.classList.remove('hidden');
-}
-
-// Show status modal
-function showStatusModal(roPo) {
-  const vehicle = vehicles.find(v => v.roPo === roPo);
-  document.getElementById('status-modal-ro').textContent = roPo;
-  document.getElementById('status-change-ro').value = roPo;
-  document.getElementById('status-notes').value = '';
-  if (vehicle) {
-    document.getElementById('new-status').value = vehicle.status || 'New';
+    `;
   }
-  statusModal.classList.remove('hidden');
-}
 
-// Show complete modal
-function showCompleteModal(roPo) {
-  document.getElementById('complete-modal-ro').textContent = roPo;
-  document.getElementById('complete-change-ro').value = roPo;
-  document.getElementById('completed-cals').value = '';
-  document.getElementById('complete-notes').value = '';
-  completeModal.classList.remove('hidden');
-}
-
-// Handle quick arrive
-async function handleQuickArrive(roPo) {
-  try {
-    await TechAPI.markArrival(roPo);
-    Toast.success('Arrival logged');
-    loadVehicles();
-    loadStats();
-  } catch (err) {
-    Toast.error(err.message || 'Failed to log arrival');
+  function truncate(str, len) {
+    if (!str) return '';
+    return str.length > len ? str.substring(0, len) + '...' : str;
   }
-}
-window.handleQuickArrive = handleQuickArrive;
 
-// Handle status change
-async function handleStatusChange() {
-  const roPo = document.getElementById('status-change-ro').value;
-  const status = document.getElementById('new-status').value;
-  const notes = document.getElementById('status-notes').value.trim();
+  // Make openJobModal globally accessible
+  window.openJobModal = function(roPo) {
+    currentJob = allJobs.find(j => j.roPo === roPo);
+    if (!currentJob) return;
 
-  const btn = document.getElementById('confirm-status-btn');
-  btn.disabled = true;
-  btn.textContent = 'Updating...';
+    const modal = document.getElementById('jobModal');
 
-  try {
-    await TechAPI.updateStatus(roPo, status, notes || null);
-    Toast.success(`Status updated to ${status}`);
-    closeModal(statusModal);
-    loadVehicles();
-    loadStats();
-  } catch (err) {
-    Toast.error(err.message || 'Failed to update status');
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Update Status';
-  }
-}
+    // Populate modal
+    document.getElementById('modalTitle').textContent = `RO #${currentJob.roPo}`;
+    document.getElementById('modalShop').textContent = currentJob.shopName || '-';
+    document.getElementById('modalVehicle').textContent = currentJob.vehicle || '-';
+    document.getElementById('modalVin').textContent = currentJob.vin || '-';
+    document.getElementById('modalSchedule').textContent = formatDateTime(currentJob.scheduledDate, currentJob.scheduledTime);
+    document.getElementById('modalCalibrations').textContent = currentJob.requiredCalibrations || 'Not determined';
+    document.getElementById('modalNotes').textContent = currentJob.notes || 'No notes';
 
-// Handle complete
-async function handleComplete() {
-  const roPo = document.getElementById('complete-change-ro').value;
-  const cals = document.getElementById('completed-cals').value.trim();
-  const notes = document.getElementById('complete-notes').value.trim();
-
-  const btn = document.getElementById('confirm-complete-btn');
-  btn.disabled = true;
-  btn.textContent = 'Completing...';
-
-  try {
-    await TechAPI.markComplete(roPo, cals || null, notes || null);
-    Toast.success('Job marked as complete');
-    closeModal(completeModal);
-    loadVehicles();
-    loadStats();
-  } catch (err) {
-    Toast.error(err.message || 'Failed to complete job');
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Mark Complete';
-  }
-}
-
-// Close modal
-function closeModal(modal) {
-  modal.classList.add('hidden');
-}
-window.closeModal = closeModal;
-window.showStatusModal = showStatusModal;
-window.showCompleteModal = showCompleteModal;
-
-// Setup event listeners
-function setupEventListeners() {
-  // Tab buttons
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      currentTab = btn.dataset.tab;
-      loadVehicles();
-    });
-  });
-
-  // Status filter
-  statusFilter.addEventListener('change', () => {
-    currentStatus = statusFilter.value;
-    loadVehicles();
-  });
-
-  // Shop filter
-  let shopDebounce;
-  shopFilter.addEventListener('input', () => {
-    clearTimeout(shopDebounce);
-    shopDebounce = setTimeout(() => {
-      currentShop = shopFilter.value.trim();
-      loadVehicles();
-    }, 300);
-  });
-
-  // Search
-  searchBtn.addEventListener('click', () => {
-    currentSearch = searchInput.value.trim();
-    loadVehicles();
-  });
-
-  searchInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-      currentSearch = searchInput.value.trim();
-      loadVehicles();
+    // DTCs
+    if (currentJob.dtcs) {
+      document.getElementById('dtcSection').style.display = 'block';
+      document.getElementById('modalDtcs').textContent = currentJob.dtcs;
+    } else {
+      document.getElementById('dtcSection').style.display = 'none';
     }
-  });
 
-  // Refresh
-  refreshBtn.addEventListener('click', () => {
-    loadStats();
-    loadVehicles();
-    Toast.success('Dashboard refreshed');
-  });
+    // Documents
+    renderModalDocuments(currentJob);
 
-  // Logout
-  document.getElementById('logout-btn').addEventListener('click', () => {
-    TechAuth.logout();
-    window.location.href = '/tech/';
-  });
+    // Show modal
+    modal.classList.add('open');
+  };
 
-  // Modal close handlers
-  [vehicleModal, statusModal, completeModal].forEach(modal => {
-    modal.querySelector('.modal-close').addEventListener('click', () => closeModal(modal));
-    modal.querySelector('.modal-backdrop').addEventListener('click', () => closeModal(modal));
-    const closeBtn = modal.querySelector('.modal-close-btn');
-    if (closeBtn) closeBtn.addEventListener('click', () => closeModal(modal));
-  });
+  function renderModalDocuments(job) {
+    const container = document.getElementById('modalDocuments');
 
-  // Status confirm
-  document.getElementById('confirm-status-btn').addEventListener('click', handleStatusChange);
+    const docs = [
+      { name: 'Estimate', url: job.estimatePdf || job.estimate_pdf, icon: 'fileText' },
+      { name: 'Pre-Scan', url: job.prescanPdf || job.prescan_pdf || job.preScanPdf, icon: 'clipboard' },
+      { name: 'Revv Report', url: job.revvPdf || job.revv_pdf || job.revvReportPdf, icon: 'barChart' },
+      { name: 'Post-Scan', url: job.postscanPdf || job.postscan_pdf || job.postScanPdf, icon: 'clipboard' },
+      { name: 'Invoice', url: job.invoicePdf || job.invoice_pdf, icon: 'fileText' }
+    ];
 
-  // Complete confirm
-  document.getElementById('confirm-complete-btn').addEventListener('click', handleComplete);
+    container.innerHTML = docs.map(doc => {
+      const hasUrl = doc.url && doc.url.startsWith('http');
+      const iconSvg = Icons[doc.icon] || Icons.fileText;
 
-  // Escape key
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      [vehicleModal, statusModal, completeModal].forEach(modal => {
-        if (!modal.classList.contains('hidden')) closeModal(modal);
-      });
-    }
-  });
-}
-
-// Utility functions
-function escapeHtml(str) {
-  if (!str) return '';
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
-}
-
-function truncate(str, len) {
-  if (!str) return '';
-  return str.length > len ? str.substring(0, len) + '...' : str;
-}
-
-function formatSchedule(dateStr, timeStr) {
-  if (!dateStr) return 'Not scheduled';
-  if (String(dateStr).includes('1899')) return 'Not scheduled';
-
-  try {
-    let date;
-    if (String(dateStr).includes('T')) {
-      date = new Date(dateStr);
-    } else if (String(dateStr).includes('/')) {
-      const parts = String(dateStr).match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-      if (parts) {
-        date = new Date(parts[3], parts[1] - 1, parts[2]);
+      if (hasUrl) {
+        return `
+          <a href="${doc.url}" target="_blank" class="doc-chip available">
+            <span class="icon">${iconSvg}</span>
+            ${doc.name}
+          </a>
+        `;
+      } else {
+        return `
+          <span class="doc-chip unavailable">
+            <span class="icon">${iconSvg}</span>
+            ${doc.name}
+          </span>
+        `;
       }
-    } else if (String(dateStr).includes('-')) {
-      date = new Date(dateStr + 'T12:00:00');
+    }).join('');
+  }
+
+  // Make closeModal globally accessible
+  window.closeModal = function() {
+    document.getElementById('jobModal').classList.remove('open');
+    currentJob = null;
+  };
+
+  // Make updateStatus globally accessible
+  window.updateStatus = async function(newStatus) {
+    if (!currentJob) return;
+
+    try {
+      const response = await TechAPI.put(`/api/tech/vehicles/${currentJob.roPo}/status`, {
+        status: newStatus
+      });
+
+      if (response.success) {
+        Toast.success(`Status updated to ${newStatus}`);
+        closeModal();
+        await loadJobs();
+      } else {
+        Toast.error(response.error || 'Failed to update status');
+      }
+    } catch (err) {
+      Toast.error('Failed to update status');
+    }
+  };
+
+  // Make addNote globally accessible
+  window.addNote = async function() {
+    if (!currentJob) return;
+
+    const noteText = document.getElementById('newNote').value.trim();
+    if (!noteText) {
+      Toast.error('Please enter a note');
+      return;
     }
 
-    if (!date || isNaN(date.getTime())) return 'Not scheduled';
+    try {
+      const response = await TechAPI.post(`/api/tech/vehicles/${currentJob.roPo}/notes`, {
+        note: noteText
+      });
 
-    const options = { month: 'short', day: 'numeric', year: 'numeric' };
-    let formatted = date.toLocaleDateString('en-US', options);
+      if (response.success) {
+        Toast.success('Note added');
+        document.getElementById('newNote').value = '';
 
-    if (timeStr && !String(timeStr).includes('1899')) {
-      if (String(timeStr).includes('T')) {
-        const timeDate = new Date(timeStr);
-        if (!isNaN(timeDate.getTime())) {
-          const timeOptions = { hour: 'numeric', minute: '2-digit', hour12: true };
-          formatted += ' ' + timeDate.toLocaleTimeString('en-US', timeOptions);
+        // Refresh job data
+        const updated = await TechAPI.get(`/api/tech/vehicles/${currentJob.roPo}`);
+        if (updated.success && updated.vehicle) {
+          currentJob = updated.vehicle;
+          document.getElementById('modalNotes').textContent = currentJob.notes || 'No notes';
         }
       } else {
-        formatted += ' ' + timeStr;
+        Toast.error(response.error || 'Failed to add note');
       }
+    } catch (err) {
+      Toast.error('Failed to add note');
     }
+  };
 
-    return formatted;
-  } catch (e) {
-    return 'Not scheduled';
-  }
-}
+  // Close modal on escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeModal();
+    }
+  });
 
-// Initialize
-init();
+  // Close modal on backdrop click
+  document.getElementById('jobModal')?.addEventListener('click', (e) => {
+    if (e.target.classList.contains('modal-overlay')) {
+      closeModal();
+    }
+  });
+
+  console.log('[TECH] dashboard.js loaded');
+})();

@@ -3,76 +3,102 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ADAS F1RST - Tech Portal Login</title>
-  <link rel="stylesheet" href="/css/styles.css">
-  <style>
-    .login-header p { color: var(--info); font-weight: 500; }
-  </style>
+  <title>ADAS F1RST - Tech Portal</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/apple-style.css">
 </head>
 <body class="login-page">
   <div class="login-container">
-    <div class="login-header">
-      <h1>ADAS F1RST</h1>
-      <p>Technician Portal</p>
-    </div>
-
-    <form id="login-form" class="login-form">
-      <div class="form-group">
-        <label for="username">Username</label>
-        <input type="text" id="username" name="username" required autocomplete="username" placeholder="Enter your username">
+    <div class="login-card">
+      <div class="login-header">
+        <div class="login-logo">ADAS F1RST</div>
+        <p class="login-subtitle" style="color: #34c759;">Technician Portal</p>
       </div>
 
-      <div class="form-group">
-        <label for="password">Password</label>
-        <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="Enter your password">
+      <form id="loginForm" class="login-form">
+        <div class="form-group">
+          <label class="form-label" for="username">Username</label>
+          <input type="text" id="username" class="form-input" placeholder="Enter your username" required autocomplete="username">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password">Password</label>
+          <input type="password" id="password" class="form-input" placeholder="Enter your password" required autocomplete="current-password">
+        </div>
+
+        <div id="loginError" class="form-error" style="display:none;"></div>
+
+        <button type="submit" id="loginBtn" class="btn-accent btn-large btn-full">
+          Sign In
+        </button>
+      </form>
+
+      <div class="login-footer">
+        <p>Need help? <a href="mailto:adasf1rstservice@gmail.com">adasf1rstservice@gmail.com</a></p>
       </div>
-
-      <div id="login-error" class="error-message hidden"></div>
-
-      <button type="submit" id="login-btn" class="btn btn-primary btn-block">
-        <span class="btn-text">Sign In</span>
-        <span class="btn-spinner hidden"></span>
-      </button>
-    </form>
-
-    <div class="login-footer">
-      <p>Need help? Contact <a href="mailto:adasf1rstservice@gmail.com">adasf1rstservice@gmail.com</a></p>
     </div>
   </div>
 
-  <div id="toast" class="toast hidden"></div>
-
-  <script src="/tech/js/auth.js"></script>
+  <script src="/js/icons.js"></script>
+  <script src="/js/auth.js"></script>
   <script>
     // Check if already logged in
-    if (TechAuth.isAuthenticated()) {
-      window.location.href = '/tech/dashboard.html';
+    const token = Auth.getToken();
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        if (payload.role === 'tech' || payload.role === 'admin') {
+          window.location.href = '/tech/dashboard.html';
+        }
+      } catch (e) {}
     }
 
-    document.getElementById('login-form').addEventListener('submit', async (e) => {
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
       e.preventDefault();
 
-      const username = document.getElementById('username').value;
+      const username = document.getElementById('username').value.trim();
       const password = document.getElementById('password').value;
-      const loginBtn = document.getElementById('login-btn');
-      const errorDiv = document.getElementById('login-error');
+      const loginBtn = document.getElementById('loginBtn');
+      const errorDiv = document.getElementById('loginError');
 
-      // Show loading
       loginBtn.disabled = true;
-      loginBtn.querySelector('.btn-text').textContent = 'Signing in...';
-      loginBtn.querySelector('.btn-spinner').classList.remove('hidden');
-      errorDiv.classList.add('hidden');
+      loginBtn.textContent = 'Signing in...';
+      errorDiv.style.display = 'none';
 
       try {
-        await TechAuth.login(username, password);
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || 'Login failed');
+        }
+
+        // Check role
+        const payload = JSON.parse(atob(data.token.split('.')[1]));
+        if (payload.role !== 'tech' && payload.role !== 'admin') {
+          throw new Error('Access denied. Tech credentials required.');
+        }
+
+        // Store auth
+        localStorage.setItem('token', data.token);
+        if (data.refreshToken) {
+          localStorage.setItem('refreshToken', data.refreshToken);
+        }
+        localStorage.setItem('userRole', payload.role);
+        localStorage.setItem('userName', payload.name || payload.techName || username);
+
         window.location.href = '/tech/dashboard.html';
       } catch (err) {
         errorDiv.textContent = err.message || 'Login failed';
-        errorDiv.classList.remove('hidden');
+        errorDiv.style.display = 'block';
       } finally {
         loginBtn.disabled = false;
-        loginBtn.querySelector('.btn-text').textContent = 'Sign In';
-        loginBtn.querySelector('.btn-spinner').classList.add('hidden');
+        loginBtn.textContent = 'Sign In';
       }
     });
   </script>
