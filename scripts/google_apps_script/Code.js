@@ -32,40 +32,47 @@
 const SCHEDULE_SHEET = 'ADAS_Schedule';
 const BILLING_SHEET = 'Billing';
 const SHOPS_SHEET = 'Shops';
+const TECHNICIANS_SHEET = 'Technicians';
+const NOTIFICATIONS_SHEET = 'Notifications';
 const SCRUB_DETAILS_SHEET = 'Scrub_Details';
-const TOTAL_COLUMNS = 22; // A through V
+const TOTAL_COLUMNS = 26; // A through Z
 
 // Column indices (0-based)
 const COL = {
-  TIMESTAMP: 0,       // A
-  SHOP_NAME: 1,       // B
-  RO_PO: 2,           // C
-  VIN: 3,             // D
-  VEHICLE: 4,         // E
-  STATUS: 5,          // F
-  SCHEDULED_DATE: 6,  // G
-  SCHEDULED_TIME: 7,  // H
-  TECHNICIAN: 8,      // I
-  REQUIRED_CALS: 9,   // J
-  COMPLETED_CALS: 10, // K
-  DTCS: 11,           // L
-  REVV_PDF: 12,       // M
-  POSTSCAN_PDF: 13,   // N
-  INVOICE_PDF: 14,    // O
-  INVOICE_NUM: 15,    // P
-  INVOICE_AMOUNT: 16, // Q
-  INVOICE_DATE: 17,   // R
-  NOTES: 18,          // S
-  FLOW_HISTORY: 19,   // T - Flow History (timestamped status changes)
-  FULL_SCRUB: 19,     // T - Alias for backward compatibility (same as FLOW_HISTORY)
+  TIMESTAMP: 0,       // A - Timestamp Created
+  SHOP_NAME: 1,       // B - Shop Name
+  RO_PO: 2,           // C - RO/PO
+  VIN: 3,             // D - VIN
+  VEHICLE: 4,         // E - Vehicle (Year Make Model)
+  STATUS: 5,          // F - Status
+  SCHEDULED_DATE: 6,  // G - Scheduled Date
+  SCHEDULED_TIME: 7,  // H - Scheduled Time
+  TECHNICIAN: 8,      // I - Technician Assigned
+  REQUIRED_CALS: 9,   // J - Required Calibrations
+  COMPLETED_CALS: 10, // K - Completed Calibrations
+  DTCS: 11,           // L - DTCs
+  REVV_PDF: 12,       // M - Revv Report PDF
+  POSTSCAN_PDF: 13,   // N - Post Scan PDF
+  INVOICE_PDF: 14,    // O - Invoice PDF
+  INVOICE_NUM: 15,    // P - Invoice Number
+  INVOICE_AMOUNT: 16, // Q - Invoice Amount
+  INVOICE_DATE: 17,   // R - Invoice Date
+  NOTES: 18,          // S - Notes
+  FLOW_HISTORY: 19,   // T - Flow History / Full Scrub Text
+  FULL_SCRUB: 19,     // T - Alias for backward compatibility
   OEM_POSITION: 20,   // U - OEM Position Statement links
-  ESTIMATE_PDF: 21    // V - Estimate PDF link
+  ESTIMATE_PDF: 21,   // V - Estimate PDF link
+  PRESCAN_PDF: 22,    // W - PreScan PDF (or "NO_DTCS_CONFIRMED")
+  JOB_START: 23,      // X - Job Start timestamp
+  JOB_END: 24,        // Y - Job End timestamp
+  NOTIFICATION_FLAGS: 25 // Z - Notification Flags (JSON)
 };
 
 /**
- * FINALIZED STATUS VALUES - 7 STATUSES
+ * FINALIZED STATUS VALUES - 8 STATUSES
  * Added "Rescheduled" for when appointments are changed
  * Added "No Cal" for repairs that don't require calibration
+ * Added "In Progress" for when tech is actively working on vehicle
  */
 const VALID_STATUSES = [
   'New',
@@ -73,6 +80,7 @@ const VALID_STATUSES = [
   'No Cal',
   'Scheduled',
   'Rescheduled',
+  'In Progress',
   'Completed',
   'Cancelled'
 ];
@@ -81,7 +89,6 @@ const STATUS_MIGRATION = {
   'Not Ready': 'New',
   'Needs Attention': 'New',
   'Needs Review': 'New',
-  'In Progress': 'Scheduled',
   'Blocked': 'Cancelled'
 };
 
@@ -92,6 +99,7 @@ const STATUS_CONFIG = {
   'No Cal':      { background: '#f5f5f5', fontColor: '#666666', icon: 'check', btnClass: 'btn-nocal' },
   'Scheduled':   { background: '#f3e8fd', fontColor: '#7c3aed', icon: 'event', btnClass: 'btn-scheduled' },
   'Rescheduled': { background: '#fff3e0', fontColor: '#e65100', icon: 'update', btnClass: 'btn-rescheduled' },
+  'In Progress': { background: '#ede7f6', fontColor: '#5e35b1', icon: 'engineering', btnClass: 'btn-inprogress' },
   'Completed':   { background: '#d2e3fc', fontColor: '#1967d2', icon: 'done_all', btnClass: 'btn-complete' },
   'Cancelled':   { background: '#fce8e6', fontColor: '#c5221f', icon: 'cancel', btnClass: 'btn-cancel' }
 };
@@ -241,6 +249,70 @@ function doPost(e) {
 
       case 'update_dtcs':
         result = updateDTCs(data);
+        break;
+
+      // ====== PORTAL API ACTIONS ======
+
+      // Authentication
+      case 'auth_login':
+        result = authenticateUser(data);
+        break;
+
+      // Shop Portal
+      case 'shop_get_vehicles':
+        result = getShopVehicles(data);
+        break;
+
+      case 'shop_submit_vehicle':
+        result = submitNewVehicle(data);
+        break;
+
+      case 'shop_schedule':
+        result = scheduleVehicle(data);
+        break;
+
+      case 'shop_cancel':
+        result = cancelVehicle(data);
+        break;
+
+      // Tech Portal
+      case 'tech_get_jobs':
+        result = getTechJobs(data);
+        break;
+
+      case 'tech_upload_revv':
+        result = uploadRevvReport(data);
+        break;
+
+      case 'tech_start_job':
+        result = startJob(data);
+        break;
+
+      case 'tech_complete_job':
+        result = completeJob(data);
+        break;
+
+      // Admin Portal
+      case 'admin_get_jobs':
+        result = getAdminJobs(data);
+        break;
+
+      case 'admin_get_stats':
+        result = getAdminStats(data);
+        break;
+
+      // Notifications
+      case 'get_notifications':
+        result = getNotifications(data);
+        break;
+
+      case 'mark_notification_read':
+        result = markNotificationRead(data);
+        break;
+
+      // File Upload
+      case 'upload_file':
+        result = uploadFileToDrive(data);
         break;
 
       default:
@@ -4151,4 +4223,844 @@ function openApprovalSidebar() {
     .setWidth(400);
 
   SpreadsheetApp.getUi().showSidebar(htmlOutput);
+}
+
+// ============================================================================
+// PORTAL API FUNCTIONS
+// These functions are called via doPost from the web portal
+// ============================================================================
+
+/**
+ * Helper: Format timestamp for notes
+ */
+function formatTimestampForNotes(date) {
+  date = date || new Date();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  const hours = date.getHours();
+  const mins = date.getMinutes().toString().padStart(2, '0');
+  const ampm = hours >= 12 ? 'pm' : 'am';
+  const hour12 = hours % 12 || 12;
+  return `${month}/${day} ${hour12}:${mins}${ampm}`;
+}
+
+/**
+ * Get assigned technician based on shop region
+ */
+function getAssignedTechForShop(shopName) {
+  // Shop-to-region mapping (customize for your shops)
+  const shopRegions = {
+    'JMD Body Shop': 'Hialeah',
+    'AutoSport': 'Hialeah',
+    'PaintMax': 'Hialeah',
+    'Reinaldo Body Shop': 'South Miami',
+    'CCNM': 'North Miami',
+    'Daniels Paint and Body': 'North Miami'
+  };
+
+  // Region-to-tech mapping
+  const regionTechs = {
+    'Hialeah': 'Felipe',
+    'North Miami': 'Anthony',
+    'South Miami': 'Martin'
+  };
+
+  // Try to find in Shops tab first
+  try {
+    const shopsSheet = SpreadsheetApp.getActive().getSheetByName(SHOPS_SHEET);
+    if (shopsSheet) {
+      const shopsData = shopsSheet.getDataRange().getValues();
+      for (let i = 1; i < shopsData.length; i++) {
+        if (shopsData[i][0] === shopName) {
+          const region = shopsData[i][6]; // Column G = Region
+          if (region && regionTechs[region]) {
+            return regionTechs[region];
+          }
+          break;
+        }
+      }
+    }
+  } catch (e) {
+    // Fall back to hardcoded mapping
+  }
+
+  const region = shopRegions[shopName] || 'Hialeah';
+  return regionTechs[region] || 'Felipe';
+}
+
+/**
+ * Get all vehicles for a specific shop
+ * @param {Object} data - {shopName, month (optional: "2025-12"), status (optional)}
+ * @returns {Object} - {success, vehicles: [...], counts: {new, ready, scheduled, completed}}
+ */
+function getShopVehicles(data) {
+  const { shopName, month, status } = data;
+  const sheet = SpreadsheetApp.getActive().getSheetByName(SCHEDULE_SHEET);
+  const allData = sheet.getDataRange().getValues();
+
+  const vehicles = [];
+  const counts = { new: 0, ready: 0, no_cal: 0, scheduled: 0, in_progress: 0, completed: 0, cancelled: 0 };
+
+  for (let i = 1; i < allData.length; i++) {
+    const row = allData[i];
+    if (row[COL.SHOP_NAME] !== shopName) continue;
+
+    const rowStatus = String(row[COL.STATUS] || '').toLowerCase().replace(/\s+/g, '_');
+    counts[rowStatus] = (counts[rowStatus] || 0) + 1;
+
+    // Filter by month if specified
+    if (month) {
+      const timestamp = new Date(row[COL.TIMESTAMP]);
+      if (!isNaN(timestamp.getTime())) {
+        const rowMonth = timestamp.toISOString().slice(0, 7);
+        if (rowMonth !== month) continue;
+      }
+    }
+
+    // Filter by status if specified
+    if (status && String(row[COL.STATUS] || '').toLowerCase() !== status.toLowerCase()) continue;
+
+    vehicles.push({
+      rowNumber: i + 1,
+      timestamp: row[COL.TIMESTAMP],
+      ro_po: row[COL.RO_PO],
+      vin: row[COL.VIN],
+      vehicle: row[COL.VEHICLE],
+      status: row[COL.STATUS],
+      scheduled_date: row[COL.SCHEDULED_DATE],
+      scheduled_time: row[COL.SCHEDULED_TIME],
+      technician: row[COL.TECHNICIAN],
+      required_cals: row[COL.REQUIRED_CALS],
+      has_estimate: !!row[COL.ESTIMATE_PDF],
+      has_prescan: !!row[COL.PRESCAN_PDF],
+      has_revv: !!row[COL.REVV_PDF],
+      has_invoice: !!row[COL.INVOICE_PDF],
+      has_postscan: !!row[COL.POSTSCAN_PDF]
+    });
+  }
+
+  return { success: true, vehicles, counts };
+}
+
+/**
+ * Submit new vehicle from shop portal
+ * @param {Object} data - {shopName, ro_po, vin, year, make, model, estimate_url, prescan_url, no_dtcs_confirmed, notes}
+ * @returns {Object} - {success, ro_po, message}
+ */
+function submitNewVehicle(data) {
+  const { shopName, ro_po, vin, year, make, model, estimate_url, prescan_url, no_dtcs_confirmed, notes } = data;
+
+  // Validate required fields
+  if (!ro_po || !vin || !estimate_url) {
+    return { success: false, error: 'Missing required fields: RO/PO, VIN, and Estimate are required' };
+  }
+
+  // Validate pre-scan or confirmation
+  if (!prescan_url && !no_dtcs_confirmed) {
+    return { success: false, error: 'Must upload Pre-Scan or confirm no DTCs present' };
+  }
+
+  const sheet = SpreadsheetApp.getActive().getSheetByName(SCHEDULE_SHEET);
+  const vehicle = [year, make, model].filter(Boolean).join(' ');
+
+  // Determine technician based on shop region
+  const assignedTech = getAssignedTechForShop(shopName);
+
+  // Pre-scan value: URL or confirmation flag
+  const prescanValue = prescan_url || (no_dtcs_confirmed ? 'NO_DTCS_CONFIRMED' : '');
+
+  // Create timestamp
+  const timestamp = new Date();
+  const initialNote = `${formatTimestampForNotes(timestamp)} | Vehicle submitted by ${shopName}`;
+
+  // Build row array matching exact column order A-Z (26 columns)
+  const newRow = new Array(TOTAL_COLUMNS).fill('');
+  newRow[COL.TIMESTAMP] = timestamp;
+  newRow[COL.SHOP_NAME] = shopName;
+  newRow[COL.RO_PO] = ro_po;
+  newRow[COL.VIN] = vin;
+  newRow[COL.VEHICLE] = vehicle;
+  newRow[COL.STATUS] = 'New';
+  newRow[COL.TECHNICIAN] = assignedTech;
+  newRow[COL.NOTES] = initialNote + (notes ? ` | ${notes}` : '');
+  newRow[COL.ESTIMATE_PDF] = estimate_url;
+  newRow[COL.PRESCAN_PDF] = prescanValue;
+
+  sheet.appendRow(newRow);
+
+  // Create notification for assigned tech
+  createNotification({
+    recipientType: 'tech',
+    recipientId: assignedTech,
+    roPo: ro_po,
+    type: 'new_vehicle',
+    message: `New vehicle from ${shopName}: ${vehicle} (RO: ${ro_po})`
+  });
+
+  return { success: true, ro_po: ro_po, technician: assignedTech, message: 'Vehicle submitted successfully' };
+}
+
+/**
+ * Schedule vehicle calibration
+ * @param {Object} data - {ro_po, scheduled_date, scheduled_time}
+ * @returns {Object} - {success, technician, message}
+ */
+function scheduleVehicle(data) {
+  const { ro_po, scheduled_date, scheduled_time } = data;
+
+  const sheet = SpreadsheetApp.getActive().getSheetByName(SCHEDULE_SHEET);
+  const allData = sheet.getDataRange().getValues();
+
+  for (let i = 1; i < allData.length; i++) {
+    if (String(allData[i][COL.RO_PO]) === String(ro_po)) {
+      const currentStatus = allData[i][COL.STATUS];
+      if (currentStatus !== 'Ready') {
+        return { success: false, error: `Cannot schedule: vehicle status is "${currentStatus}", must be "Ready"` };
+      }
+
+      const technician = allData[i][COL.TECHNICIAN];
+      const shopName = allData[i][COL.SHOP_NAME];
+      const vehicle = allData[i][COL.VEHICLE];
+      const rowNum = i + 1;
+
+      // Update schedule columns (1-indexed for getRange)
+      sheet.getRange(rowNum, COL.SCHEDULED_DATE + 1).setValue(scheduled_date);
+      sheet.getRange(rowNum, COL.SCHEDULED_TIME + 1).setValue(scheduled_time);
+      sheet.getRange(rowNum, COL.STATUS + 1).setValue('Scheduled');
+
+      // Append to notes
+      const timestamp = formatTimestampForNotes(new Date());
+      const currentNotes = allData[i][COL.NOTES] || '';
+      const newNote = `${timestamp} | Scheduled for ${scheduled_date} ${scheduled_time}`;
+      sheet.getRange(rowNum, COL.NOTES + 1).setValue(currentNotes + '\n' + newNote);
+
+      // Notify tech
+      createNotification({
+        recipientType: 'tech',
+        recipientId: technician,
+        roPo: ro_po,
+        type: 'job_scheduled',
+        message: `Job scheduled: ${vehicle} at ${shopName} on ${scheduled_date} ${scheduled_time}`
+      });
+
+      return { success: true, technician: technician, scheduled_date: scheduled_date, scheduled_time: scheduled_time, message: 'Vehicle scheduled successfully' };
+    }
+  }
+
+  return { success: false, error: 'RO not found' };
+}
+
+/**
+ * Cancel scheduled vehicle
+ * @param {Object} data - {ro_po, reason}
+ * @returns {Object} - {success, message}
+ */
+function cancelVehicle(data) {
+  const { ro_po, reason } = data;
+
+  if (!reason) {
+    return { success: false, error: 'Cancellation reason is required' };
+  }
+
+  const sheet = SpreadsheetApp.getActive().getSheetByName(SCHEDULE_SHEET);
+  const allData = sheet.getDataRange().getValues();
+
+  for (let i = 1; i < allData.length; i++) {
+    if (String(allData[i][COL.RO_PO]) === String(ro_po)) {
+      const technician = allData[i][COL.TECHNICIAN];
+      const vehicle = allData[i][COL.VEHICLE];
+      const rowNum = i + 1;
+
+      // Update status
+      sheet.getRange(rowNum, COL.STATUS + 1).setValue('Cancelled');
+
+      // Append to notes
+      const timestamp = formatTimestampForNotes(new Date());
+      const currentNotes = allData[i][COL.NOTES] || '';
+      const newNote = `${timestamp} | CANCELLED - Reason: ${reason}`;
+      sheet.getRange(rowNum, COL.NOTES + 1).setValue(currentNotes + '\n' + newNote);
+
+      // Notify tech
+      createNotification({
+        recipientType: 'tech',
+        recipientId: technician,
+        roPo: ro_po,
+        type: 'job_cancelled',
+        message: `Job cancelled: ${vehicle} - ${reason}`
+      });
+
+      return { success: true, message: 'Vehicle cancelled' };
+    }
+  }
+
+  return { success: false, error: 'RO not found' };
+}
+
+/**
+ * Get jobs for a technician
+ * @param {Object} data - {techName, filter: "all"|"new"|"today"|"ready"|"in_progress", month}
+ * @returns {Object} - {success, jobs: [...], counts: {...}}
+ */
+function getTechJobs(data) {
+  const { techName, filter, month } = data;
+  const sheet = SpreadsheetApp.getActive().getSheetByName(SCHEDULE_SHEET);
+  const allData = sheet.getDataRange().getValues();
+
+  const jobs = [];
+  const counts = { new: 0, ready: 0, today: 0, in_progress: 0, completed: 0 };
+  const today = new Date().toISOString().slice(0, 10);
+
+  for (let i = 1; i < allData.length; i++) {
+    const row = allData[i];
+    if (row[COL.TECHNICIAN] !== techName) continue;
+
+    const status = String(row[COL.STATUS] || '').toLowerCase().replace(/\s+/g, '_');
+    let scheduledDate = '';
+    if (row[COL.SCHEDULED_DATE]) {
+      const sd = new Date(row[COL.SCHEDULED_DATE]);
+      if (!isNaN(sd.getTime())) {
+        scheduledDate = sd.toISOString().slice(0, 10);
+      }
+    }
+
+    // Count by status
+    if (status === 'new') counts.new++;
+    if (status === 'ready') counts.ready++;
+    if (status === 'scheduled' && scheduledDate === today) counts.today++;
+    if (status === 'in_progress') counts.in_progress++;
+    if (status === 'completed') counts.completed++;
+
+    // Apply filter
+    if (filter === 'new' && status !== 'new') continue;
+    if (filter === 'ready' && status !== 'ready') continue;
+    if (filter === 'today' && !(status === 'scheduled' && scheduledDate === today)) continue;
+    if (filter === 'in_progress' && status !== 'in_progress') continue;
+
+    // Apply month filter
+    if (month) {
+      const timestamp = new Date(row[COL.TIMESTAMP]);
+      if (!isNaN(timestamp.getTime())) {
+        const rowMonth = timestamp.toISOString().slice(0, 7);
+        if (rowMonth !== month) continue;
+      }
+    }
+
+    jobs.push({
+      rowNumber: i + 1,
+      timestamp: row[COL.TIMESTAMP],
+      shop_name: row[COL.SHOP_NAME],
+      ro_po: row[COL.RO_PO],
+      vin: row[COL.VIN],
+      vehicle: row[COL.VEHICLE],
+      status: row[COL.STATUS],
+      scheduled_date: row[COL.SCHEDULED_DATE],
+      scheduled_time: row[COL.SCHEDULED_TIME],
+      required_cals: row[COL.REQUIRED_CALS],
+      completed_cals: row[COL.COMPLETED_CALS],
+      estimate_url: row[COL.ESTIMATE_PDF],
+      prescan_url: row[COL.PRESCAN_PDF],
+      revv_url: row[COL.REVV_PDF],
+      invoice_url: row[COL.INVOICE_PDF],
+      postscan_url: row[COL.POSTSCAN_PDF],
+      dtcs: row[COL.DTCS],
+      job_start: row[COL.JOB_START],
+      job_end: row[COL.JOB_END],
+      notes: row[COL.NOTES]
+    });
+  }
+
+  return { success: true, jobs: jobs, counts: counts };
+}
+
+/**
+ * Upload RevvADAS report and set calibrations
+ * @param {Object} data - {ro_po, revv_url, calibrations: [{name, type}], no_cal, notes}
+ * @returns {Object} - {success, new_status, message}
+ */
+function uploadRevvReport(data) {
+  const { ro_po, revv_url, calibrations, no_cal, notes } = data;
+
+  if (!revv_url) {
+    return { success: false, error: 'RevvADAS PDF URL is required' };
+  }
+
+  const sheet = SpreadsheetApp.getActive().getSheetByName(SCHEDULE_SHEET);
+  const allData = sheet.getDataRange().getValues();
+
+  for (let i = 1; i < allData.length; i++) {
+    if (String(allData[i][COL.RO_PO]) === String(ro_po)) {
+      const shopName = allData[i][COL.SHOP_NAME];
+      const vehicle = allData[i][COL.VEHICLE];
+      const rowNum = i + 1;
+
+      // Determine new status
+      let newStatus = 'Ready';
+      let requiredCals = '';
+
+      if (no_cal) {
+        newStatus = 'No Cal';
+        requiredCals = 'No Calibration Required';
+      } else if (calibrations && calibrations.length > 0) {
+        // Format: "Camera (S); Radar (D); BSM (S)"
+        requiredCals = calibrations.map(function(c) { return c.name + ' (' + c.type + ')'; }).join('; ');
+      }
+
+      // Update columns
+      sheet.getRange(rowNum, COL.STATUS + 1).setValue(newStatus);
+      sheet.getRange(rowNum, COL.REQUIRED_CALS + 1).setValue(requiredCals);
+      sheet.getRange(rowNum, COL.REVV_PDF + 1).setValue(revv_url);
+
+      // Append to notes
+      const timestamp = formatTimestampForNotes(new Date());
+      const currentNotes = allData[i][COL.NOTES] || '';
+      let newNote = `${timestamp} | RevvADAS uploaded - Status: ${newStatus}`;
+      if (requiredCals) newNote += ` | Cals: ${requiredCals}`;
+      if (notes) newNote += ` | ${notes}`;
+      sheet.getRange(rowNum, COL.NOTES + 1).setValue(currentNotes + '\n' + newNote);
+
+      // Notify shop
+      const notificationMsg = no_cal
+        ? `No calibration needed for ${vehicle} (RO: ${ro_po})`
+        : `Vehicle ready for scheduling: ${vehicle} (RO: ${ro_po})`;
+
+      createNotification({
+        recipientType: 'shop',
+        recipientId: shopName,
+        roPo: ro_po,
+        type: no_cal ? 'no_cal' : 'ready_for_schedule',
+        message: notificationMsg
+      });
+
+      return { success: true, new_status: newStatus, required_cals: requiredCals, message: 'RevvADAS report uploaded' };
+    }
+  }
+
+  return { success: false, error: 'RO not found' };
+}
+
+/**
+ * Start job (tech arrives at vehicle)
+ * @param {Object} data - {ro_po, odometer, notes}
+ * @returns {Object} - {success, message}
+ */
+function startJob(data) {
+  const { ro_po, odometer, notes } = data;
+
+  const sheet = SpreadsheetApp.getActive().getSheetByName(SCHEDULE_SHEET);
+  const allData = sheet.getDataRange().getValues();
+
+  for (let i = 1; i < allData.length; i++) {
+    if (String(allData[i][COL.RO_PO]) === String(ro_po)) {
+      const now = new Date();
+      const rowNum = i + 1;
+
+      // Update columns
+      sheet.getRange(rowNum, COL.STATUS + 1).setValue('In Progress');
+      sheet.getRange(rowNum, COL.JOB_START + 1).setValue(now);
+
+      // Append to notes
+      const timestamp = formatTimestampForNotes(now);
+      const currentNotes = allData[i][COL.NOTES] || '';
+      let newNote = `${timestamp} | Job started`;
+      if (odometer) newNote += ` | Odometer: ${odometer}`;
+      if (notes) newNote += ` | ${notes}`;
+      sheet.getRange(rowNum, COL.NOTES + 1).setValue(currentNotes + '\n' + newNote);
+
+      return { success: true, job_start: now, message: 'Job started' };
+    }
+  }
+
+  return { success: false, error: 'RO not found' };
+}
+
+/**
+ * Complete job and upload final documents
+ * @param {Object} data - {ro_po, invoice_url, postscan_url, completed_cals, invoice_number, invoice_amount, dtcs, notes}
+ * @returns {Object} - {success, message}
+ */
+function completeJob(data) {
+  const { ro_po, invoice_url, postscan_url, completed_cals, invoice_number, invoice_amount, dtcs, notes } = data;
+
+  if (!invoice_url || !postscan_url) {
+    return { success: false, error: 'Invoice and Post-Scan PDFs are required' };
+  }
+
+  const sheet = SpreadsheetApp.getActive().getSheetByName(SCHEDULE_SHEET);
+  const allData = sheet.getDataRange().getValues();
+
+  for (let i = 1; i < allData.length; i++) {
+    if (String(allData[i][COL.RO_PO]) === String(ro_po)) {
+      const now = new Date();
+      const shopName = allData[i][COL.SHOP_NAME];
+      const vehicle = allData[i][COL.VEHICLE];
+      const rowNum = i + 1;
+
+      // Update columns
+      sheet.getRange(rowNum, COL.STATUS + 1).setValue('Completed');
+      sheet.getRange(rowNum, COL.COMPLETED_CALS + 1).setValue(completed_cals || '');
+      sheet.getRange(rowNum, COL.DTCS + 1).setValue(dtcs || '');
+      sheet.getRange(rowNum, COL.POSTSCAN_PDF + 1).setValue(postscan_url);
+      sheet.getRange(rowNum, COL.INVOICE_PDF + 1).setValue(invoice_url);
+      if (invoice_number) sheet.getRange(rowNum, COL.INVOICE_NUM + 1).setValue(invoice_number);
+      if (invoice_amount) sheet.getRange(rowNum, COL.INVOICE_AMOUNT + 1).setValue(invoice_amount);
+      sheet.getRange(rowNum, COL.INVOICE_DATE + 1).setValue(now);
+      sheet.getRange(rowNum, COL.JOB_END + 1).setValue(now);
+
+      // Calculate duration
+      const jobStart = allData[i][COL.JOB_START];
+      let duration = '';
+      if (jobStart) {
+        const durationMs = now - new Date(jobStart);
+        const hours = Math.floor(durationMs / 3600000);
+        const mins = Math.floor((durationMs % 3600000) / 60000);
+        duration = hours + 'h ' + mins + 'm';
+      }
+
+      // Append to notes
+      const timestamp = formatTimestampForNotes(now);
+      const currentNotes = allData[i][COL.NOTES] || '';
+      let newNote = `${timestamp} | Job completed`;
+      if (duration) newNote += ` | Duration: ${duration}`;
+      if (completed_cals) newNote += ` | Completed: ${completed_cals}`;
+      if (dtcs) newNote += ` | Final DTCs: ${dtcs}`;
+      if (notes) newNote += ` | ${notes}`;
+      sheet.getRange(rowNum, COL.NOTES + 1).setValue(currentNotes + '\n' + newNote);
+
+      // Notify shop
+      createNotification({
+        recipientType: 'shop',
+        recipientId: shopName,
+        roPo: ro_po,
+        type: 'job_completed',
+        message: `Calibration complete for ${vehicle} (RO: ${ro_po}) - Documents ready for download`
+      });
+
+      return { success: true, job_end: now, duration: duration, message: 'Job completed successfully' };
+    }
+  }
+
+  return { success: false, error: 'RO not found' };
+}
+
+/**
+ * Get all jobs with filters (Admin)
+ * @param {Object} data - {shop, tech, status, month, dateFrom, dateTo}
+ * @returns {Object} - {success, jobs: [...], stats: {...}}
+ */
+function getAdminJobs(data) {
+  const { shop, tech, status, month, dateFrom, dateTo } = data || {};
+  const sheet = SpreadsheetApp.getActive().getSheetByName(SCHEDULE_SHEET);
+  const allData = sheet.getDataRange().getValues();
+
+  const jobs = [];
+  const stats = {
+    total: 0,
+    by_status: {},
+    by_shop: {},
+    by_tech: {}
+  };
+
+  for (let i = 1; i < allData.length; i++) {
+    const row = allData[i];
+    const rowShop = row[COL.SHOP_NAME];
+    const rowTech = row[COL.TECHNICIAN];
+    const rowStatus = row[COL.STATUS];
+    const rowDate = row[COL.TIMESTAMP];
+
+    // Apply filters
+    if (shop && rowShop !== shop) continue;
+    if (tech && rowTech !== tech) continue;
+    if (status && String(rowStatus).toLowerCase() !== status.toLowerCase()) continue;
+
+    if (month) {
+      const rd = new Date(rowDate);
+      if (!isNaN(rd.getTime())) {
+        const rowMonth = rd.toISOString().slice(0, 7);
+        if (rowMonth !== month) continue;
+      }
+    }
+
+    if (dateFrom && new Date(rowDate) < new Date(dateFrom)) continue;
+    if (dateTo && new Date(rowDate) > new Date(dateTo)) continue;
+
+    // Aggregate stats
+    stats.total++;
+    stats.by_status[rowStatus] = (stats.by_status[rowStatus] || 0) + 1;
+    stats.by_shop[rowShop] = (stats.by_shop[rowShop] || 0) + 1;
+    if (rowTech) stats.by_tech[rowTech] = (stats.by_tech[rowTech] || 0) + 1;
+
+    jobs.push({
+      rowNumber: i + 1,
+      timestamp: row[COL.TIMESTAMP],
+      shop_name: row[COL.SHOP_NAME],
+      ro_po: row[COL.RO_PO],
+      vin: row[COL.VIN],
+      vehicle: row[COL.VEHICLE],
+      status: row[COL.STATUS],
+      scheduled_date: row[COL.SCHEDULED_DATE],
+      scheduled_time: row[COL.SCHEDULED_TIME],
+      technician: row[COL.TECHNICIAN],
+      required_cals: row[COL.REQUIRED_CALS],
+      completed_cals: row[COL.COMPLETED_CALS],
+      invoice_number: row[COL.INVOICE_NUM],
+      invoice_amount: row[COL.INVOICE_AMOUNT],
+      job_start: row[COL.JOB_START],
+      job_end: row[COL.JOB_END]
+    });
+  }
+
+  return { success: true, jobs: jobs, stats: stats };
+}
+
+/**
+ * Get dashboard stats for admin
+ * @param {Object} data - {month}
+ * @returns {Object} - {success, stats: {...}}
+ */
+function getAdminStats(data) {
+  const { month } = data || {};
+  const currentMonth = month || new Date().toISOString().slice(0, 7);
+
+  const sheet = SpreadsheetApp.getActive().getSheetByName(SCHEDULE_SHEET);
+  const allData = sheet.getDataRange().getValues();
+
+  const stats = {
+    total_this_month: 0,
+    active_today: 0,
+    completed_this_month: 0,
+    revenue_this_month: 0,
+    by_shop: [],
+    by_tech: []
+  };
+
+  const shopCounts = {};
+  const techCounts = {};
+  const today = new Date().toISOString().slice(0, 10);
+
+  for (let i = 1; i < allData.length; i++) {
+    const row = allData[i];
+    const rd = new Date(row[COL.TIMESTAMP]);
+    if (isNaN(rd.getTime())) continue;
+
+    const rowMonth = rd.toISOString().slice(0, 7);
+    const rowStatus = String(row[COL.STATUS] || '').toLowerCase();
+    let scheduledDate = '';
+    if (row[COL.SCHEDULED_DATE]) {
+      const sd = new Date(row[COL.SCHEDULED_DATE]);
+      if (!isNaN(sd.getTime())) {
+        scheduledDate = sd.toISOString().slice(0, 10);
+      }
+    }
+    const invoiceAmount = parseFloat(row[COL.INVOICE_AMOUNT]) || 0;
+
+    if (rowMonth === currentMonth) {
+      stats.total_this_month++;
+      if (rowStatus === 'completed') {
+        stats.completed_this_month++;
+        stats.revenue_this_month += invoiceAmount;
+      }
+
+      // Shop counts
+      const shopName = row[COL.SHOP_NAME];
+      if (shopName) {
+        if (!shopCounts[shopName]) shopCounts[shopName] = { name: shopName, total: 0, completed: 0, revenue: 0 };
+        shopCounts[shopName].total++;
+        if (rowStatus === 'completed') {
+          shopCounts[shopName].completed++;
+          shopCounts[shopName].revenue += invoiceAmount;
+        }
+      }
+
+      // Tech counts
+      const techName = row[COL.TECHNICIAN];
+      if (techName) {
+        if (!techCounts[techName]) techCounts[techName] = { name: techName, assigned: 0, completed: 0, revenue: 0 };
+        techCounts[techName].assigned++;
+        if (rowStatus === 'completed') {
+          techCounts[techName].completed++;
+          techCounts[techName].revenue += invoiceAmount;
+        }
+      }
+    }
+
+    // Active today
+    if ((rowStatus === 'scheduled' && scheduledDate === today) || rowStatus === 'in progress') {
+      stats.active_today++;
+    }
+  }
+
+  stats.by_shop = Object.values(shopCounts).sort(function(a, b) { return b.total - a.total; });
+  stats.by_tech = Object.values(techCounts).sort(function(a, b) { return b.assigned - a.assigned; });
+
+  return { success: true, stats: stats };
+}
+
+// ============================================================================
+// NOTIFICATION SYSTEM
+// ============================================================================
+
+/**
+ * Create a notification
+ * @param {Object} data - {recipientType, recipientId, roPo, type, message}
+ */
+function createNotification(data) {
+  const { recipientType, recipientId, roPo, type, message } = data;
+
+  let sheet = SpreadsheetApp.getActive().getSheetByName(NOTIFICATIONS_SHEET);
+  if (!sheet) {
+    // Create Notifications tab if it doesn't exist
+    const ss = SpreadsheetApp.getActive();
+    sheet = ss.insertSheet(NOTIFICATIONS_SHEET);
+    sheet.appendRow(['Timestamp', 'Recipient_Type', 'Recipient_ID', 'RO_PO', 'Type', 'Message', 'Read']);
+  }
+
+  sheet.appendRow([
+    new Date(),
+    recipientType,
+    recipientId,
+    roPo || '',
+    type,
+    message,
+    false
+  ]);
+
+  return { success: true };
+}
+
+/**
+ * Get unread notifications for user
+ * @param {Object} data - {recipientType, recipientId}
+ * @returns {Object} - {success, notifications: [...], unread_count}
+ */
+function getNotifications(data) {
+  const { recipientType, recipientId } = data;
+
+  const sheet = SpreadsheetApp.getActive().getSheetByName(NOTIFICATIONS_SHEET);
+  if (!sheet) return { success: true, notifications: [], unread_count: 0 };
+
+  const allData = sheet.getDataRange().getValues();
+  const notifications = [];
+  let unreadCount = 0;
+
+  for (let i = 1; i < allData.length; i++) {
+    const row = allData[i];
+    if (row[1] === recipientType && (row[2] === recipientId || row[2] === 'all')) {
+      notifications.push({
+        rowNumber: i + 1,
+        timestamp: row[0],
+        ro_po: row[3],
+        type: row[4],
+        message: row[5],
+        read: row[6]
+      });
+      if (!row[6]) unreadCount++;
+    }
+  }
+
+  // Sort newest first
+  notifications.sort(function(a, b) { return new Date(b.timestamp) - new Date(a.timestamp); });
+
+  return { success: true, notifications: notifications, unread_count: unreadCount };
+}
+
+/**
+ * Mark notification as read
+ * @param {Object} data - {rowNumber}
+ */
+function markNotificationRead(data) {
+  const { rowNumber } = data;
+  const sheet = SpreadsheetApp.getActive().getSheetByName(NOTIFICATIONS_SHEET);
+  if (sheet && rowNumber > 1) {
+    sheet.getRange(rowNumber, 7).setValue(true);
+  }
+  return { success: true };
+}
+
+// ============================================================================
+// FILE UPLOAD
+// ============================================================================
+
+/**
+ * Upload file to Google Drive and return URL
+ * This function should be called from client with base64 data
+ */
+function uploadFileToDrive(data) {
+  const { fileName, mimeType, base64Data, folderId } = data;
+
+  try {
+    const blob = Utilities.newBlob(Utilities.base64Decode(base64Data), mimeType, fileName);
+    const folder = folderId ? DriveApp.getFolderById(folderId) : DriveApp.getRootFolder();
+    const file = folder.createFile(blob);
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+    return {
+      success: true,
+      fileId: file.getId(),
+      url: file.getUrl(),
+      downloadUrl: 'https://drive.google.com/uc?export=download&id=' + file.getId()
+    };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
+// ============================================================================
+// AUTHENTICATION (Simple - for direct GAS deployment)
+// ============================================================================
+
+/**
+ * Authenticate user and return role info
+ * @param {Object} data - {username, password}
+ * @returns {Object} - {success, role, name, shopName/techName, token}
+ */
+function authenticateUser(data) {
+  const { username, password } = data;
+
+  // Check Shops tab
+  const shopsSheet = SpreadsheetApp.getActive().getSheetByName(SHOPS_SHEET);
+  if (shopsSheet) {
+    const shopsData = shopsSheet.getDataRange().getValues();
+    for (let i = 1; i < shopsData.length; i++) {
+      // Column E = Username, Column F = Password (or hash)
+      if (shopsData[i][4] === username) {
+        // Simple password check (in production, use proper hashing)
+        if (shopsData[i][5] === password) {
+          if (shopsData[i][7] === false) continue; // Not active (Column H)
+          return {
+            success: true,
+            role: 'shop',
+            name: shopsData[i][0], // Column A = Shop Name
+            shopName: shopsData[i][0],
+            region: shopsData[i][6], // Column G = Region
+            token: Utilities.getUuid() // Simple session token
+          };
+        }
+      }
+    }
+  }
+
+  // Check Technicians tab
+  const techsSheet = SpreadsheetApp.getActive().getSheetByName(TECHNICIANS_SHEET);
+  if (techsSheet) {
+    const techsData = techsSheet.getDataRange().getValues();
+    for (let i = 1; i < techsData.length; i++) {
+      // Column D = Username, Column E = Password (or hash)
+      if (techsData[i][3] === username) {
+        if (techsData[i][4] === password) {
+          if (techsData[i][7] === false) continue; // Not active (Column H)
+          const isAdmin = username === 'randy'; // Randy has admin access
+          return {
+            success: true,
+            role: isAdmin ? 'admin' : 'tech',
+            name: techsData[i][0], // Column A = Name
+            techName: techsData[i][0],
+            regions: techsData[i][5] ? techsData[i][5].split(',').map(function(r) { return r.trim(); }) : [],
+            token: Utilities.getUuid()
+          };
+        }
+      }
+    }
+  }
+
+  return { success: false, error: 'Invalid credentials' };
 }
