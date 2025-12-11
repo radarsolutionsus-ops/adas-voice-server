@@ -3,98 +3,176 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tech Dashboard - ADAS F1RST</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <title>Dashboard - ADAS F1RST Tech Portal</title>
   <link rel="stylesheet" href="/css/apple-style.css">
+  <link rel="stylesheet" href="/css/portal.css">
 </head>
 <body>
-  <header class="app-header">
-    <div class="app-logo">ADAS F1RST</div>
-    <div class="header-center">
-      <span class="tech-badge" id="techName">Loading...</span>
-    </div>
-    <div class="header-actions">
-      <button class="btn-logout" id="logoutBtn">
-        <span class="icon icon-sm" id="logoutIcon"></span>
-        Sign Out
-      </button>
-    </div>
-  </header>
-
-  <main class="app-main">
-    <!-- Stats Row -->
-    <div class="stats-row">
-      <div class="stat-card">
-        <div class="stat-value" id="statToday">-</div>
-        <div class="stat-label">Today</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value" id="statScheduled">-</div>
-        <div class="stat-label">Scheduled</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value" id="statInProgress">-</div>
-        <div class="stat-label">In Progress</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value" id="statCompleted">-</div>
-        <div class="stat-label">Completed</div>
-      </div>
-    </div>
-
-    <!-- Today's Jobs -->
-    <section class="section">
-      <div class="section-header">
-        <h2>Today's Jobs</h2>
-        <span class="badge" id="todayCount">0</span>
+  <div class="portal-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">
+          <div class="logo-icon">A</div>
+          <span class="logo-text">ADAS F1RST</span>
+        </div>
+        <button class="sidebar-toggle" id="sidebarToggle" title="Toggle Sidebar">
+          <span class="icon" id="toggleIcon"></span>
+        </button>
       </div>
 
-      <div class="jobs-list" id="todayJobs">
-        <div class="loading-state">
-          <div class="spinner"></div>
-          <p>Loading jobs...</p>
+      <nav class="sidebar-nav">
+        <div class="nav-section">
+          <a href="/tech/dashboard.html" class="nav-item active">
+            <span class="nav-icon" id="navDashboard"></span>
+            <span class="nav-text">Dashboard</span>
+          </a>
+        </div>
+
+        <div class="nav-section">
+          <div class="nav-section-title">Jobs</div>
+          <a href="/tech/dashboard.html#today" class="nav-item" id="navTodayLink">
+            <span class="nav-icon" id="navToday"></span>
+            <span class="nav-text">Today's Jobs</span>
+            <span class="nav-badge" id="todayBadge" style="display:none;">0</span>
+          </a>
+          <a href="/tech/dashboard.html#all" class="nav-item">
+            <span class="nav-icon" id="navAllJobs"></span>
+            <span class="nav-text">All Jobs</span>
+            <span class="nav-badge" id="totalCount">0</span>
+          </a>
+          <a href="/tech/dashboard.html#progress" class="nav-item">
+            <span class="nav-icon" id="navInProgress"></span>
+            <span class="nav-text">In Progress</span>
+          </a>
+          <a href="/tech/dashboard.html#completed" class="nav-item">
+            <span class="nav-icon" id="navCompleted"></span>
+            <span class="nav-text">Completed</span>
+          </a>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="sidebar-user">
+          <div class="user-avatar" id="userAvatar">T</div>
+          <div class="user-info">
+            <div class="user-name" id="userName">Technician</div>
+            <div class="user-role">Technician</div>
+          </div>
         </div>
       </div>
-    </section>
+    </aside>
 
-    <!-- All Jobs -->
-    <section class="section">
-      <div class="section-header">
-        <h2>All Jobs</h2>
-        <div class="filter-pills">
-          <button class="pill active" data-status="all">All</button>
-          <button class="pill" data-status="New">New</button>
-          <button class="pill" data-status="Scheduled">Scheduled</button>
-          <button class="pill" data-status="In Progress">In Progress</button>
-          <button class="pill" data-status="Completed">Completed</button>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <header class="top-header">
+        <div class="header-left">
+          <button class="mobile-menu-btn" id="mobileMenuBtn">
+            <span class="icon" id="mobileMenuIcon"></span>
+          </button>
+          <h1 class="page-title">Dashboard</h1>
+        </div>
+        <div class="header-right">
+          <button class="btn-logout" id="logoutBtn">
+            <span class="icon icon-sm" id="logoutIcon"></span>
+            Sign Out
+          </button>
+        </div>
+      </header>
+
+      <div class="content-area">
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon blue" id="statIconToday"></div>
+            <div class="stat-content">
+              <div class="stat-value" id="statToday">-</div>
+              <div class="stat-label">Today's Jobs</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon purple" id="statIconScheduled"></div>
+            <div class="stat-content">
+              <div class="stat-value" id="statScheduled">-</div>
+              <div class="stat-label">Scheduled</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon yellow" id="statIconProgress"></div>
+            <div class="stat-content">
+              <div class="stat-value" id="statInProgress">-</div>
+              <div class="stat-label">In Progress</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon green" id="statIconCompleted"></div>
+            <div class="stat-content">
+              <div class="stat-value" id="statCompleted">-</div>
+              <div class="stat-label">Completed</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Main Grid -->
+        <div class="grid-2">
+          <!-- Today's Jobs -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Today's Jobs</h3>
+              <span class="status-badge scheduled" id="todayCount">0 jobs</span>
+            </div>
+            <div class="card-body" id="todayJobs">
+              <div class="loading"><div class="spinner"></div></div>
+            </div>
+          </div>
+
+          <!-- Quick Actions -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Quick Actions</h3>
+            </div>
+            <div class="card-body">
+              <a href="#" class="quick-action" onclick="filterJobs('In Progress'); return false;">
+                <div class="quick-action-icon orange" id="qaProgressIcon"></div>
+                <span class="text">View In Progress</span>
+              </a>
+              <a href="#" class="quick-action" onclick="filterJobs('Scheduled'); return false;">
+                <div class="quick-action-icon purple" id="qaScheduledIcon"></div>
+                <span class="text">View Scheduled</span>
+              </a>
+              <a href="#" class="quick-action" onclick="filterJobs('Completed'); return false;">
+                <div class="quick-action-icon green" id="qaCompletedIcon"></div>
+                <span class="text">View Completed</span>
+              </a>
+              <a href="#" class="quick-action" onclick="filterJobs('all'); return false;">
+                <div class="quick-action-icon blue" id="qaAllIcon"></div>
+                <span class="text">View All Jobs</span>
+              </a>
+            </div>
+          </div>
+
+          <!-- All Jobs -->
+          <div class="card" style="grid-column: span 2;">
+            <div class="card-header">
+              <h3 class="card-title">All Jobs</h3>
+              <div class="filter-pills">
+                <button class="pill active" data-status="all">All</button>
+                <button class="pill" data-status="Scheduled">Scheduled</button>
+                <button class="pill" data-status="In Progress">In Progress</button>
+                <button class="pill" data-status="Completed">Completed</button>
+              </div>
+            </div>
+            <div class="card-body no-padding">
+              <div id="allJobs">
+                <div class="loading"><div class="spinner"></div></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-
-      <!-- Search Bar -->
-      <div class="search-bar">
-        <span class="icon" id="searchIcon"></span>
-        <input type="text" id="searchInput" class="search-input-inline" placeholder="Search RO, vehicle, shop...">
-      </div>
-
-      <div class="jobs-list" id="allJobs">
-        <!-- Populated by JS -->
-      </div>
-    </section>
-  </main>
-
-  <!-- Confirmation Modal -->
-  <div class="modal-overlay" id="confirmModal">
-    <div class="modal modal-confirm">
-      <div class="modal-body confirm-body">
-        <div class="confirm-icon" id="confirmIcon"></div>
-        <h3 id="confirmTitle">Confirm Action</h3>
-        <p id="confirmMessage">Are you sure you want to proceed?</p>
-        <div class="confirm-buttons">
-          <button class="btn-secondary" onclick="closeConfirmModal()">Cancel</button>
-          <button class="btn-accent" id="confirmBtn" onclick="executeConfirmedAction()">Confirm</button>
-        </div>
-      </div>
-    </div>
+    </main>
   </div>
 
   <!-- Job Detail Modal -->
@@ -139,15 +217,9 @@
         <!-- Documents -->
         <div class="modal-section">
           <h4>Documents</h4>
-          <div class="docs-row" id="modalDocuments">
+          <div class="doc-cards" id="modalDocuments">
             <!-- Populated by JS -->
           </div>
-        </div>
-
-        <!-- DTCs -->
-        <div class="modal-section" id="dtcSection" style="display:none;">
-          <h4>DTCs</h4>
-          <div class="dtc-box" id="modalDtcs">-</div>
         </div>
 
         <!-- Notes -->
@@ -160,11 +232,11 @@
         <div class="modal-section">
           <h4>Update Status</h4>
           <div class="status-buttons">
-            <button class="status-btn" onclick="updateStatus('In Progress')">
+            <button class="btn btn-secondary" onclick="updateStatus('In Progress')">
               <span class="icon" id="statusWrenchIcon"></span>
               Start Job
             </button>
-            <button class="status-btn success" onclick="updateStatus('Completed')">
+            <button class="btn btn-success" onclick="updateStatus('Completed')">
               <span class="icon" id="statusCheckIcon"></span>
               Mark Complete
             </button>
@@ -176,10 +248,7 @@
           <h4>Add Note</h4>
           <div class="add-note-form">
             <textarea id="newNote" class="form-textarea" rows="2" placeholder="Enter note..."></textarea>
-            <button class="btn-secondary" onclick="addNote()">
-              <span class="icon icon-sm" id="addNoteIcon"></span>
-              Add
-            </button>
+            <button class="btn btn-secondary" onclick="addNote()">Add Note</button>
           </div>
         </div>
       </div>
@@ -189,7 +258,498 @@
   <script src="/js/icons.js"></script>
   <script src="/js/auth.js"></script>
   <script src="/js/api.js"></script>
-  <script src="/tech/js/tech-common.js"></script>
-  <script src="/tech/js/dashboard.js"></script>
+  <script>
+    // Helper to get from either storage
+    function getStorageItem(key) {
+      return localStorage.getItem(key) || sessionStorage.getItem(key);
+    }
+
+    let allJobs = [];
+    let currentJob = null;
+    let currentFilter = 'all';
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Check auth
+      const token = getStorageItem('adas_access_token') || getStorageItem('token');
+      const role = getStorageItem('adas_user_role') || getStorageItem('userRole');
+
+      if (!token) {
+        window.location.replace('/?logout=true');
+        return;
+      }
+
+      if (role !== 'tech') {
+        localStorage.clear();
+        sessionStorage.clear();
+        window.location.replace('/?logout=true');
+        return;
+      }
+
+      // Set user info
+      const userName = getStorageItem('userName') || 'Technician';
+      document.getElementById('userName').textContent = userName;
+      document.getElementById('userAvatar').textContent = userName.charAt(0).toUpperCase();
+
+      // Initialize icons
+      initIcons();
+
+      // Setup sidebar
+      setupSidebar();
+
+      // Setup logout
+      setupLogout();
+
+      // Setup filter pills
+      setupFilters();
+
+      // Load data
+      await loadJobs();
+    });
+
+    function initIcons() {
+      // Sidebar icons
+      document.getElementById('toggleIcon').innerHTML = Icons.menu;
+      document.getElementById('mobileMenuIcon').innerHTML = Icons.menu;
+      document.getElementById('navDashboard').innerHTML = Icons.chart;
+      document.getElementById('navToday').innerHTML = Icons.calendar;
+      document.getElementById('navAllJobs').innerHTML = Icons.list;
+      document.getElementById('navInProgress').innerHTML = Icons.wrench;
+      document.getElementById('navCompleted').innerHTML = Icons.checkCircle;
+
+      // Header icons
+      document.getElementById('logoutIcon').innerHTML = Icons.logout;
+
+      // Stat card icons
+      document.getElementById('statIconToday').innerHTML = Icons.calendar;
+      document.getElementById('statIconScheduled').innerHTML = Icons.clock;
+      document.getElementById('statIconProgress').innerHTML = Icons.wrench;
+      document.getElementById('statIconCompleted').innerHTML = Icons.checkCircle;
+
+      // Quick action icons
+      document.getElementById('qaProgressIcon').innerHTML = Icons.wrench;
+      document.getElementById('qaScheduledIcon').innerHTML = Icons.calendar;
+      document.getElementById('qaCompletedIcon').innerHTML = Icons.checkCircle;
+      document.getElementById('qaAllIcon').innerHTML = Icons.list;
+
+      // Modal icons
+      document.getElementById('closeModalIcon').innerHTML = Icons.x;
+      document.getElementById('statusWrenchIcon').innerHTML = Icons.wrench;
+      document.getElementById('statusCheckIcon').innerHTML = Icons.checkCircle;
+    }
+
+    function setupSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const toggle = document.getElementById('sidebarToggle');
+      const mobileBtn = document.getElementById('mobileMenuBtn');
+      const overlay = document.getElementById('sidebarOverlay');
+
+      toggle?.addEventListener('click', () => sidebar.classList.toggle('collapsed'));
+      mobileBtn?.addEventListener('click', () => sidebar.classList.toggle('open'));
+      overlay?.addEventListener('click', () => sidebar.classList.remove('open'));
+    }
+
+    function setupLogout() {
+      document.getElementById('logoutBtn')?.addEventListener('click', () => {
+        localStorage.clear();
+        sessionStorage.clear();
+        window.location.replace('/?logout=true');
+      });
+    }
+
+    function setupFilters() {
+      document.querySelectorAll('.pill').forEach(pill => {
+        pill.addEventListener('click', () => {
+          document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+          pill.classList.add('active');
+          filterJobs(pill.dataset.status);
+        });
+      });
+    }
+
+    async function loadJobs() {
+      try {
+        const token = getStorageItem('adas_access_token') || getStorageItem('token');
+        const response = await fetch('/api/tech/jobs', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+
+        if (!data.success) throw new Error(data.error);
+
+        allJobs = data.jobs || [];
+        updateStats(allJobs);
+        updateTodayJobs(allJobs);
+        renderJobs(allJobs);
+
+      } catch (err) {
+        console.error('Load error:', err);
+        document.getElementById('todayJobs').innerHTML = '<div class="empty-state"><p>Failed to load jobs</p></div>';
+        document.getElementById('allJobs').innerHTML = '<div class="empty-state"><p>Failed to load jobs</p></div>';
+      }
+    }
+
+    function updateStats(jobs) {
+      const today = new Date().toDateString();
+      const todayJobs = jobs.filter(j => {
+        if (!j.scheduledDate) return false;
+        return new Date(j.scheduledDate).toDateString() === today;
+      });
+
+      document.getElementById('statToday').textContent = todayJobs.length;
+      document.getElementById('statScheduled').textContent = jobs.filter(j => j.status === 'Scheduled' || j.status === 'Rescheduled').length;
+      document.getElementById('statInProgress').textContent = jobs.filter(j => j.status === 'In Progress').length;
+      document.getElementById('statCompleted').textContent = jobs.filter(j => j.status === 'Completed').length;
+
+      document.getElementById('totalCount').textContent = jobs.length;
+      if (todayJobs.length > 0) {
+        document.getElementById('todayBadge').textContent = todayJobs.length;
+        document.getElementById('todayBadge').style.display = '';
+      }
+    }
+
+    function updateTodayJobs(jobs) {
+      const today = new Date().toDateString();
+      const todayJobs = jobs.filter(j => {
+        if (!j.scheduledDate) return false;
+        return new Date(j.scheduledDate).toDateString() === today;
+      });
+
+      document.getElementById('todayCount').textContent = `${todayJobs.length} jobs`;
+
+      if (todayJobs.length === 0) {
+        document.getElementById('todayJobs').innerHTML = '<div class="empty-state"><p>No jobs scheduled for today</p></div>';
+        return;
+      }
+
+      document.getElementById('todayJobs').innerHTML = todayJobs.map(job => `
+        <div class="schedule-item" onclick="openJobModal('${job.roPo}')">
+          <div class="schedule-time">${job.scheduledTime || 'TBD'}</div>
+          <div class="schedule-info">
+            <div class="schedule-ro">RO #${escapeHtml(job.roPo)}</div>
+            <div class="schedule-shop">${escapeHtml(job.shopName || 'Unknown Shop')}</div>
+          </div>
+          <span class="status-badge ${getStatusClass(job.status)}">${job.status}</span>
+        </div>
+      `).join('');
+    }
+
+    function filterJobs(status) {
+      currentFilter = status;
+      document.querySelectorAll('.pill').forEach(p => {
+        p.classList.toggle('active', p.dataset.status === status);
+      });
+
+      if (status === 'all') {
+        renderJobs(allJobs);
+      } else {
+        renderJobs(allJobs.filter(j => j.status === status || (status === 'Scheduled' && j.status === 'Rescheduled')));
+      }
+    }
+
+    function renderJobs(jobs) {
+      if (jobs.length === 0) {
+        document.getElementById('allJobs').innerHTML = '<div class="empty-state"><p>No jobs found</p></div>';
+        return;
+      }
+
+      document.getElementById('allJobs').innerHTML = `
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>RO #</th>
+              <th>Shop</th>
+              <th>Vehicle</th>
+              <th>Status</th>
+              <th>Scheduled</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            ${jobs.map(job => `
+              <tr class="clickable" onclick="openJobModal('${job.roPo}')">
+                <td><strong>${escapeHtml(job.roPo)}</strong></td>
+                <td>${escapeHtml(job.shopName || '-')}</td>
+                <td>${escapeHtml(job.vehicle || '-')}</td>
+                <td><span class="status-badge ${getStatusClass(job.status)}">${job.status || 'New'}</span></td>
+                <td>${job.scheduledDate ? formatDate(job.scheduledDate) : '-'}</td>
+                <td><span class="icon">${Icons.chevronRight}</span></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function openJobModal(roPo) {
+      currentJob = allJobs.find(j => j.roPo === roPo);
+      if (!currentJob) return;
+
+      document.getElementById('modalTitle').textContent = `RO #${currentJob.roPo}`;
+      document.getElementById('modalShop').textContent = currentJob.shopName || '-';
+      document.getElementById('modalVehicle').textContent = currentJob.vehicle || '-';
+      document.getElementById('modalVin').textContent = currentJob.vin || '-';
+      document.getElementById('modalSchedule').textContent = currentJob.scheduledDate ? formatDate(currentJob.scheduledDate) + ' ' + (currentJob.scheduledTime || '') : '-';
+      document.getElementById('modalCalibrations').textContent = currentJob.requiredCalibrations || '-';
+      document.getElementById('modalNotes').textContent = currentJob.notes || 'No notes';
+
+      // Documents
+      const docs = [
+        { name: 'Estimate', url: currentJob.estimatePdfUrl },
+        { name: 'Pre-Scan', url: currentJob.preScanPdfUrl },
+        { name: 'Revv Report', url: currentJob.revvReportUrl },
+        { name: 'Post-Scan', url: currentJob.postScanPdfUrl },
+        { name: 'Invoice', url: currentJob.invoicePdfUrl }
+      ];
+
+      document.getElementById('modalDocuments').innerHTML = docs.map(doc => `
+        <div class="doc-card ${doc.url ? 'available' : 'unavailable'}" ${doc.url ? `onclick="window.open('${doc.url}', '_blank')"` : ''}>
+          <div class="doc-card-icon">${Icons.file}</div>
+          <div class="doc-card-name">${doc.name}</div>
+          <div class="doc-card-status">${doc.url ? 'View' : 'Not available'}</div>
+        </div>
+      `).join('');
+
+      document.getElementById('jobModal').classList.add('open');
+    }
+
+    function closeModal() {
+      document.getElementById('jobModal').classList.remove('open');
+      currentJob = null;
+    }
+
+    async function updateStatus(status) {
+      if (!currentJob) return;
+
+      try {
+        const token = getStorageItem('adas_access_token') || getStorageItem('token');
+        const response = await fetch(`/api/tech/jobs/${currentJob.roPo}/status`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ status })
+        });
+
+        const data = await response.json();
+        if (!data.success) throw new Error(data.error);
+
+        closeModal();
+        await loadJobs();
+      } catch (err) {
+        alert('Failed to update status: ' + err.message);
+      }
+    }
+
+    async function addNote() {
+      if (!currentJob) return;
+      const note = document.getElementById('newNote').value.trim();
+      if (!note) return;
+
+      try {
+        const token = getStorageItem('adas_access_token') || getStorageItem('token');
+        const response = await fetch(`/api/tech/jobs/${currentJob.roPo}/notes`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ note })
+        });
+
+        const data = await response.json();
+        if (!data.success) throw new Error(data.error);
+
+        document.getElementById('newNote').value = '';
+        await loadJobs();
+        openJobModal(currentJob.roPo);
+      } catch (err) {
+        alert('Failed to add note: ' + err.message);
+      }
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr || dateStr.includes('1899')) return '';
+      try {
+        return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      } catch { return dateStr; }
+    }
+
+    function getStatusClass(status) {
+      if (!status) return 'new';
+      return status.toLowerCase().replace(/\s+/g, '-');
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+  </script>
+
+  <style>
+    /* Modal Styles */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      padding: 20px;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal {
+      background: white;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 600px;
+      max-height: 90vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .modal-large {
+      max-width: 700px;
+    }
+
+    .modal-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-header h3 {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      padding: 8px;
+      cursor: pointer;
+      border-radius: 6px;
+    }
+
+    .modal-close:hover {
+      background: var(--bg);
+    }
+
+    .modal-body {
+      padding: 24px;
+      overflow-y: auto;
+    }
+
+    .modal-section {
+      margin-bottom: 24px;
+    }
+
+    .modal-section:last-child {
+      margin-bottom: 0;
+    }
+
+    .modal-section h4 {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    .info-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .info-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .info-value {
+      font-size: 14px;
+    }
+
+    .info-value.mono {
+      font-family: monospace;
+    }
+
+    .calibrations-box,
+    .notes-box {
+      background: var(--bg);
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+
+    .status-buttons {
+      display: flex;
+      gap: 12px;
+    }
+
+    .add-note-form {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .add-note-form textarea {
+      flex: 1;
+    }
+
+    .form-textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 14px;
+      resize: vertical;
+    }
+
+    /* Filter Pills */
+    .filter-pills {
+      display: flex;
+      gap: 8px;
+    }
+
+    .pill {
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: white;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .pill:hover {
+      background: var(--bg);
+    }
+
+    .pill.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+  </style>
 </body>
 </html>

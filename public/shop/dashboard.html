@@ -3,171 +3,398 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard - ADAS F1RST</title>
+  <title>Dashboard - ADAS F1RST Shop Portal</title>
   <link rel="stylesheet" href="/css/apple-style.css">
+  <link rel="stylesheet" href="/css/portal.css">
 </head>
 <body>
-  <!-- Header -->
-  <header class="app-header">
-    <div class="app-logo">ADAS F1RST</div>
-    <div class="header-center">
-      <span class="shop-badge" id="shopName">Loading...</span>
-    </div>
-    <div class="header-actions">
-      <button class="header-btn" id="helpBtn" title="Help">
-        <span class="icon" id="helpIcon"></span>
-      </button>
-      <button class="btn-logout" id="logoutBtn">
-        <span class="icon icon-sm" id="logoutIcon"></span>
-        Sign Out
-      </button>
-    </div>
-  </header>
-
-  <main class="app-main">
-    <!-- Welcome Section -->
-    <div class="welcome-section">
-      <div class="welcome-content">
-        <h1>Welcome back</h1>
-        <p>Here's what's happening with your vehicles</p>
-      </div>
-      <a href="/shop/submit.html" class="btn-primary btn-large">
-        <span class="icon" id="plusIcon"></span>
-        Submit New Vehicle
-      </a>
-    </div>
-
-    <!-- Stats Grid -->
-    <div class="stats-grid">
-      <div class="stat-card" onclick="filterByStatus('all')">
-        <div class="stat-card-icon blue">
-          <span class="icon" id="statIconTotal"></span>
+  <div class="portal-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">
+          <div class="logo-icon">A</div>
+          <span class="logo-text">ADAS F1RST</span>
         </div>
-        <div class="stat-value" id="statTotal">0</div>
-        <div class="stat-label">Total Vehicles</div>
-      </div>
-
-      <div class="stat-card" onclick="filterByStatus('Scheduled')">
-        <div class="stat-card-icon purple">
-          <span class="icon" id="statIconScheduled"></span>
-        </div>
-        <div class="stat-value" id="statScheduled">0</div>
-        <div class="stat-label">Scheduled</div>
-      </div>
-
-      <div class="stat-card" onclick="filterByStatus('In Progress')">
-        <div class="stat-card-icon orange">
-          <span class="icon" id="statIconProgress"></span>
-        </div>
-        <div class="stat-value" id="statInProgress">0</div>
-        <div class="stat-label">In Progress</div>
-      </div>
-
-      <div class="stat-card" onclick="filterByStatus('Completed')">
-        <div class="stat-card-icon green">
-          <span class="icon" id="statIconCompleted"></span>
-        </div>
-        <div class="stat-value" id="statCompleted">0</div>
-        <div class="stat-label">Completed</div>
-      </div>
-    </div>
-
-    <!-- Filter Bar -->
-    <div class="filter-bar">
-      <div class="filter-tabs">
-        <button class="filter-tab active" data-status="all">All</button>
-        <button class="filter-tab" data-status="New">New</button>
-        <button class="filter-tab" data-status="Scheduled">Scheduled</button>
-        <button class="filter-tab" data-status="In Progress">In Progress</button>
-        <button class="filter-tab" data-status="Completed">Completed</button>
-      </div>
-      <div class="search-input">
-        <span class="icon" id="searchIcon"></span>
-        <input type="text" id="searchInput" placeholder="Search RO or VIN...">
-      </div>
-    </div>
-
-    <!-- Vehicle List -->
-    <div class="vehicle-list" id="vehicleList">
-      <div class="loading-state">
-        <div class="spinner"></div>
-        <p>Loading your vehicles...</p>
-      </div>
-    </div>
-
-    <!-- Empty State -->
-    <div class="empty-state hidden" id="emptyState">
-      <span class="icon icon-xl" id="emptyIcon"></span>
-      <h3>No vehicles yet</h3>
-      <p>Submit your first vehicle to get started</p>
-      <a href="/shop/submit.html" class="btn-accent btn-large">Submit a Vehicle</a>
-    </div>
-  </main>
-
-  <!-- Help Modal -->
-  <div class="modal-overlay" id="helpModal">
-    <div class="modal">
-      <div class="modal-header">
-        <h3>Need Help?</h3>
-        <button class="modal-close" id="helpModalClose">
-          <span class="icon icon-sm" id="closeIcon"></span>
+        <button class="sidebar-toggle" id="sidebarToggle" title="Toggle Sidebar">
+          <span class="icon" id="toggleIcon"></span>
         </button>
       </div>
-      <div class="modal-body">
-        <div class="help-item">
-          <span class="icon" id="helpPhoneIcon"></span>
-          <div class="help-item-content">
-            <strong>Call Us</strong>
-            <p><a href="tel:+13055551234">305-555-1234</a></p>
-          </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-section">
+          <a href="/shop/dashboard.html" class="nav-item active">
+            <span class="nav-icon" id="navDashboard"></span>
+            <span class="nav-text">Dashboard</span>
+          </a>
         </div>
-        <div class="help-item">
-          <span class="icon" id="helpMailIcon"></span>
-          <div class="help-item-content">
-            <strong>Email Support</strong>
-            <p><a href="mailto:adasf1rstservice@gmail.com">adasf1rstservice@gmail.com</a></p>
-          </div>
+
+        <div class="nav-section">
+          <div class="nav-section-title">Vehicles</div>
+          <a href="/shop/vehicles.html" class="nav-item">
+            <span class="nav-icon" id="navAllVehicles"></span>
+            <span class="nav-text">All Vehicles</span>
+            <span class="nav-badge" id="totalCount">0</span>
+          </a>
+          <a href="/shop/vehicles.html?status=New" class="nav-item">
+            <span class="nav-icon" id="navNew"></span>
+            <span class="nav-text">New</span>
+            <span class="nav-badge" id="newCount" style="display:none;">0</span>
+          </a>
+          <a href="/shop/vehicles.html?status=Scheduled" class="nav-item">
+            <span class="nav-icon" id="navScheduled"></span>
+            <span class="nav-text">Scheduled</span>
+          </a>
+          <a href="/shop/vehicles.html?status=In%20Progress" class="nav-item">
+            <span class="nav-icon" id="navInProgress"></span>
+            <span class="nav-text">In Progress</span>
+          </a>
+          <a href="/shop/vehicles.html?status=Completed" class="nav-item">
+            <span class="nav-icon" id="navCompleted"></span>
+            <span class="nav-text">Completed</span>
+          </a>
         </div>
-        <div class="help-item">
-          <span class="icon" id="helpClockIcon"></span>
-          <div class="help-item-content">
-            <strong>Hours</strong>
-            <p>Mon-Fri 8AM-6PM, Sat 9AM-2PM</p>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="sidebar-user">
+          <div class="user-avatar" id="userAvatar">S</div>
+          <div class="user-info">
+            <div class="user-name" id="userName">Shop</div>
+            <div class="user-role">Shop</div>
           </div>
         </div>
       </div>
-    </div>
+    </aside>
+
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <header class="top-header">
+        <div class="header-left">
+          <button class="mobile-menu-btn" id="mobileMenuBtn">
+            <span class="icon" id="mobileMenuIcon"></span>
+          </button>
+          <h1 class="page-title">Dashboard</h1>
+        </div>
+        <div class="header-right">
+          <a href="/shop/submit.html" class="btn btn-primary">
+            <span class="icon" id="plusIcon"></span>
+            Submit Vehicle
+          </a>
+          <button class="btn-logout" id="logoutBtn">
+            <span class="icon icon-sm" id="logoutIcon"></span>
+            Sign Out
+          </button>
+        </div>
+      </header>
+
+      <div class="content-area">
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+          <div class="stat-card clickable" onclick="window.location='/shop/vehicles.html'">
+            <div class="stat-icon blue" id="statIconTotal"></div>
+            <div class="stat-content">
+              <div class="stat-value" id="statTotal">-</div>
+              <div class="stat-label">Total Vehicles</div>
+            </div>
+          </div>
+          <div class="stat-card clickable" onclick="window.location='/shop/vehicles.html?status=New'">
+            <div class="stat-icon purple" id="statIconNew"></div>
+            <div class="stat-content">
+              <div class="stat-value" id="statNew">-</div>
+              <div class="stat-label">New</div>
+            </div>
+          </div>
+          <div class="stat-card clickable" onclick="window.location='/shop/vehicles.html?status=Scheduled'">
+            <div class="stat-icon yellow" id="statIconScheduled"></div>
+            <div class="stat-content">
+              <div class="stat-value" id="statScheduled">-</div>
+              <div class="stat-label">Scheduled</div>
+            </div>
+          </div>
+          <div class="stat-card clickable" onclick="window.location='/shop/vehicles.html?status=Completed'">
+            <div class="stat-icon green" id="statIconCompleted"></div>
+            <div class="stat-content">
+              <div class="stat-value" id="statCompleted">-</div>
+              <div class="stat-label">Completed</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Main Grid -->
+        <div class="grid-2">
+          <!-- Today's Schedule -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Scheduled Jobs</h3>
+              <span class="status-badge scheduled" id="scheduledCount">0 jobs</span>
+            </div>
+            <div class="card-body" id="scheduledJobs">
+              <div class="loading"><div class="spinner"></div></div>
+            </div>
+          </div>
+
+          <!-- Quick Actions -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Quick Actions</h3>
+            </div>
+            <div class="card-body">
+              <a href="/shop/submit.html" class="quick-action">
+                <div class="quick-action-icon blue" id="qaSubmitIcon"></div>
+                <span class="text">Submit New Vehicle</span>
+              </a>
+              <a href="/shop/vehicles.html?status=New" class="quick-action">
+                <div class="quick-action-icon purple" id="qaNewIcon"></div>
+                <span class="text">View New Vehicles</span>
+              </a>
+              <a href="/shop/vehicles.html?status=In%20Progress" class="quick-action">
+                <div class="quick-action-icon orange" id="qaProgressIcon"></div>
+                <span class="text">In Progress</span>
+              </a>
+              <a href="/shop/vehicles.html?status=Completed" class="quick-action">
+                <div class="quick-action-icon green" id="qaCompletedIcon"></div>
+                <span class="text">Completed Jobs</span>
+              </a>
+            </div>
+          </div>
+
+          <!-- Recent Vehicles -->
+          <div class="card" style="grid-column: span 2;">
+            <div class="card-header">
+              <h3 class="card-title">Recent Vehicles</h3>
+              <a href="/shop/vehicles.html" class="btn btn-sm btn-secondary">View All</a>
+            </div>
+            <div class="card-body no-padding">
+              <div id="recentVehicles">
+                <div class="loading"><div class="spinner"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
   </div>
 
   <script src="/js/icons.js"></script>
   <script src="/js/auth.js"></script>
   <script src="/js/api.js"></script>
   <script src="/shop/js/shop-common.js"></script>
-  <script src="/shop/js/dashboard.js"></script>
   <script>
-    // Initialize icons after DOM load
-    document.addEventListener('DOMContentLoaded', () => {
-      // Header icons
-      document.getElementById('helpIcon').innerHTML = Icons.help;
-      document.getElementById('logoutIcon').innerHTML = Icons.logout;
-      document.getElementById('plusIcon').innerHTML = Icons.plus;
-      document.getElementById('searchIcon').innerHTML = Icons.search;
+    // Helper to get from either storage
+    function getStorageItem(key) {
+      return localStorage.getItem(key) || sessionStorage.getItem(key);
+    }
 
-      // Stat icons
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Initialize shop portal
+      if (!initShopPortal()) return;
+
+      // Set user info in sidebar
+      const userName = getStorageItem('userName') || getStorageItem('userShopName') || 'Shop';
+      document.getElementById('userName').textContent = userName;
+      document.getElementById('userAvatar').textContent = userName.charAt(0).toUpperCase();
+
+      // Initialize icons
+      initIcons();
+
+      // Setup sidebar toggle
+      setupSidebar();
+
+      // Setup logout
+      setupLogout();
+
+      // Load dashboard data
+      await loadDashboardData();
+    });
+
+    function initIcons() {
+      // Sidebar icons
+      document.getElementById('toggleIcon').innerHTML = Icons.menu;
+      document.getElementById('mobileMenuIcon').innerHTML = Icons.menu;
+      document.getElementById('navDashboard').innerHTML = Icons.chart;
+      document.getElementById('navAllVehicles').innerHTML = Icons.car;
+      document.getElementById('navNew').innerHTML = Icons.sparkles;
+      document.getElementById('navScheduled').innerHTML = Icons.calendar;
+      document.getElementById('navInProgress').innerHTML = Icons.wrench;
+      document.getElementById('navCompleted').innerHTML = Icons.checkCircle;
+
+      // Header icons
+      document.getElementById('plusIcon').innerHTML = Icons.plus;
+      document.getElementById('logoutIcon').innerHTML = Icons.logout;
+
+      // Stat card icons
       document.getElementById('statIconTotal').innerHTML = Icons.car;
+      document.getElementById('statIconNew').innerHTML = Icons.sparkles;
       document.getElementById('statIconScheduled').innerHTML = Icons.calendar;
-      document.getElementById('statIconProgress').innerHTML = Icons.wrench;
       document.getElementById('statIconCompleted').innerHTML = Icons.checkCircle;
 
-      // Empty state icon
-      document.getElementById('emptyIcon').innerHTML = Icons.car;
+      // Quick action icons
+      document.getElementById('qaSubmitIcon').innerHTML = Icons.plus;
+      document.getElementById('qaNewIcon').innerHTML = Icons.sparkles;
+      document.getElementById('qaProgressIcon').innerHTML = Icons.wrench;
+      document.getElementById('qaCompletedIcon').innerHTML = Icons.checkCircle;
+    }
 
-      // Modal icons
-      document.getElementById('closeIcon').innerHTML = Icons.x;
-      document.getElementById('helpPhoneIcon').innerHTML = Icons.phone;
-      document.getElementById('helpMailIcon').innerHTML = Icons.mail;
-      document.getElementById('helpClockIcon').innerHTML = Icons.clock;
-    });
+    function setupSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const toggle = document.getElementById('sidebarToggle');
+      const mobileBtn = document.getElementById('mobileMenuBtn');
+      const overlay = document.getElementById('sidebarOverlay');
+
+      toggle?.addEventListener('click', () => {
+        sidebar.classList.toggle('collapsed');
+      });
+
+      mobileBtn?.addEventListener('click', () => {
+        sidebar.classList.toggle('open');
+      });
+
+      overlay?.addEventListener('click', () => {
+        sidebar.classList.remove('open');
+      });
+    }
+
+    function setupLogout() {
+      document.getElementById('logoutBtn')?.addEventListener('click', () => {
+        localStorage.clear();
+        sessionStorage.clear();
+        window.location.replace('/?logout=true');
+      });
+    }
+
+    async function loadDashboardData() {
+      try {
+        const response = await ShopAPI.get('/api/shop/vehicles');
+        if (!response.success) throw new Error(response.error);
+
+        const vehicles = response.vehicles || [];
+
+        // Update stats
+        updateStats(vehicles);
+
+        // Update scheduled jobs
+        updateScheduledJobs(vehicles);
+
+        // Update recent vehicles table
+        updateRecentVehicles(vehicles);
+
+      } catch (err) {
+        console.error('Load error:', err);
+        document.getElementById('scheduledJobs').innerHTML = `
+          <div class="empty-state">
+            <p>Failed to load data. Please refresh.</p>
+          </div>
+        `;
+      }
+    }
+
+    function updateStats(vehicles) {
+      const total = vehicles.length;
+      const newCount = vehicles.filter(v => v.status === 'New').length;
+      const scheduled = vehicles.filter(v => v.status === 'Scheduled' || v.status === 'Rescheduled').length;
+      const completed = vehicles.filter(v => v.status === 'Completed').length;
+
+      document.getElementById('statTotal').textContent = total;
+      document.getElementById('statNew').textContent = newCount;
+      document.getElementById('statScheduled').textContent = scheduled;
+      document.getElementById('statCompleted').textContent = completed;
+
+      // Update sidebar badges
+      document.getElementById('totalCount').textContent = total;
+      if (newCount > 0) {
+        document.getElementById('newCount').textContent = newCount;
+        document.getElementById('newCount').style.display = '';
+      }
+    }
+
+    function updateScheduledJobs(vehicles) {
+      const scheduled = vehicles.filter(v =>
+        v.status === 'Scheduled' || v.status === 'Rescheduled' || v.status === 'In Progress'
+      ).slice(0, 5);
+
+      document.getElementById('scheduledCount').textContent = `${scheduled.length} jobs`;
+
+      if (scheduled.length === 0) {
+        document.getElementById('scheduledJobs').innerHTML = `
+          <div class="empty-state">
+            <p>No scheduled jobs</p>
+          </div>
+        `;
+        return;
+      }
+
+      document.getElementById('scheduledJobs').innerHTML = scheduled.map(v => `
+        <div class="schedule-item" onclick="window.location='/shop/vehicle.html?ro=${encodeURIComponent(v.roPo)}'">
+          <div class="schedule-time">${v.scheduledDate ? formatDate(v.scheduledDate) : 'TBD'}</div>
+          <div class="schedule-info">
+            <div class="schedule-ro">RO #${escapeHtml(v.roPo)}</div>
+            <div class="schedule-vehicle">${escapeHtml(v.vehicle || 'Unknown')}</div>
+          </div>
+          <span class="status-badge ${getStatusClass(v.status)}">${v.status}</span>
+        </div>
+      `).join('');
+    }
+
+    function updateRecentVehicles(vehicles) {
+      const recent = vehicles.slice(0, 10);
+
+      if (recent.length === 0) {
+        document.getElementById('recentVehicles').innerHTML = `
+          <div class="empty-state">
+            <p>No vehicles yet. <a href="/shop/submit.html">Submit your first vehicle</a></p>
+          </div>
+        `;
+        return;
+      }
+
+      document.getElementById('recentVehicles').innerHTML = `
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>RO #</th>
+              <th>Vehicle</th>
+              <th>Status</th>
+              <th>Date</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            ${recent.map(v => `
+              <tr class="clickable" onclick="window.location='/shop/vehicle.html?ro=${encodeURIComponent(v.roPo)}'">
+                <td><strong>${escapeHtml(v.roPo)}</strong></td>
+                <td>${escapeHtml(v.vehicle || 'Unknown')}</td>
+                <td><span class="status-badge ${getStatusClass(v.status)}">${v.status || 'New'}</span></td>
+                <td>${v.scheduledDate ? formatDate(v.scheduledDate) : '-'}</td>
+                <td><span class="icon">${Icons.chevronRight}</span></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr || dateStr.includes('1899')) return '';
+      try {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      } catch { return dateStr; }
+    }
+
+    function getStatusClass(status) {
+      if (!status) return 'new';
+      return status.toLowerCase().replace(/\s+/g, '-');
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
   </script>
 </body>
 </html>
