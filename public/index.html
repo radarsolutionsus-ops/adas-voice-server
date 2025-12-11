@@ -156,9 +156,11 @@
         return;
       }
 
-      // Check for existing token (try both key formats)
-      const token = localStorage.getItem('adas_access_token') || localStorage.getItem('token');
-      const role = localStorage.getItem('adas_user_role') || localStorage.getItem('userRole');
+      // Check for existing token (try both key formats and both storage types)
+      const token = localStorage.getItem('adas_access_token') || localStorage.getItem('token') ||
+                    sessionStorage.getItem('adas_access_token') || sessionStorage.getItem('token');
+      const role = localStorage.getItem('adas_user_role') || localStorage.getItem('userRole') ||
+                   sessionStorage.getItem('adas_user_role') || sessionStorage.getItem('userRole');
 
       // No token, stay on login page
       if (!token || !role) return;
@@ -217,24 +219,19 @@
         }
 
         // Store auth data - use same keys as auth.js
-        console.log('[LOGIN] Storing tokens...');
-        console.log('[LOGIN] accessToken:', data.accessToken ? data.accessToken.substring(0, 20) + '...' : 'MISSING');
-
-        localStorage.setItem('adas_access_token', data.accessToken);
-        localStorage.setItem('adas_refresh_token', data.refreshToken);
-        localStorage.setItem('adas_user_role', data.user.role);
-        localStorage.setItem('userName', data.user.name);
-        localStorage.setItem('userShopName', data.user.shopName || '');
-        // Also store legacy keys for compatibility
-        localStorage.setItem('token', data.accessToken);
-        localStorage.setItem('userRole', data.user.role);
-
-        // Verify storage worked
-        console.log('[LOGIN] After storage - keys:', Object.keys(localStorage));
-        console.log('[LOGIN] Verified adas_access_token:', localStorage.getItem('adas_access_token') ? 'present' : 'MISSING');
+        // Store in both localStorage and sessionStorage for browser compatibility
+        const stores = [localStorage, sessionStorage];
+        stores.forEach(store => {
+          store.setItem('adas_access_token', data.accessToken);
+          store.setItem('adas_refresh_token', data.refreshToken);
+          store.setItem('adas_user_role', data.user.role);
+          store.setItem('userName', data.user.name);
+          store.setItem('userShopName', data.user.shopName || '');
+          store.setItem('token', data.accessToken);
+          store.setItem('userRole', data.user.role);
+        });
 
         // Redirect
-        console.log('[LOGIN] Redirecting to:', data.user.role);
         redirectToPortal(data.user.role);
 
       } catch (err) {

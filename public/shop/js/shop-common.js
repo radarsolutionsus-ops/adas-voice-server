@@ -53,34 +53,33 @@
     };
   }
 
+  // Helper to get from either storage
+  function getStorageItem(key) {
+    return localStorage.getItem(key) || sessionStorage.getItem(key);
+  }
+
   // Initialize shop portal
   window.initShopPortal = function() {
-    console.log('[SHOP] initShopPortal called');
-    console.log('[SHOP] localStorage keys:', Object.keys(localStorage));
-    console.log('[SHOP] adas_access_token:', localStorage.getItem('adas_access_token') ? 'present' : 'missing');
-    console.log('[SHOP] token:', localStorage.getItem('token') ? 'present' : 'missing');
-
-    // Check auth - try both key formats for compatibility
-    const token = localStorage.getItem('adas_access_token') || localStorage.getItem('token');
-    const role = localStorage.getItem('adas_user_role') || localStorage.getItem('userRole');
-
-    console.log('[SHOP] token found:', !!token, 'role:', role);
+    // Check auth - try both key formats and both storage types for compatibility
+    const token = getStorageItem('adas_access_token') || getStorageItem('token');
+    const role = getStorageItem('adas_user_role') || getStorageItem('userRole');
 
     if (!token) {
-      console.log('[SHOP] No token, redirecting to login');
+      console.log('[SHOP] No token found, redirecting to login');
       window.location.replace('/?logout=true');
       return false;
     }
 
     if (role !== 'shop') {
-      console.log('[SHOP] Wrong role:', role, '- expected "shop"');
+      console.log('[SHOP] Wrong role:', role);
       localStorage.clear();
+      sessionStorage.clear();
       window.location.replace('/?logout=true');
       return false;
     }
 
     // Set shop name in header
-    const shopName = localStorage.getItem('userName') || localStorage.getItem('userShopName') || 'Shop';
+    const shopName = getStorageItem('userName') || getStorageItem('userShopName') || 'Shop';
     const shopNameEl = document.getElementById('shopName');
     if (shopNameEl) {
       shopNameEl.textContent = shopName;

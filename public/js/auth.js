@@ -108,10 +108,10 @@ const Auth = {
   },
 
   /**
-   * Get current access token
+   * Get current access token (checks both localStorage and sessionStorage)
    */
   getToken() {
-    return localStorage.getItem(this.TOKEN_KEY);
+    return localStorage.getItem(this.TOKEN_KEY) || sessionStorage.getItem(this.TOKEN_KEY);
   },
 
   /**
