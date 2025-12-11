@@ -28,7 +28,16 @@ const Auth = {
     localStorage.setItem(this.REFRESH_KEY, data.refreshToken);
     localStorage.setItem(this.SHOP_KEY, JSON.stringify(data.shop));
 
-    return data.shop;
+    // Store role and redirect info
+    if (data.user && data.user.role) {
+      localStorage.setItem('adas_user_role', data.user.role);
+    }
+
+    return {
+      shop: data.shop,
+      user: data.user,
+      redirectTo: data.redirectTo || '/shop/dashboard.html'
+    };
   },
 
   /**
@@ -54,6 +63,14 @@ const Auth = {
     localStorage.removeItem(this.TOKEN_KEY);
     localStorage.removeItem(this.REFRESH_KEY);
     localStorage.removeItem(this.SHOP_KEY);
+    localStorage.removeItem('adas_user_role');
+  },
+
+  /**
+   * Get current user role
+   */
+  getRole() {
+    return localStorage.getItem('adas_user_role');
   },
 
   /**

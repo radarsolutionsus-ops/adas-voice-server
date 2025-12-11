@@ -41,9 +41,16 @@
 
   <script src="/js/auth.js"></script>
   <script>
-    // Check if already logged in
+    // Check if already logged in and redirect based on role
     if (Auth.isAuthenticated()) {
-      window.location.href = '/dashboard.html';
+      const role = localStorage.getItem('adas_user_role');
+      if (role === 'admin') {
+        window.location.href = '/admin/dashboard.html';
+      } else if (role === 'tech') {
+        window.location.href = '/tech/dashboard.html';
+      } else {
+        window.location.href = '/shop/dashboard.html';
+      }
     }
 
     document.getElementById('login-form').addEventListener('submit', async (e) => {
@@ -61,8 +68,9 @@
       errorDiv.classList.add('hidden');
 
       try {
-        await Auth.login(username, password);
-        window.location.href = '/dashboard.html';
+        const result = await Auth.login(username, password);
+        // Redirect based on role
+        window.location.href = result.redirectTo || '/shop/dashboard.html';
       } catch (err) {
         errorDiv.textContent = err.message || 'Login failed';
         errorDiv.classList.remove('hidden');
