@@ -56,10 +56,15 @@
   // Initialize shop portal
   window.initShopPortal = function() {
     console.log('[SHOP] initShopPortal called');
+    console.log('[SHOP] localStorage keys:', Object.keys(localStorage));
+    console.log('[SHOP] adas_access_token:', localStorage.getItem('adas_access_token') ? 'present' : 'missing');
+    console.log('[SHOP] token:', localStorage.getItem('token') ? 'present' : 'missing');
 
     // Check auth - try both key formats for compatibility
     const token = localStorage.getItem('adas_access_token') || localStorage.getItem('token');
     const role = localStorage.getItem('adas_user_role') || localStorage.getItem('userRole');
+
+    console.log('[SHOP] token found:', !!token, 'role:', role);
 
     if (!token) {
       console.log('[SHOP] No token, redirecting to login');
@@ -68,7 +73,7 @@
     }
 
     if (role !== 'shop') {
-      console.log('[SHOP] Wrong role:', role);
+      console.log('[SHOP] Wrong role:', role, '- expected "shop"');
       localStorage.clear();
       window.location.replace('/?logout=true');
       return false;
