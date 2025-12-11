@@ -30,21 +30,21 @@
 
         <div class="nav-section">
           <div class="nav-section-title">Jobs</div>
-          <a href="/tech/dashboard.html#today" class="nav-item" id="navTodayLink">
+          <a href="/tech/dashboard.html?filter=today" class="nav-item" id="navTodayLink" data-filter="today">
             <span class="nav-icon" id="navToday"></span>
             <span class="nav-text">Today's Jobs</span>
             <span class="nav-badge" id="todayBadge" style="display:none;">0</span>
           </a>
-          <a href="/tech/dashboard.html#all" class="nav-item">
+          <a href="/tech/dashboard.html" class="nav-item" data-filter="all">
             <span class="nav-icon" id="navAllJobs"></span>
             <span class="nav-text">All Jobs</span>
             <span class="nav-badge" id="totalCount">0</span>
           </a>
-          <a href="/tech/dashboard.html#progress" class="nav-item">
+          <a href="/tech/dashboard.html?status=In%20Progress" class="nav-item" data-filter="In Progress">
             <span class="nav-icon" id="navInProgress"></span>
             <span class="nav-text">In Progress</span>
           </a>
-          <a href="/tech/dashboard.html#completed" class="nav-item">
+          <a href="/tech/dashboard.html?status=Completed" class="nav-item" data-filter="Completed">
             <span class="nav-icon" id="navCompleted"></span>
             <span class="nav-text">Completed</span>
           </a>
@@ -133,19 +133,19 @@
               <h3 class="card-title">Quick Actions</h3>
             </div>
             <div class="card-body">
-              <a href="#" class="quick-action" onclick="filterJobs('In Progress'); return false;">
+              <a href="/tech/dashboard.html?status=In%20Progress" class="quick-action">
                 <div class="quick-action-icon orange" id="qaProgressIcon"></div>
                 <span class="text">View In Progress</span>
               </a>
-              <a href="#" class="quick-action" onclick="filterJobs('Scheduled'); return false;">
+              <a href="/tech/dashboard.html?status=Scheduled" class="quick-action">
                 <div class="quick-action-icon purple" id="qaScheduledIcon"></div>
                 <span class="text">View Scheduled</span>
               </a>
-              <a href="#" class="quick-action" onclick="filterJobs('Completed'); return false;">
+              <a href="/tech/dashboard.html?status=Completed" class="quick-action">
                 <div class="quick-action-icon green" id="qaCompletedIcon"></div>
                 <span class="text">View Completed</span>
               </a>
-              <a href="#" class="quick-action" onclick="filterJobs('all'); return false;">
+              <a href="/tech/dashboard.html" class="quick-action">
                 <div class="quick-action-icon blue" id="qaAllIcon"></div>
                 <span class="text">View All Jobs</span>
               </a>
@@ -267,6 +267,11 @@
     let currentJob = null;
     let currentFilter = 'all';
 
+    // Get filter from URL params
+    const urlParams = new URLSearchParams(window.location.search);
+    const statusFilter = urlParams.get('status');
+    const todayFilter = urlParams.get('filter');
+
     document.addEventListener('DOMContentLoaded', async () => {
       // Check auth
       const token = getStorageItem('adas_access_token') || getStorageItem('token');
@@ -301,9 +306,52 @@
       // Setup filter pills
       setupFilters();
 
+      // Highlight active nav based on URL params
+      highlightActiveNav();
+
       // Load data
       await loadJobs();
+
+      // Apply URL filter after data loads
+      applyUrlFilter();
     });
+
+    function highlightActiveNav() {
+      // Remove active from all nav items
+      document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+
+      // Find and activate the correct one
+      if (statusFilter) {
+        const activeLink = document.querySelector(`.nav-item[data-filter="${statusFilter}"]`);
+        if (activeLink) activeLink.classList.add('active');
+      } else if (todayFilter === 'today') {
+        document.getElementById('navTodayLink').classList.add('active');
+      } else {
+        // Default to dashboard
+        const dashboardLink = document.querySelector('.nav-item[href="/tech/dashboard.html"]:not([data-filter])');
+        if (dashboardLink) dashboardLink.classList.add('active');
+        else document.querySelector('.nav-item[data-filter="all"]')?.classList.add('active');
+      }
+    }
+
+    function applyUrlFilter() {
+      // Update page title based on filter
+      const pageTitle = document.querySelector('.page-title');
+
+      if (todayFilter === 'today') {
+        if (pageTitle) pageTitle.textContent = "Today's Jobs";
+        // Show only today's jobs in the main table
+        const today = new Date().toDateString();
+        const todayJobs = allJobs.filter(j => {
+          if (!j.scheduledDate) return false;
+          return new Date(j.scheduledDate).toDateString() === today;
+        });
+        renderJobs(todayJobs);
+      } else if (statusFilter) {
+        if (pageTitle) pageTitle.textContent = `${statusFilter} Jobs`;
+        filterJobs(statusFilter);
+      }
+    }
 
     function initIcons() {
       // Sidebar icons
