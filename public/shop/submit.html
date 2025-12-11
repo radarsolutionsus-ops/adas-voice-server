@@ -4,10 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Submit Vehicle - ADAS F1RST</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/apple-style.css">
 </head>
 <body>
-  <!-- Header -->
   <header class="app-header">
     <div class="app-logo">ADAS F1RST</div>
     <div class="header-center">
@@ -25,63 +25,58 @@
   </header>
 
   <main class="app-main">
-    <!-- Back Link -->
     <a href="/shop/dashboard.html" class="back-link">
       <span class="icon" id="backIcon"></span>
       Back to Dashboard
     </a>
 
-    <!-- Form Card -->
-    <div class="form-card">
+    <div class="card form-card">
       <div class="form-header">
-        <h2>Submit New Vehicle</h2>
-        <p>Complete the form below to submit a vehicle for calibration</p>
+        <h1>Submit New Vehicle</h1>
+        <p class="text-secondary">Upload your estimate and we'll extract the vehicle details</p>
       </div>
 
       <!-- Progress Steps -->
       <div class="form-steps">
-        <div class="form-step-indicator">
-          <div class="step-number active" id="step1Circle">1</div>
-          <span class="step-label active">Vehicle Info</span>
+        <div class="step active" data-step="1">
+          <div class="step-number">1</div>
+          <div class="step-label">Basic Info</div>
         </div>
-        <div class="step-line" id="line1"></div>
-        <div class="form-step-indicator">
-          <div class="step-number" id="step2Circle">2</div>
-          <span class="step-label">Documents</span>
+        <div class="step-line"></div>
+        <div class="step" data-step="2">
+          <div class="step-number">2</div>
+          <div class="step-label">Documents</div>
         </div>
-        <div class="step-line" id="line2"></div>
-        <div class="form-step-indicator">
-          <div class="step-number" id="step3Circle">3</div>
-          <span class="step-label">Review</span>
+        <div class="step-line"></div>
+        <div class="step" data-step="3">
+          <div class="step-number">3</div>
+          <div class="step-label">Review</div>
         </div>
       </div>
 
       <form id="submitForm">
-        <!-- Step 1: Vehicle Information -->
+        <!-- Step 1: Basic Info -->
         <div class="form-step active" id="step1">
           <div class="form-group">
-            <label class="form-label">RO/PO Number *</label>
-            <input type="text" class="form-input" id="roNumber" placeholder="Enter RO or PO number" required>
+            <label class="form-label">RO/PO Number <span class="required">*</span></label>
+            <input type="text" id="roPo" class="form-input" placeholder="Enter RO or PO number" required>
+            <p class="form-hint">This is your shop's work order number</p>
           </div>
 
           <div class="form-group">
-            <label class="form-label">Vehicle Year, Make, Model *</label>
-            <input type="text" class="form-input" id="vehicle" placeholder="e.g., 2023 Toyota Camry" required>
+            <label class="form-label">Vehicle (Optional)</label>
+            <input type="text" id="vehicleDesc" class="form-input" placeholder="e.g., 2024 Toyota Camry - we'll extract from estimate">
+            <p class="form-hint">Leave blank if unsure - we'll get it from the estimate</p>
           </div>
 
           <div class="form-group">
-            <label class="form-label">VIN (Recommended)</label>
-            <input type="text" class="form-input" id="vin" placeholder="17-character VIN" maxlength="17" style="text-transform:uppercase;">
-            <p class="form-hint">VIN helps us identify exact calibration requirements</p>
+            <label class="form-label">Notes (Optional)</label>
+            <textarea id="notes" class="form-textarea" rows="3" placeholder="Any special instructions or notes..."></textarea>
           </div>
 
-          <div class="form-group">
-            <label class="form-label">Notes / Special Instructions</label>
-            <textarea class="form-input form-textarea" id="notes" placeholder="Any additional information about the vehicle or service needed..."></textarea>
-          </div>
-
-          <div class="form-actions form-actions-center">
-            <button type="button" class="btn-accent btn-large btn-full" onclick="goToStep(2)">
+          <div class="form-actions form-actions-between">
+            <div></div>
+            <button type="button" class="btn-accent" onclick="goToStep(2)">
               Continue to Documents
               <span class="icon icon-sm" id="nextIcon1"></span>
             </button>
@@ -91,47 +86,34 @@
         <!-- Step 2: Documents -->
         <div class="form-step" id="step2">
           <div class="form-group">
-            <label class="form-label">Estimate PDF *</label>
-            <div class="file-upload" id="estimateZone">
-              <span class="icon icon-lg" id="uploadIcon1"></span>
-              <div class="file-upload-title">Click to upload estimate</div>
-              <div class="file-upload-subtitle">or drag and drop PDF file here</div>
+            <label class="form-label">Estimate PDF <span class="required">*</span></label>
+            <div class="file-upload" id="estimateUpload">
               <input type="file" id="estimateFile" accept=".pdf">
-            </div>
-            <div class="file-preview" id="estimatePreview">
-              <span class="icon" id="fileIcon1"></span>
-              <div class="file-preview-info">
-                <div class="file-preview-name" id="estimateFileName"></div>
-                <div class="file-preview-size" id="estimateFileSize"></div>
+              <div class="upload-content" id="estimateContent">
+                <span class="icon upload-icon" id="uploadIcon1"></span>
+                <p class="upload-text">Click or drag to upload estimate</p>
+                <p class="upload-hint">PDF format, max 10MB</p>
               </div>
-              <button type="button" class="file-preview-remove" onclick="removeFile('estimate')">
-                <span class="icon icon-sm" id="removeIcon1"></span>
-              </button>
             </div>
+            <p class="form-hint">We'll extract VIN and vehicle info from the estimate</p>
           </div>
 
           <div class="form-group">
-            <label class="form-label">Pre-Scan PDF</label>
-            <div class="file-upload" id="prescanZone">
-              <span class="icon icon-lg" id="uploadIcon2"></span>
-              <div class="file-upload-title">Click to upload pre-scan</div>
-              <div class="file-upload-subtitle">or drag and drop PDF file here</div>
+            <label class="form-label">Pre-Scan Report (Optional)</label>
+            <div class="file-upload" id="prescanUpload">
               <input type="file" id="prescanFile" accept=".pdf">
-            </div>
-            <div class="file-preview" id="prescanPreview">
-              <span class="icon" id="fileIcon2"></span>
-              <div class="file-preview-info">
-                <div class="file-preview-name" id="prescanFileName"></div>
-                <div class="file-preview-size" id="prescanFileSize"></div>
+              <div class="upload-content" id="prescanContent">
+                <span class="icon upload-icon" id="uploadIcon2"></span>
+                <p class="upload-text">Click or drag to upload pre-scan</p>
+                <p class="upload-hint">PDF format, max 10MB</p>
               </div>
-              <button type="button" class="file-preview-remove" onclick="removeFile('prescan')">
-                <span class="icon icon-sm" id="removeIcon2"></span>
-              </button>
             </div>
 
-            <div class="checkbox-option">
-              <input type="checkbox" id="noDtcConfirm">
-              <span>No pre-scan available - I confirm there are no active DTC codes</span>
+            <div class="checkbox-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="noDtcConfirm">
+                <span class="checkbox-text">No pre-scan available - I confirm no active DTCs</span>
+              </label>
             </div>
           </div>
 
@@ -140,8 +122,8 @@
               <span class="icon icon-sm" id="backIcon2"></span>
               Back
             </button>
-            <button type="button" class="btn-accent" onclick="goToStep(3)">
-              Review Submission
+            <button type="button" class="btn-accent" onclick="processDocuments()">
+              Process Documents
               <span class="icon icon-sm" id="nextIcon2"></span>
             </button>
           </div>
@@ -150,40 +132,46 @@
         <!-- Step 3: Review -->
         <div class="form-step" id="step3">
           <div class="review-section">
-            <h3>Vehicle Information</h3>
-            <div class="review-item">
-              <span class="review-label">RO/PO Number</span>
-              <span class="review-value" id="reviewRo"></span>
+            <h3>Extracted Information</h3>
+            <p class="text-secondary">Please verify the information below</p>
+
+            <div class="review-grid">
+              <div class="review-item">
+                <span class="review-label">RO/PO</span>
+                <span class="review-value" id="reviewRoPo">-</span>
+              </div>
+              <div class="review-item">
+                <span class="review-label">VIN</span>
+                <span class="review-value" id="reviewVin">-</span>
+              </div>
+              <div class="review-item">
+                <span class="review-label">Vehicle</span>
+                <span class="review-value" id="reviewVehicle">-</span>
+              </div>
+              <div class="review-item">
+                <span class="review-label">Estimate</span>
+                <span class="review-value success" id="reviewEstimate">Uploaded</span>
+              </div>
+              <div class="review-item">
+                <span class="review-label">Pre-Scan</span>
+                <span class="review-value" id="reviewPrescan">-</span>
+              </div>
             </div>
-            <div class="review-item">
-              <span class="review-label">Vehicle</span>
-              <span class="review-value" id="reviewVehicle"></span>
-            </div>
-            <div class="review-item">
-              <span class="review-label">VIN</span>
-              <span class="review-value" id="reviewVin"></span>
-            </div>
-            <div class="review-item">
+
+            <div class="review-notes" id="reviewNotesSection" style="display:none;">
               <span class="review-label">Notes</span>
-              <span class="review-value" id="reviewNotes"></span>
+              <p class="review-value" id="reviewNotes">-</p>
             </div>
           </div>
 
-          <div class="review-section">
-            <h3>Documents</h3>
-            <div class="review-item">
-              <span class="review-label">Estimate</span>
-              <span class="review-value" id="reviewEstimate"></span>
-            </div>
-            <div class="review-item">
-              <span class="review-label">Pre-Scan</span>
-              <span class="review-value" id="reviewPrescan"></span>
-            </div>
+          <div class="info-banner">
+            <span class="icon" id="infoBannerIcon"></span>
+            <p>After submission, we'll process the estimate and determine calibration requirements. You'll be notified when ready to schedule.</p>
           </div>
 
           <div class="form-actions" style="flex-direction:column;gap:12px;">
             <button type="submit" class="btn-accent btn-large btn-full" id="submitBtn">
-              <span class="icon" id="checkIcon"></span>
+              <span class="icon" id="submitIcon"></span>
               Submit Vehicle
             </button>
             <button type="button" class="btn-ghost btn-full" onclick="goToStep(1)">
@@ -193,6 +181,14 @@
           </div>
         </div>
       </form>
+
+      <!-- Processing Overlay -->
+      <div class="processing-overlay" id="processingOverlay" style="display:none;">
+        <div class="processing-content">
+          <div class="spinner"></div>
+          <p id="processingText">Processing documents...</p>
+        </div>
+      </div>
     </div>
   </main>
 
@@ -240,248 +236,6 @@
   <script src="/js/auth.js"></script>
   <script src="/js/api.js"></script>
   <script src="/shop/js/shop-common.js"></script>
-  <script>
-    let currentStep = 1;
-    let uploadedFiles = {
-      estimate: null,
-      prescan: null
-    };
-
-    document.addEventListener('DOMContentLoaded', () => {
-      if (!initShopPortal()) return;
-      setupCommonHandlers();
-      initializeIcons();
-      setupFileUploads();
-      setupFormSubmit();
-    });
-
-    function initializeIcons() {
-      // Header icons
-      document.getElementById('helpIcon').innerHTML = Icons.help;
-      document.getElementById('logoutIcon').innerHTML = Icons.logout;
-      document.getElementById('backIcon').innerHTML = Icons.arrowLeft;
-
-      // Form icons
-      document.getElementById('nextIcon1').innerHTML = Icons.arrowRight;
-      document.getElementById('nextIcon2').innerHTML = Icons.arrowRight;
-      document.getElementById('backIcon2').innerHTML = Icons.arrowLeft;
-      document.getElementById('checkIcon').innerHTML = Icons.check;
-      document.getElementById('editIcon').innerHTML = Icons.edit;
-
-      // Upload icons
-      document.getElementById('uploadIcon1').innerHTML = Icons.upload;
-      document.getElementById('uploadIcon2').innerHTML = Icons.upload;
-      document.getElementById('fileIcon1').innerHTML = Icons.fileText;
-      document.getElementById('fileIcon2').innerHTML = Icons.fileText;
-      document.getElementById('removeIcon1').innerHTML = Icons.x;
-      document.getElementById('removeIcon2').innerHTML = Icons.x;
-
-      // Modal icons
-      document.getElementById('closeIcon').innerHTML = Icons.x;
-      document.getElementById('helpPhoneIcon').innerHTML = Icons.phone;
-      document.getElementById('helpMailIcon').innerHTML = Icons.mail;
-      document.getElementById('successIcon').innerHTML = Icons.checkCircle;
-    }
-
-    function goToStep(step) {
-      // Validate step 1 before proceeding
-      if (currentStep === 1 && step > 1) {
-        const ro = document.getElementById('roNumber').value.trim();
-        const vehicle = document.getElementById('vehicle').value.trim();
-        if (!ro || !vehicle) {
-          Toast.error('Please fill in RO number and vehicle');
-          return;
-        }
-      }
-
-      // Update step circles
-      for (let i = 1; i <= 3; i++) {
-        const circle = document.getElementById(`step${i}Circle`);
-        const line = document.getElementById(`line${i - 1}`);
-        const labels = document.querySelectorAll('.step-label');
-
-        circle.classList.remove('active', 'completed');
-        if (i < step) {
-          circle.classList.add('completed');
-          circle.innerHTML = Icons.check;
-        } else if (i === step) {
-          circle.classList.add('active');
-          circle.textContent = i;
-        } else {
-          circle.textContent = i;
-        }
-
-        if (line) {
-          line.classList.toggle('completed', i < step);
-        }
-
-        // Update labels
-        labels[i - 1]?.classList.toggle('active', i === step);
-      }
-
-      // Show/hide steps
-      document.querySelectorAll('.form-step').forEach((el, idx) => {
-        el.classList.toggle('active', idx + 1 === step);
-      });
-
-      // Populate review if going to step 3
-      if (step === 3) {
-        populateReview();
-      }
-
-      currentStep = step;
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    function setupFileUploads() {
-      ['estimate', 'prescan'].forEach(type => {
-        const zone = document.getElementById(`${type}Zone`);
-        const input = document.getElementById(`${type}File`);
-
-        zone.addEventListener('click', () => input.click());
-
-        zone.addEventListener('dragover', (e) => {
-          e.preventDefault();
-          zone.classList.add('dragover');
-        });
-
-        zone.addEventListener('dragleave', () => {
-          zone.classList.remove('dragover');
-        });
-
-        zone.addEventListener('drop', (e) => {
-          e.preventDefault();
-          zone.classList.remove('dragover');
-          const file = e.dataTransfer.files[0];
-          if (file && file.type === 'application/pdf') {
-            handleFile(type, file);
-          } else {
-            Toast.error('Please upload a PDF file');
-          }
-        });
-
-        input.addEventListener('change', (e) => {
-          const file = e.target.files[0];
-          if (file) {
-            handleFile(type, file);
-          }
-        });
-      });
-    }
-
-    function handleFile(type, file) {
-      uploadedFiles[type] = file;
-
-      const preview = document.getElementById(`${type}Preview`);
-      const fileName = document.getElementById(`${type}FileName`);
-      const fileSize = document.getElementById(`${type}FileSize`);
-      const zone = document.getElementById(`${type}Zone`);
-
-      fileName.textContent = file.name;
-      fileSize.textContent = formatFileSize(file.size);
-      preview.classList.add('has-file');
-      zone.style.display = 'none';
-    }
-
-    function removeFile(type) {
-      uploadedFiles[type] = null;
-
-      const preview = document.getElementById(`${type}Preview`);
-      const zone = document.getElementById(`${type}Zone`);
-      const input = document.getElementById(`${type}File`);
-
-      preview.classList.remove('has-file');
-      zone.style.display = 'block';
-      input.value = '';
-    }
-
-    function formatFileSize(bytes) {
-      if (bytes < 1024) return bytes + ' B';
-      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-    }
-
-    function populateReview() {
-      document.getElementById('reviewRo').textContent = document.getElementById('roNumber').value || '-';
-      document.getElementById('reviewVehicle').textContent = document.getElementById('vehicle').value || '-';
-      document.getElementById('reviewVin').textContent = document.getElementById('vin').value || 'Not provided';
-      document.getElementById('reviewNotes').textContent = document.getElementById('notes').value || 'None';
-      document.getElementById('reviewEstimate').textContent = uploadedFiles.estimate ? uploadedFiles.estimate.name : 'Not uploaded';
-
-      const noDtcConfirm = document.getElementById('noDtcConfirm')?.checked;
-      if (uploadedFiles.prescan) {
-        document.getElementById('reviewPrescan').textContent = uploadedFiles.prescan.name;
-      } else if (noDtcConfirm) {
-        document.getElementById('reviewPrescan').textContent = 'No pre-scan (confirmed no DTCs)';
-      } else {
-        document.getElementById('reviewPrescan').textContent = 'Not uploaded';
-      }
-    }
-
-    function setupFormSubmit() {
-      document.getElementById('submitForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-
-        // Validate estimate PDF is required
-        if (!uploadedFiles.estimate) {
-          Toast.error('Estimate PDF is required');
-          goToStep(2);
-          return;
-        }
-
-        // Validate pre-scan or confirmation
-        const noDtcConfirm = document.getElementById('noDtcConfirm')?.checked;
-        if (!uploadedFiles.prescan && !noDtcConfirm) {
-          Toast.error('Please upload a pre-scan PDF or confirm no DTC codes');
-          goToStep(2);
-          return;
-        }
-
-        const submitBtn = document.getElementById('submitBtn');
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<div class="spinner" style="width:20px;height:20px;margin-right:8px;"></div> Submitting...';
-
-        try {
-          const formData = new FormData();
-          formData.append('roPo', document.getElementById('roNumber').value.trim());
-          formData.append('vehicle', document.getElementById('vehicle').value.trim());
-          formData.append('vin', document.getElementById('vin').value.trim().toUpperCase());
-          formData.append('notes', document.getElementById('notes').value.trim());
-          formData.append('noPrescanConfirmed', noDtcConfirm ? 'true' : 'false');
-
-          if (uploadedFiles.estimate) {
-            formData.append('estimatePdf', uploadedFiles.estimate);
-          }
-          if (uploadedFiles.prescan) {
-            formData.append('preScanPdf', uploadedFiles.prescan);
-          }
-
-          const token = await Auth.getValidToken();
-          const response = await fetch('/api/shop/vehicles', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`
-            },
-            body: formData
-          });
-
-          const result = await response.json();
-
-          if (result.success) {
-            document.getElementById('successModal').classList.add('open');
-          } else {
-            Toast.error(result.error || 'Failed to submit vehicle');
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = `${Icons.check} Submit Vehicle`;
-          }
-        } catch (err) {
-          console.error('Submit error:', err);
-          Toast.error('Failed to submit vehicle. Please try again.');
-          submitBtn.disabled = false;
-          submitBtn.innerHTML = `${Icons.check} Submit Vehicle`;
-        }
-      });
-    }
-  </script>
+  <script src="/shop/js/submit.js"></script>
 </body>
 </html>

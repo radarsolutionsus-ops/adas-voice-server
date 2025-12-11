@@ -17,7 +17,7 @@ const router = express.Router();
 // Configure multer for file uploads
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024, files: 1 },
+  limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (file.mimetype === 'application/pdf') {
       cb(null, true);
@@ -26,6 +26,12 @@ const upload = multer({
     }
   }
 });
+
+// Multiple file upload configuration for vehicle submission
+const vehicleUpload = upload.fields([
+  { name: 'estimatePdf', maxCount: 1 },
+  { name: 'preScanPdf', maxCount: 1 }
+]);
 
 // All shop routes require authentication and shop role
 router.use(authenticateToken);
@@ -40,8 +46,8 @@ router.get('/vehicles', shopController.getShopVehicles);
 // Vehicle detail
 router.get('/vehicles/:roPo', shopController.getVehicleDetail);
 
-// Submit new vehicle
-router.post('/vehicles', requirePermission('canSubmitVehicle'), shopController.submitVehicle);
+// Submit new vehicle with file uploads
+router.post('/vehicles', requirePermission('canSubmitVehicle'), vehicleUpload, shopController.submitVehicleWithFiles);
 
 // Schedule/Reschedule
 router.post('/vehicles/:roPo/schedule', requirePermission('canReschedule'), shopController.scheduleVehicle);

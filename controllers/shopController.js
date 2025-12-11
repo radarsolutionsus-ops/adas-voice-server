@@ -254,6 +254,124 @@ export async function submitVehicle(req, res) {
 }
 
 /**
+ * POST /api/shop/vehicles (with file uploads)
+ * Submit a new vehicle with estimate and optional prescan PDFs
+ * Document-first workflow - simpler for shops
+ */
+export async function submitVehicleWithFiles(req, res) {
+  try {
+    const { roPo, vehicle, notes, noPrescanConfirmed } = req.body;
+    const user = req.user;
+
+    // Validate required fields
+    if (!roPo || !roPo.trim()) {
+      return res.status(400).json({ success: false, error: 'RO/PO number is required' });
+    }
+
+    const cleanRoPo = roPo.trim();
+
+    // Check if RO already exists
+    const existing = await sheetWriter.getScheduleRowByRO(cleanRoPo);
+    if (existing) {
+      return res.status(409).json({ success: false, error: `RO ${cleanRoPo} already exists` });
+    }
+
+    // Get files from multer
+    const estimateFile = req.files?.estimatePdf?.[0];
+    const preScanFile = req.files?.preScanPdf?.[0];
+
+    // Estimate is required
+    if (!estimateFile) {
+      return res.status(400).json({ success: false, error: 'Estimate PDF is required' });
+    }
+
+    // Pre-scan or confirmation required
+    const noDtcConfirmed = noPrescanConfirmed === 'true';
+    if (!preScanFile && !noDtcConfirmed) {
+      return res.status(400).json({ success: false, error: 'Pre-scan PDF or DTC confirmation required' });
+    }
+
+    console.log(`${LOG_TAG} Submitting vehicle with files: RO ${cleanRoPo} for shop ${user.shopName}`);
+
+    // Import drive upload service dynamically
+    const { uploadPDF } = await import('../services/driveUpload.js');
+
+    // Upload estimate PDF
+    let estimatePdfUrl = '';
+    const estimateResult = await uploadPDF(
+      estimateFile.buffer,
+      estimateFile.originalname,
+      cleanRoPo,
+      'estimate'
+    );
+    if (estimateResult.success) {
+      estimatePdfUrl = estimateResult.webViewLink;
+      console.log(`${LOG_TAG} Estimate uploaded: ${estimatePdfUrl}`);
+    } else {
+      console.error(`${LOG_TAG} Failed to upload estimate:`, estimateResult.error);
+      return res.status(500).json({ success: false, error: 'Failed to upload estimate PDF' });
+    }
+
+    // Upload pre-scan PDF if provided
+    let preScanPdfUrl = '';
+    if (preScanFile) {
+      const preScanResult = await uploadPDF(
+        preScanFile.buffer,
+        preScanFile.originalname,
+        cleanRoPo,
+        'scan_report'
+      );
+      if (preScanResult.success) {
+        preScanPdfUrl = preScanResult.webViewLink;
+        console.log(`${LOG_TAG} Pre-scan uploaded: ${preScanPdfUrl}`);
+      } else {
+        console.warn(`${LOG_TAG} Failed to upload pre-scan:`, preScanResult.error);
+        // Continue anyway - estimate was successful
+      }
+    }
+
+    // Build notes
+    let fullNotes = notes || '';
+    if (noDtcConfirmed && !preScanFile) {
+      const timestamp = new Date().toISOString();
+      fullNotes = `[${timestamp}] Shop confirmed no active DTC codes\n${fullNotes}`;
+    }
+
+    // Create the schedule entry
+    const result = await sheetWriter.upsertScheduleRowByRO(cleanRoPo, {
+      shopName: user.sheetName,
+      vin: '', // Will be extracted later
+      vehicle: vehicle || '',
+      notes: fullNotes.trim(),
+      status: 'New',
+      estimatePdf: estimatePdfUrl,
+      postScanPdf: preScanPdfUrl // Pre-scan stored in postScanPdf column
+    });
+
+    if (!result.success) {
+      return res.status(500).json({
+        success: false,
+        error: result.error || 'Failed to submit vehicle'
+      });
+    }
+
+    console.log(`${LOG_TAG} Vehicle submitted via portal: RO ${cleanRoPo}`);
+
+    res.json({
+      success: true,
+      message: 'Vehicle submitted successfully',
+      roPo: cleanRoPo
+    });
+  } catch (err) {
+    console.error(`${LOG_TAG} Error submitting vehicle with files:`, err.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to submit vehicle'
+    });
+  }
+}
+
+/**
  * POST /api/shop/vehicles/:roPo/schedule
  * Schedule or reschedule an appointment
  */
@@ -507,6 +625,7 @@ export default {
   getShopVehicles,
   getVehicleDetail,
   submitVehicle,
+  submitVehicleWithFiles,
   scheduleVehicle,
   cancelVehicle,
   getDocuments,

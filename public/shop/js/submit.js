@@ -1,170 +1,428 @@
 /**
- * submit.js - Shop vehicle submission page logic
+ * submit.js - Submit Vehicle Document-First Workflow
  */
+(function() {
+  'use strict';
 
-// Require authentication
-ShopAuth.requireAuth();
+  let currentStep = 1;
+  let extractedData = {};
+  let uploadedFiles = {
+    estimate: null,
+    prescan: null
+  };
 
-// Elements
-const shopNameEl = document.getElementById('shop-name');
-const submitForm = document.getElementById('submit-form');
-const submitBtn = document.getElementById('submit-btn');
-const formError = document.getElementById('form-error');
-const successModal = document.getElementById('success-modal');
+  document.addEventListener('DOMContentLoaded', () => {
+    if (!initShopPortal()) return;
 
-// File inputs
-const estimateInput = document.getElementById('estimate-pdf');
-const prescanInput = document.getElementById('prescan-pdf');
-const noPrescanConfirm = document.getElementById('no-prescan-confirm');
-
-// File URLs after upload
-let estimatePdfUrl = null;
-let prescanPdfUrl = null;
-
-// Init
-function init() {
-  const user = ShopAuth.getUser();
-  if (user) {
-    shopNameEl.textContent = user.shopName || user.name || '';
-  }
-
-  setupEventListeners();
-}
-
-function setupEventListeners() {
-  // File input change handlers
-  estimateInput.addEventListener('change', (e) => handleFileSelect(e, 'estimate'));
-  prescanInput.addEventListener('change', (e) => handleFileSelect(e, 'prescan'));
-
-  // Form submit
-  submitForm.addEventListener('submit', handleSubmit);
-
-  // Logout
-  document.getElementById('logout-btn').addEventListener('click', () => {
-    ShopAuth.logout();
-    window.location.href = '/shop/';
+    initializeIcons();
+    setupCommonHandlers();
+    setupFileUploads();
+    setupForm();
   });
 
-  // VIN auto-uppercase
-  document.getElementById('vin').addEventListener('input', (e) => {
-    e.target.value = e.target.value.toUpperCase();
-  });
-}
-
-function handleFileSelect(e, type) {
-  const file = e.target.files[0];
-  const fileNameEl = document.getElementById(`${type}-file-name`);
-  const fileSizeEl = document.getElementById(`${type}-file-size`);
-
-  if (file) {
-    fileNameEl.textContent = file.name;
-    fileNameEl.classList.add('has-file');
-    fileSizeEl.textContent = formatFileSize(file.size);
-  } else {
-    fileNameEl.textContent = 'No file selected';
-    fileNameEl.classList.remove('has-file');
-    fileSizeEl.textContent = '';
-  }
-}
-
-function formatFileSize(bytes) {
-  if (bytes < 1024) return bytes + ' B';
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-}
-
-async function handleSubmit(e) {
-  e.preventDefault();
-  hideError();
-
-  // Validate
-  const roPo = document.getElementById('ro-po').value.trim();
-  const vin = document.getElementById('vin').value.trim().toUpperCase();
-  const year = document.getElementById('year').value.trim();
-  const make = document.getElementById('make').value.trim();
-  const model = document.getElementById('model').value.trim();
-  const notes = document.getElementById('notes').value.trim();
-
-  if (!roPo) {
-    showError('RO/PO number is required');
-    return;
-  }
-
-  if (!vin || vin.length !== 17) {
-    showError('Full 17-character VIN is required');
-    return;
-  }
-
-  if (!year || !make || !model) {
-    showError('Year, make, and model are required');
-    return;
-  }
-
-  const estimateFile = estimateInput.files[0];
-  if (!estimateFile) {
-    showError('Estimate PDF is required');
-    return;
-  }
-
-  const prescanFile = prescanInput.files[0];
-  if (!prescanFile && !noPrescanConfirm.checked) {
-    showError('Please upload a pre-scan PDF or confirm no active DTCs');
-    return;
-  }
-
-  // Show loading
-  setLoading(true);
-
-  try {
-    // Upload estimate PDF
-    const estimateResult = await ShopAPI.uploadFile(estimateFile);
-    estimatePdfUrl = estimateResult.url;
-
-    // Upload prescan PDF if provided
-    if (prescanFile) {
-      const prescanResult = await ShopAPI.uploadFile(prescanFile);
-      prescanPdfUrl = prescanResult.url;
+  function initializeIcons() {
+    // Header icons
+    if (document.getElementById('helpIcon')) {
+      document.getElementById('helpIcon').innerHTML = Icons.help;
+    }
+    if (document.getElementById('logoutIcon')) {
+      document.getElementById('logoutIcon').innerHTML = Icons.logout;
+    }
+    if (document.getElementById('backIcon')) {
+      document.getElementById('backIcon').innerHTML = Icons.arrowLeft;
     }
 
-    // Submit vehicle
-    const result = await ShopAPI.submitVehicle({
-      roPo,
-      vin,
-      year,
-      make,
-      model,
-      notes,
-      estimatePdfUrl,
-      prescanPdfUrl,
-      noPrescanConfirmed: noPrescanConfirm.checked && !prescanFile
+    // Form icons
+    if (document.getElementById('nextIcon1')) {
+      document.getElementById('nextIcon1').innerHTML = Icons.chevronRight;
+    }
+    if (document.getElementById('nextIcon2')) {
+      document.getElementById('nextIcon2').innerHTML = Icons.chevronRight;
+    }
+    if (document.getElementById('backIcon2')) {
+      document.getElementById('backIcon2').innerHTML = Icons.arrowLeft;
+    }
+    if (document.getElementById('submitIcon')) {
+      document.getElementById('submitIcon').innerHTML = Icons.checkCircle;
+    }
+    if (document.getElementById('editIcon')) {
+      document.getElementById('editIcon').innerHTML = Icons.edit;
+    }
+
+    // Upload icons
+    if (document.getElementById('uploadIcon1')) {
+      document.getElementById('uploadIcon1').innerHTML = Icons.upload;
+    }
+    if (document.getElementById('uploadIcon2')) {
+      document.getElementById('uploadIcon2').innerHTML = Icons.upload;
+    }
+
+    // Info banner
+    if (document.getElementById('infoBannerIcon')) {
+      document.getElementById('infoBannerIcon').innerHTML = Icons.alertCircle;
+    }
+
+    // Modal icons
+    if (document.getElementById('closeIcon')) {
+      document.getElementById('closeIcon').innerHTML = Icons.x;
+    }
+    if (document.getElementById('helpPhoneIcon')) {
+      document.getElementById('helpPhoneIcon').innerHTML = Icons.phone;
+    }
+    if (document.getElementById('helpMailIcon')) {
+      document.getElementById('helpMailIcon').innerHTML = Icons.mail;
+    }
+    if (document.getElementById('successIcon')) {
+      document.getElementById('successIcon').innerHTML = Icons.checkCircle;
+    }
+  }
+
+  function setupFileUploads() {
+    // Estimate upload
+    const estimateUpload = document.getElementById('estimateUpload');
+    const estimateFile = document.getElementById('estimateFile');
+
+    if (estimateUpload && estimateFile) {
+      estimateUpload.addEventListener('click', (e) => {
+        if (e.target.tagName !== 'INPUT') {
+          estimateFile.click();
+        }
+      });
+
+      estimateUpload.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        estimateUpload.classList.add('dragover');
+      });
+
+      estimateUpload.addEventListener('dragleave', () => {
+        estimateUpload.classList.remove('dragover');
+      });
+
+      estimateUpload.addEventListener('drop', (e) => {
+        e.preventDefault();
+        estimateUpload.classList.remove('dragover');
+        if (e.dataTransfer.files.length) {
+          handleFileSelect('estimate', e.dataTransfer.files[0]);
+        }
+      });
+
+      estimateFile.addEventListener('change', (e) => {
+        if (e.target.files.length) {
+          handleFileSelect('estimate', e.target.files[0]);
+        }
+      });
+    }
+
+    // Prescan upload
+    const prescanUpload = document.getElementById('prescanUpload');
+    const prescanFile = document.getElementById('prescanFile');
+
+    if (prescanUpload && prescanFile) {
+      prescanUpload.addEventListener('click', (e) => {
+        if (e.target.tagName !== 'INPUT') {
+          prescanFile.click();
+        }
+      });
+
+      prescanUpload.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        prescanUpload.classList.add('dragover');
+      });
+
+      prescanUpload.addEventListener('dragleave', () => {
+        prescanUpload.classList.remove('dragover');
+      });
+
+      prescanUpload.addEventListener('drop', (e) => {
+        e.preventDefault();
+        prescanUpload.classList.remove('dragover');
+        if (e.dataTransfer.files.length) {
+          handleFileSelect('prescan', e.dataTransfer.files[0]);
+        }
+      });
+
+      prescanFile.addEventListener('change', (e) => {
+        if (e.target.files.length) {
+          handleFileSelect('prescan', e.target.files[0]);
+        }
+      });
+    }
+  }
+
+  function handleFileSelect(type, file) {
+    if (!file) return;
+
+    if (file.type !== 'application/pdf') {
+      Toast.error('Please upload a PDF file');
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      Toast.error('File size must be under 10MB');
+      return;
+    }
+
+    uploadedFiles[type] = file;
+
+    const content = document.getElementById(`${type}Content`);
+    if (content) {
+      content.innerHTML = `
+        <span class="icon upload-success">${Icons.checkCircle}</span>
+        <p class="upload-text">${escapeHtml(file.name)}</p>
+        <p class="upload-hint">${(file.size / 1024 / 1024).toFixed(2)} MB</p>
+      `;
+    }
+
+    const upload = document.getElementById(`${type}Upload`);
+    if (upload) {
+      upload.classList.add('has-file');
+    }
+  }
+
+  function setupForm() {
+    const form = document.getElementById('submitForm');
+    if (form) {
+      form.addEventListener('submit', handleSubmit);
+    }
+  }
+
+  // Make goToStep globally accessible
+  window.goToStep = function(step) {
+    // Validate current step before advancing
+    if (step > currentStep) {
+      if (currentStep === 1 && !validateStep1()) return;
+      if (currentStep === 2 && !validateStep2()) return;
+    }
+
+    // Hide all steps
+    document.querySelectorAll('.form-step').forEach(el => {
+      el.classList.remove('active');
     });
 
-    // Show success
-    document.getElementById('success-ro').textContent = roPo;
-    successModal.classList.remove('hidden');
+    // Show target step
+    const targetStep = document.getElementById(`step${step}`);
+    if (targetStep) {
+      targetStep.classList.add('active');
+    }
 
-  } catch (err) {
-    showError(err.message || 'Failed to submit vehicle');
-  } finally {
-    setLoading(false);
+    // Update progress indicators
+    document.querySelectorAll('.form-steps .step').forEach(el => {
+      const stepNum = parseInt(el.dataset.step);
+      el.classList.remove('active', 'completed');
+      if (stepNum === step) {
+        el.classList.add('active');
+      }
+      if (stepNum < step) {
+        el.classList.add('completed');
+        const numEl = el.querySelector('.step-number');
+        if (numEl) {
+          numEl.innerHTML = Icons.check;
+        }
+      } else if (stepNum > step) {
+        const numEl = el.querySelector('.step-number');
+        if (numEl) {
+          numEl.textContent = stepNum;
+        }
+      } else {
+        const numEl = el.querySelector('.step-number');
+        if (numEl) {
+          numEl.textContent = stepNum;
+        }
+      }
+    });
+
+    // Update step lines
+    document.querySelectorAll('.step-line').forEach((line, idx) => {
+      if (idx < step - 1) {
+        line.classList.add('completed');
+      } else {
+        line.classList.remove('completed');
+      }
+    });
+
+    currentStep = step;
+
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  function validateStep1() {
+    const roPo = document.getElementById('roPo').value.trim();
+    if (!roPo) {
+      Toast.error('Please enter RO/PO number');
+      document.getElementById('roPo').focus();
+      return false;
+    }
+    return true;
   }
-}
 
-function showError(message) {
-  formError.textContent = message;
-  formError.classList.remove('hidden');
-  formError.scrollIntoView({ behavior: 'smooth', block: 'center' });
-}
+  function validateStep2() {
+    if (!uploadedFiles.estimate) {
+      Toast.error('Please upload an estimate PDF');
+      return false;
+    }
 
-function hideError() {
-  formError.classList.add('hidden');
-}
+    const noDtc = document.getElementById('noDtcConfirm')?.checked;
+    if (!uploadedFiles.prescan && !noDtc) {
+      Toast.error('Please upload pre-scan or confirm no DTCs');
+      return false;
+    }
 
-function setLoading(loading) {
-  submitBtn.disabled = loading;
-  submitBtn.querySelector('.btn-text').textContent = loading ? 'Submitting...' : 'Submit Vehicle';
-  submitBtn.querySelector('.btn-spinner').classList.toggle('hidden', !loading);
-}
+    return true;
+  }
 
-// Initialize
-init();
+  // Make processDocuments globally accessible
+  window.processDocuments = async function() {
+    if (!validateStep2()) return;
+
+    showProcessing('Processing documents...');
+
+    try {
+      // For now, we just populate the review section without server processing
+      // The actual VIN extraction happens during submission
+      extractedData = {
+        vin: '',
+        vehicle: document.getElementById('vehicleDesc').value.trim() || ''
+      };
+
+      // Populate review section
+      populateReview();
+
+      hideProcessing();
+      goToStep(3);
+
+    } catch (err) {
+      hideProcessing();
+      Toast.error(err.message || 'Failed to process documents');
+      console.error('Process error:', err);
+    }
+  };
+
+  function populateReview() {
+    const roPo = document.getElementById('roPo')?.value || '';
+    const vehicle = document.getElementById('vehicleDesc')?.value || '';
+    const notes = document.getElementById('notes')?.value || '';
+    const noDtcConfirm = document.getElementById('noDtcConfirm')?.checked;
+
+    document.getElementById('reviewRoPo').textContent = roPo || '-';
+    document.getElementById('reviewVin').textContent = extractedData.vin || 'Will be extracted from estimate';
+    document.getElementById('reviewVehicle').textContent = extractedData.vehicle || vehicle || 'Will be extracted';
+    document.getElementById('reviewEstimate').textContent = uploadedFiles.estimate ? 'Uploaded' : '-';
+
+    const reviewPrescan = document.getElementById('reviewPrescan');
+    if (uploadedFiles.prescan) {
+      reviewPrescan.textContent = 'Uploaded';
+      reviewPrescan.classList.add('success');
+    } else if (noDtcConfirm) {
+      reviewPrescan.textContent = 'No DTCs confirmed';
+      reviewPrescan.classList.remove('success');
+    } else {
+      reviewPrescan.textContent = 'Not provided';
+      reviewPrescan.classList.remove('success');
+    }
+
+    const notesSection = document.getElementById('reviewNotesSection');
+    if (notes) {
+      notesSection.style.display = 'block';
+      document.getElementById('reviewNotes').textContent = notes;
+    } else {
+      notesSection.style.display = 'none';
+    }
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+
+    // Final validation
+    if (!uploadedFiles.estimate) {
+      Toast.error('Estimate PDF is required');
+      goToStep(2);
+      return;
+    }
+
+    const noDtcConfirm = document.getElementById('noDtcConfirm')?.checked;
+    if (!uploadedFiles.prescan && !noDtcConfirm) {
+      Toast.error('Please upload a pre-scan PDF or confirm no DTC codes');
+      goToStep(2);
+      return;
+    }
+
+    showProcessing('Submitting vehicle...');
+
+    const submitBtn = document.getElementById('submitBtn');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append('roPo', document.getElementById('roPo').value.trim());
+      formData.append('vehicle', document.getElementById('vehicleDesc').value.trim());
+      formData.append('notes', document.getElementById('notes').value.trim());
+      formData.append('noPrescanConfirmed', noDtcConfirm ? 'true' : 'false');
+
+      if (uploadedFiles.estimate) {
+        formData.append('estimatePdf', uploadedFiles.estimate);
+      }
+      if (uploadedFiles.prescan) {
+        formData.append('preScanPdf', uploadedFiles.prescan);
+      }
+
+      const token = await Auth.getValidToken();
+      const response = await fetch('/api/shop/vehicles', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      const result = await response.json();
+
+      hideProcessing();
+
+      if (result.success) {
+        document.getElementById('successModal').classList.add('open');
+      } else {
+        Toast.error(result.error || 'Failed to submit vehicle');
+        if (submitBtn) {
+          submitBtn.disabled = false;
+        }
+      }
+    } catch (err) {
+      console.error('Submit error:', err);
+      hideProcessing();
+      Toast.error('Failed to submit vehicle. Please try again.');
+      if (submitBtn) {
+        submitBtn.disabled = false;
+      }
+    }
+  }
+
+  function showProcessing(text) {
+    const overlay = document.getElementById('processingOverlay');
+    const textEl = document.getElementById('processingText');
+    if (textEl) {
+      textEl.textContent = text;
+    }
+    if (overlay) {
+      overlay.style.display = 'flex';
+    }
+  }
+
+  function hideProcessing() {
+    const overlay = document.getElementById('processingOverlay');
+    if (overlay) {
+      overlay.style.display = 'none';
+    }
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  console.log('[SHOP] submit.js loaded');
+})();

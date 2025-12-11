@@ -145,6 +145,41 @@ const API = {
       body: JSON.stringify({ reason })
     });
     return data;
+  },
+
+  /**
+   * POST with FormData (for file uploads)
+   * Does not set Content-Type - browser will set it with boundary
+   */
+  async postForm(endpoint, formData) {
+    try {
+      const token = await Auth.getValidToken();
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      if (response.status === 401) {
+        Auth.logout();
+        window.location.href = '/';
+        return { success: false, error: 'Unauthorized' };
+      }
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Request failed');
+      }
+
+      return data;
+    } catch (err) {
+      console.error('API postForm error:', err);
+      return { success: false, error: err.message };
+    }
   }
 };
 
