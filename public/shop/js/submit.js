@@ -150,6 +150,7 @@
   }
 
   async function handleFileSelect(type, file) {
+    console.log(`[SUBMIT] handleFileSelect called: type=${type}, file=${file?.name}`);
     if (!file) return;
 
     if (file.type !== 'application/pdf') {
@@ -180,6 +181,7 @@
 
     // If this is an estimate, extract VIN/vehicle info immediately
     if (type === 'estimate') {
+      console.log('[SUBMIT] Calling extractEstimateData...');
       await extractEstimateData(file);
     }
   }
@@ -189,6 +191,7 @@
    * Called immediately when user uploads estimate
    */
   async function extractEstimateData(file) {
+    console.log('[SUBMIT] extractEstimateData starting...');
     const content = document.getElementById('estimateContent');
 
     try {
@@ -204,7 +207,9 @@
       const formData = new FormData();
       formData.append('estimate', file);
 
+      console.log('[SUBMIT] Getting auth token...');
       const token = await Auth.getValidToken();
+      console.log('[SUBMIT] Calling /api/shop/extract-estimate...');
       const response = await fetch('/api/shop/extract-estimate', {
         method: 'POST',
         headers: {
@@ -214,6 +219,7 @@
       });
 
       const result = await response.json();
+      console.log('[SUBMIT] Extract API response:', result);
 
       if (result.success && result.extracted) {
         extractedData = {
