@@ -184,13 +184,13 @@ async function showVehicleDetail(roPo) {
 
     const v = data.vehicle;
 
-    // Build documents section with all document types
+    // Build documents section - handle both snake_case and camelCase from API
     const docs = [
-      { name: 'Estimate', url: v.estimatePdf, icon: Icons.fileText },
-      { name: 'Pre-Scan', url: v.preScanPdf || v.postScanPdf, icon: Icons.clipboard },
-      { name: 'Revv Report', url: v.revvReportPdf, icon: Icons.barChart },
-      { name: 'Post-Scan', url: v.postScanPdf, icon: Icons.clipboard },
-      { name: 'Invoice', url: v.invoicePdf, icon: Icons.receipt }
+      { name: 'Estimate', url: v.estimatePdf || v.estimate_pdf, icon: Icons.fileText },
+      { name: 'Pre-Scan', url: v.preScanPdf || v.prescan_pdf || v.postScanPdf || v.postscan_pdf, icon: Icons.clipboard },
+      { name: 'Revv Report', url: v.revvReportPdf || v.revv_pdf || v.revvPdf, icon: Icons.barChart },
+      { name: 'Post-Scan', url: v.postScanPdf || v.postscan_pdf, icon: Icons.clipboard },
+      { name: 'Invoice', url: v.invoicePdf || v.invoice_pdf, icon: Icons.receipt }
     ].filter(d => d.url && d.url.startsWith('http'));
 
     // Render flow history entries

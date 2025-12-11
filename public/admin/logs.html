@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Activity Logs - ADAS F1RST Admin</title>
+  <link rel="stylesheet" href="/css/apple-style.css">
+  <link rel="stylesheet" href="/admin/css/admin.css">
+</head>
+<body>
+  <div class="admin-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">
+          <div class="logo-icon">A</div>
+          <span class="logo-text">ADAS F1RST</span>
+        </div>
+        <button class="sidebar-toggle" id="sidebarToggle">
+          <span class="icon" id="menuIcon"></span>
+        </button>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section">
+          <a href="/admin/dashboard.html" class="nav-item">
+            <span class="nav-icon" id="navDashboard"></span>
+            <span class="nav-text">Dashboard</span>
+          </a>
+        </div>
+        <div class="nav-section">
+          <div class="nav-section-title">Vehicles</div>
+          <a href="/admin/vehicles.html" class="nav-item">
+            <span class="nav-icon" id="navVehicles"></span>
+            <span class="nav-text">All Vehicles</span>
+          </a>
+        </div>
+        <div class="nav-section">
+          <div class="nav-section-title">Management</div>
+          <a href="/admin/shops.html" class="nav-item">
+            <span class="nav-icon" id="navShops"></span>
+            <span class="nav-text">Shops</span>
+          </a>
+          <a href="/admin/techs.html" class="nav-item">
+            <span class="nav-icon" id="navTechs"></span>
+            <span class="nav-text">Technicians</span>
+          </a>
+        </div>
+        <div class="nav-section">
+          <div class="nav-section-title">Billing</div>
+          <a href="/admin/billing.html" class="nav-item">
+            <span class="nav-icon" id="navBilling"></span>
+            <span class="nav-text">Overview</span>
+          </a>
+        </div>
+        <div class="nav-section">
+          <div class="nav-section-title">System</div>
+          <a href="/admin/settings.html" class="nav-item">
+            <span class="nav-icon" id="navSettings"></span>
+            <span class="nav-text">Settings</span>
+          </a>
+          <a href="/admin/logs.html" class="nav-item active">
+            <span class="nav-icon" id="navLogs"></span>
+            <span class="nav-text">Logs</span>
+          </a>
+        </div>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="sidebar-user">
+          <div class="user-avatar" id="userAvatar">R</div>
+          <div class="user-info">
+            <div class="user-name" id="userName">Randy</div>
+            <div class="user-role">Owner</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <header class="top-header">
+        <div class="header-left">
+          <button class="mobile-menu-btn" id="mobileMenuBtn">
+            <span class="icon" id="mobileMenuIcon"></span>
+          </button>
+          <h1 class="page-title">Activity Logs</h1>
+        </div>
+        <div class="header-right">
+          <button class="btn-logout" id="logoutBtn">
+            <span class="icon icon-sm" id="logoutIcon"></span>
+            Sign Out
+          </button>
+        </div>
+      </header>
+
+      <div class="content-area">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">System Activity</h3>
+          </div>
+          <div class="card-body">
+            <div class="empty-state" style="padding:48px 24px;text-align:center;">
+              <div style="width:64px;height:64px;margin:0 auto 16px;color:var(--text-tertiary);" id="emptyIcon"></div>
+              <h3 style="margin-bottom:8px;">Activity Logs Coming Soon</h3>
+              <p style="color:var(--text-secondary);margin-bottom:24px;">
+                Detailed activity logs will be available in a future update.
+              </p>
+              <p style="color:var(--text-tertiary);font-size:14px;">
+                For system logs, check your Railway dashboard.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/icons.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/admin/admin-common.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Sidebar icons
+      document.getElementById('menuIcon').innerHTML = Icons.menu;
+      document.getElementById('mobileMenuIcon').innerHTML = Icons.menu;
+      document.getElementById('navDashboard').innerHTML = Icons.chart;
+      document.getElementById('navVehicles').innerHTML = Icons.car;
+      document.getElementById('navShops').innerHTML = Icons.building;
+      document.getElementById('navTechs').innerHTML = Icons.users;
+      document.getElementById('navBilling').innerHTML = Icons.wallet;
+      document.getElementById('navSettings').innerHTML = Icons.settings;
+      document.getElementById('navLogs').innerHTML = Icons.list;
+      document.getElementById('logoutIcon').innerHTML = Icons.logout;
+      document.getElementById('emptyIcon').innerHTML = Icons.list;
+    });
+  </script>
+</body>
+</html>

@@ -127,25 +127,39 @@ export async function getVehicleDetail(req, res) {
       });
     }
 
+    // Normalize PDF fields - handle both snake_case and camelCase from GAS
+    const estimatePdf = row.estimate_pdf || row.estimatePdf || '';
+    const revvReportPdf = row.revv_pdf || row.revvPdf || row.revvReportPdf || row.revv_report_pdf || '';
+    const postScanPdf = row.postscan_pdf || row.postScanPdf || row.post_scan_pdf || '';
+    const invoicePdf = row.invoice_pdf || row.invoicePdf || '';
+
+    console.log(`${LOG_TAG} Vehicle ${roPo} PDFs:`, {
+      estimatePdf: estimatePdf ? 'YES' : 'NO',
+      revvReportPdf: revvReportPdf ? 'YES' : 'NO',
+      postScanPdf: postScanPdf ? 'YES' : 'NO',
+      invoicePdf: invoicePdf ? 'YES' : 'NO'
+    });
+
     res.json({
       success: true,
       vehicle: {
-        roPo: row.roPo || roPo,
+        roPo: row.roPo || row.ro_po || roPo,
         vin: row.vin || '',
         vehicle: row.vehicle || '',
         status: row.status || 'New',
-        scheduledDate: row.scheduledDate || '',
-        scheduledTime: row.scheduledTime || '',
-        requiredCalibrations: row.requiredCalibrations || '',
-        completedCalibrations: row.completedCalibrations || '',
+        scheduledDate: row.scheduledDate || row.scheduled_date || '',
+        scheduledTime: row.scheduledTime || row.scheduled_time || '',
+        requiredCalibrations: row.requiredCalibrations || row.required_calibrations || '',
+        completedCalibrations: row.completedCalibrations || row.completed_calibrations || '',
         dtcs: row.dtcs || '',
         notes: row.notes || '',
-        estimatePdf: row.estimatePdf || '',
-        preScanPdf: row.postScanPdf || '',  // Pre-scan stored in postScan column
-        revvReportPdf: row.revvReportPdf || '',
-        postScanPdf: row.postScanPdf || '',
-        invoicePdf: row.invoicePdf || '',
-        timestampCreated: row.timestampCreated || ''
+        estimatePdf: estimatePdf,
+        preScanPdf: postScanPdf,  // Pre-scan stored in postScan column
+        revvReportPdf: revvReportPdf,
+        postScanPdf: postScanPdf,
+        invoicePdf: invoicePdf,
+        flowHistory: row.flowHistory || row.flow_history || '',
+        timestampCreated: row.timestampCreated || row.timestamp || ''
       }
     });
   } catch (err) {
