@@ -109,6 +109,12 @@ export async function getAllVehicles(req, res) {
       technician: v.technician || v.technicianAssigned || '',
       requiredCalibrations: v.requiredCalibrations || '',
       notes: v.notes || '',
+      dtcs: v.dtcs || '',
+      estimatePdf: v.estimatePdf || '',
+      preScanPdf: v.preScanPdf || '',
+      revvReportPdf: v.revvReportPdf || '',
+      postScanPdf: v.postScanPdf || '',
+      invoicePdf: v.invoicePdf || '',
       lastUpdated: v.timestampCreated || ''
     }));
 
@@ -171,6 +177,12 @@ export async function getMyVehicles(req, res) {
       scheduledTime: v.scheduledTime || '',
       requiredCalibrations: v.requiredCalibrations || '',
       notes: v.notes || '',
+      dtcs: v.dtcs || '',
+      estimatePdf: v.estimatePdf || '',
+      preScanPdf: v.preScanPdf || '',
+      revvReportPdf: v.revvReportPdf || '',
+      postScanPdf: v.postScanPdf || '',
+      invoicePdf: v.invoicePdf || '',
       lastUpdated: v.timestampCreated || ''
     }));
 
@@ -239,7 +251,13 @@ export async function getTodaySchedule(req, res) {
       scheduledTime: v.scheduledTime || '',
       technician: v.technician || v.technicianAssigned || '',
       requiredCalibrations: v.requiredCalibrations || '',
-      notes: v.notes || ''
+      notes: v.notes || '',
+      dtcs: v.dtcs || '',
+      estimatePdf: v.estimatePdf || '',
+      preScanPdf: v.preScanPdf || '',
+      revvReportPdf: v.revvReportPdf || '',
+      postScanPdf: v.postScanPdf || '',
+      invoicePdf: v.invoicePdf || ''
     }));
 
     res.json({
@@ -301,7 +319,7 @@ export async function getVehicleDetail(req, res) {
         dtcs: row.dtcs || '',
         notes: row.notes || '',
         estimatePdf: row.estimatePdf || '',
-        preScanPdf: row.postScanPdf || '',
+        preScanPdf: row.preScanPdf || '',
         revvReportPdf: row.revvReportPdf || '',
         postScanPdf: row.postScanPdf || '',
         invoicePdf: row.invoicePdf || '',

@@ -8,9 +8,24 @@
   let currentJob = null;
   let currentFilter = 'all';
   let searchTerm = '';
+  let pendingAction = null;
+  let currentUserRole = null;
+  let currentTechName = null;
 
   document.addEventListener('DOMContentLoaded', async () => {
     if (!initTechPortal()) return;
+
+    // Get user info from token
+    const token = Auth.getToken();
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        currentUserRole = payload.role;
+        currentTechName = payload.name || payload.techName || '';
+      } catch (e) {
+        console.error('[TECH] Error parsing token:', e);
+      }
+    }
 
     initializeIcons();
     setupTechCommonHandlers();
@@ -70,7 +85,9 @@
 
   async function loadJobs() {
     try {
-      const response = await TechAPI.get('/api/tech/vehicles');
+      // Admins see all vehicles, techs see only their assigned vehicles
+      const endpoint = currentUserRole === 'admin' ? '/api/tech/vehicles' : '/api/tech/vehicles/mine';
+      const response = await TechAPI.get(endpoint);
 
       if (!response.success) {
         Toast.error(response.error || 'Failed to load jobs');
@@ -285,8 +302,24 @@
     currentJob = null;
   };
 
-  // Make updateStatus globally accessible
-  window.updateStatus = async function(newStatus) {
+  // Show confirmation modal before status update
+  window.updateStatus = function(newStatus) {
+    if (!currentJob) return;
+
+    const isComplete = newStatus === 'Completed';
+    const iconClass = isComplete ? 'success' : 'warning';
+    const iconSvg = isComplete ? Icons.checkCircle : Icons.wrench;
+    const title = isComplete ? 'Mark as Complete?' : 'Start Job?';
+    const message = isComplete
+      ? `Mark RO #${currentJob.roPo} as completed? This will notify the shop.`
+      : `Start working on RO #${currentJob.roPo}?`;
+
+    pendingAction = { type: 'status', status: newStatus };
+    showConfirmModal(title, message, iconSvg, iconClass);
+  };
+
+  // Actually execute the status update
+  async function executeStatusUpdate(newStatus) {
     if (!currentJob) return;
 
     try {
@@ -303,6 +336,36 @@
       }
     } catch (err) {
       Toast.error('Failed to update status');
+    }
+  }
+
+  // Show confirmation modal
+  function showConfirmModal(title, message, iconSvg, iconClass) {
+    const modal = document.getElementById('confirmModal');
+    const iconEl = document.getElementById('confirmIcon');
+
+    document.getElementById('confirmTitle').textContent = title;
+    document.getElementById('confirmMessage').textContent = message;
+    iconEl.innerHTML = iconSvg;
+    iconEl.className = 'confirm-icon ' + iconClass;
+
+    modal.classList.add('open');
+  }
+
+  // Close confirmation modal
+  window.closeConfirmModal = function() {
+    document.getElementById('confirmModal').classList.remove('open');
+    pendingAction = null;
+  };
+
+  // Execute the confirmed action
+  window.executeConfirmedAction = async function() {
+    if (!pendingAction) return;
+
+    closeConfirmModal();
+
+    if (pendingAction.type === 'status') {
+      await executeStatusUpdate(pendingAction.status);
     }
   };
 
@@ -339,9 +402,10 @@
     }
   };
 
-  // Close modal on escape key
+  // Close modals on escape key
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
+      closeConfirmModal();
       closeModal();
     }
   });
@@ -350,6 +414,13 @@
   document.getElementById('jobModal')?.addEventListener('click', (e) => {
     if (e.target.classList.contains('modal-overlay')) {
       closeModal();
+    }
+  });
+
+  // Close confirm modal on backdrop click
+  document.getElementById('confirmModal')?.addEventListener('click', (e) => {
+    if (e.target.classList.contains('modal-overlay')) {
+      closeConfirmModal();
     }
   });
 

@@ -1033,6 +1033,68 @@ a:hover {
   margin-bottom: 24px;
 }
 
+/* Confirmation Modal */
+.modal-confirm {
+  max-width: 360px;
+}
+
+.confirm-body {
+  text-align: center;
+  padding: 32px 24px;
+}
+
+.confirm-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+  background: var(--bg-secondary);
+}
+
+.confirm-icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.confirm-icon.warning {
+  background: rgba(255, 149, 0, 0.12);
+  color: var(--status-progress);
+}
+
+.confirm-icon.success {
+  background: rgba(52, 199, 89, 0.12);
+  color: var(--status-completed);
+}
+
+.confirm-icon.danger {
+  background: rgba(255, 59, 48, 0.12);
+  color: var(--status-attention);
+}
+
+.confirm-body h3 {
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+
+.confirm-body p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+}
+
+.confirm-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.confirm-buttons button {
+  min-width: 100px;
+}
+
 /* Help Modal Items */
 .help-item {
   display: flex;

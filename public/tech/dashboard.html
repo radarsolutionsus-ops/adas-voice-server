@@ -82,6 +82,21 @@
     </section>
   </main>
 
+  <!-- Confirmation Modal -->
+  <div class="modal-overlay" id="confirmModal">
+    <div class="modal modal-confirm">
+      <div class="modal-body confirm-body">
+        <div class="confirm-icon" id="confirmIcon"></div>
+        <h3 id="confirmTitle">Confirm Action</h3>
+        <p id="confirmMessage">Are you sure you want to proceed?</p>
+        <div class="confirm-buttons">
+          <button class="btn-secondary" onclick="closeConfirmModal()">Cancel</button>
+          <button class="btn-accent" id="confirmBtn" onclick="executeConfirmedAction()">Confirm</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Job Detail Modal -->
   <div class="modal-overlay" id="jobModal">
     <div class="modal modal-large">
