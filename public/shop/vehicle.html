@@ -351,7 +351,8 @@
         document.getElementById('scheduledBanner').style.display = 'flex';
         document.getElementById('calendarIcon').innerHTML = Icons.calendar;
         document.getElementById('scheduledDate').textContent = formatDate(v.scheduledDate);
-        document.getElementById('scheduledTime').textContent = v.scheduledTime ? `at ${formatTime(v.scheduledTime)}` : '';
+        const timeDisplay = v.scheduledTime ? formatTime(v.scheduledTime) : '';
+        document.getElementById('scheduledTime').textContent = timeDisplay ? `at ${timeDisplay}` : '';
       }
 
       // Documents
