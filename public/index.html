@@ -144,20 +144,46 @@
   </div>
 
   <script>
-    // Check for logout flag
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('logout') === 'true') {
-      localStorage.clear();
-      sessionStorage.clear();
-      window.history.replaceState({}, '', '/');
-    }
+    // Check auth state on page load
+    (async function checkAuth() {
+      const urlParams = new URLSearchParams(window.location.search);
 
-    // Check if already logged in
-    const token = localStorage.getItem('token');
-    const role = localStorage.getItem('userRole');
-    if (token && role) {
-      redirectToPortal(role);
-    }
+      // Handle logout flag - clear everything and stay on login
+      if (urlParams.get('logout') === 'true') {
+        localStorage.clear();
+        sessionStorage.clear();
+        window.history.replaceState({}, '', '/');
+        return;
+      }
+
+      // Check for existing token
+      const token = localStorage.getItem('token');
+      const role = localStorage.getItem('userRole');
+
+      // No token, stay on login page
+      if (!token || !role) return;
+
+      // Verify token is still valid before redirecting
+      try {
+        const res = await fetch('/api/auth/me', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (res.ok) {
+          // Token valid, redirect to portal
+          redirectToPortal(role);
+        } else {
+          // Token invalid, clear and stay on login
+          localStorage.clear();
+          sessionStorage.clear();
+        }
+      } catch (e) {
+        // Network error, clear auth and stay on login
+        console.log('Auth check failed:', e);
+        localStorage.clear();
+        sessionStorage.clear();
+      }
+    })();
 
     document.getElementById('loginForm').addEventListener('submit', async function(e) {
       e.preventDefault();
