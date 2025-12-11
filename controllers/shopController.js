@@ -26,7 +26,7 @@ export async function getShopVehicles(req, res) {
     const user = req.user;
     const { status, search } = req.query;
 
-    console.log(`${LOG_TAG} Getting vehicles for shop: ${user.shopName}`);
+    console.log(`${LOG_TAG} Getting vehicles for shop: ${user.shopName} (sheetName: ${user.sheetName})`);
 
     // Get all schedule rows
     const result = await sheetWriter.getAllScheduleRows();
@@ -40,6 +40,8 @@ export async function getShopVehicles(req, res) {
 
     // Filter by shop
     let vehicles = filterVehiclesByUser(result.rows || [], user);
+
+    console.log(`${LOG_TAG} Total rows: ${result.rows?.length || 0}, filtered: ${vehicles.length} for sheetName: ${user.sheetName}`);
 
     // Filter by status if provided
     if (status && status !== 'all') {

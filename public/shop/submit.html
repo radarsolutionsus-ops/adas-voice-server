@@ -357,38 +357,9 @@
             </div>
 
             <div class="form-group">
-              <label class="form-label">VIN (Optional)</label>
+              <label class="form-label">VIN (Recommended)</label>
               <input type="text" class="form-input" id="vin" placeholder="17-character VIN" maxlength="17" style="text-transform:uppercase;">
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Required Calibrations</label>
-              <div class="checkbox-group" id="calibrationOptions">
-                <div class="checkbox-item">
-                  <input type="checkbox" id="calFront" name="calibrations" value="Front Camera">
-                  <label for="calFront">Front Camera</label>
-                </div>
-                <div class="checkbox-item">
-                  <input type="checkbox" id="calRadar" name="calibrations" value="Radar">
-                  <label for="calRadar">Radar</label>
-                </div>
-                <div class="checkbox-item">
-                  <input type="checkbox" id="calBlind" name="calibrations" value="Blind Spot">
-                  <label for="calBlind">Blind Spot</label>
-                </div>
-                <div class="checkbox-item">
-                  <input type="checkbox" id="cal360" name="calibrations" value="360 Camera">
-                  <label for="cal360">360 Camera</label>
-                </div>
-                <div class="checkbox-item">
-                  <input type="checkbox" id="calLidar" name="calibrations" value="LiDAR">
-                  <label for="calLidar">LiDAR</label>
-                </div>
-                <div class="checkbox-item">
-                  <input type="checkbox" id="calOther" name="calibrations" value="Other">
-                  <label for="calOther">Other</label>
-                </div>
-              </div>
+              <small style="color:var(--text-muted);display:block;margin-top:6px;">VIN helps us identify exact calibration requirements</small>
             </div>
 
             <div class="form-group">
@@ -404,7 +375,7 @@
           <!-- Step 2: Documents -->
           <div class="form-step" id="step2">
             <div class="form-group">
-              <label class="form-label">Estimate PDF</label>
+              <label class="form-label">Estimate PDF *</label>
               <div class="upload-zone" id="estimateZone">
                 <div class="icon">&#128196;</div>
                 <div class="title">Tap to upload estimate</div>
@@ -422,7 +393,7 @@
             </div>
 
             <div class="form-group">
-              <label class="form-label">Pre-Scan PDF (Optional)</label>
+              <label class="form-label">Pre-Scan PDF</label>
               <div class="upload-zone" id="prescanZone">
                 <div class="icon">&#128203;</div>
                 <div class="title">Tap to upload pre-scan</div>
@@ -436,6 +407,13 @@
                   <div class="file-size" id="prescanFileSize"></div>
                 </div>
                 <button type="button" class="file-remove" onclick="removeFile('prescan')">&times;</button>
+              </div>
+
+              <div style="margin-top:16px;padding:16px;background:var(--background);border-radius:10px;border:2px solid var(--border);">
+                <label style="display:flex;align-items:center;gap:12px;cursor:pointer;">
+                  <input type="checkbox" id="noDtcConfirm" style="width:20px;height:20px;accent-color:var(--primary);">
+                  <span style="font-size:15px;">No pre-scan available - I confirm there are no active DTC codes</span>
+                </label>
               </div>
             </div>
 
@@ -460,10 +438,6 @@
               <div class="review-item">
                 <span class="review-label">VIN</span>
                 <span class="review-value" id="reviewVin"></span>
-              </div>
-              <div class="review-item">
-                <span class="review-label">Calibrations</span>
-                <span class="review-value" id="reviewCalibrations"></span>
               </div>
               <div class="review-item">
                 <span class="review-label">Notes</span>
@@ -666,43 +640,44 @@
     }
 
     function setupCheckboxes() {
-      document.querySelectorAll('.checkbox-item').forEach(item => {
-        const checkbox = item.querySelector('input[type="checkbox"]');
-
-        item.addEventListener('click', (e) => {
-          if (e.target !== checkbox) {
-            checkbox.checked = !checkbox.checked;
-          }
-          item.classList.toggle('selected', checkbox.checked);
-        });
-
-        checkbox.addEventListener('change', () => {
-          item.classList.toggle('selected', checkbox.checked);
-        });
-      });
-    }
-
-    function getSelectedCalibrations() {
-      const checked = document.querySelectorAll('input[name="calibrations"]:checked');
-      return Array.from(checked).map(cb => cb.value);
+      // No calibration checkboxes anymore - this function is kept for compatibility
     }
 
     function populateReview() {
       document.getElementById('reviewRo').textContent = document.getElementById('roNumber').value || '-';
       document.getElementById('reviewVehicle').textContent = document.getElementById('vehicle').value || '-';
       document.getElementById('reviewVin').textContent = document.getElementById('vin').value || 'Not provided';
-
-      const calibrations = getSelectedCalibrations();
-      document.getElementById('reviewCalibrations').textContent = calibrations.length > 0 ? calibrations.join(', ') : 'Not specified';
-
       document.getElementById('reviewNotes').textContent = document.getElementById('notes').value || 'None';
       document.getElementById('reviewEstimate').textContent = uploadedFiles.estimate ? uploadedFiles.estimate.name : 'Not uploaded';
-      document.getElementById('reviewPrescan').textContent = uploadedFiles.prescan ? uploadedFiles.prescan.name : 'Not uploaded';
+
+      const noDtcConfirm = document.getElementById('noDtcConfirm')?.checked;
+      if (uploadedFiles.prescan) {
+        document.getElementById('reviewPrescan').textContent = uploadedFiles.prescan.name;
+      } else if (noDtcConfirm) {
+        document.getElementById('reviewPrescan').textContent = 'No pre-scan (confirmed no DTCs)';
+      } else {
+        document.getElementById('reviewPrescan').textContent = 'Not uploaded';
+      }
     }
 
     function setupFormSubmit() {
       document.getElementById('submitForm').addEventListener('submit', async (e) => {
         e.preventDefault();
+
+        // Validate estimate PDF is required
+        if (!uploadedFiles.estimate) {
+          Toast.error('Estimate PDF is required');
+          goToStep(2);
+          return;
+        }
+
+        // Validate pre-scan or confirmation
+        const noDtcConfirm = document.getElementById('noDtcConfirm')?.checked;
+        if (!uploadedFiles.prescan && !noDtcConfirm) {
+          Toast.error('Please upload a pre-scan PDF or confirm no DTC codes');
+          goToStep(2);
+          return;
+        }
 
         const submitBtn = document.getElementById('submitBtn');
         submitBtn.disabled = true;
@@ -713,8 +688,8 @@
           formData.append('roPo', document.getElementById('roNumber').value.trim());
           formData.append('vehicle', document.getElementById('vehicle').value.trim());
           formData.append('vin', document.getElementById('vin').value.trim().toUpperCase());
-          formData.append('requiredCalibrations', getSelectedCalibrations().join(', '));
           formData.append('notes', document.getElementById('notes').value.trim());
+          formData.append('noPrescanConfirmed', noDtcConfirm ? 'true' : 'false');
 
           if (uploadedFiles.estimate) {
             formData.append('estimatePdf', uploadedFiles.estimate);

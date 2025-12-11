@@ -87,8 +87,21 @@ function setupCommonHandlers() {
   // Logout
   const logoutBtn = document.getElementById('logoutBtn');
   if (logoutBtn) {
-    logoutBtn.addEventListener('click', async () => {
-      await Auth.logout();
+    logoutBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      // Clear all auth data
+      localStorage.clear();
+
+      // Also call Auth.logout() for server-side cleanup
+      try {
+        await Auth.logout();
+      } catch (err) {
+        // Ignore logout errors, we're clearing anyway
+      }
+
+      // Redirect to login
       window.location.href = '/';
     });
   }

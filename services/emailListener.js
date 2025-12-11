@@ -211,7 +211,7 @@ const __dirname = path.dirname(__filename);
 const GMAIL_USER = 'radarsolutionsus@gmail.com';
 const SOURCE_LABEL_NAME = 'ADAS FIRST';
 const PROCESSED_LABEL_NAME = 'ADAS_FIRST_PROCESSED';
-const POLL_INTERVAL_MS = parseInt(process.env.EMAIL_POLL_INTERVAL_MS) || 60000; // 1 minute default
+const POLL_INTERVAL_MS = parseInt(process.env.EMAIL_POLL_INTERVAL_MS) || 900000; // 15 minutes default
 
 // Paths for OAuth and tracking (credentials now in /credentials/ folder)
 const OAUTH_CREDENTIALS_PATH = process.env.GMAIL_OAUTH_CREDENTIALS_PATH ||
