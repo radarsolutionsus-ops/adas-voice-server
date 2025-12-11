@@ -35,20 +35,20 @@
             <span class="nav-text">All Vehicles</span>
             <span class="nav-badge" id="totalCount">0</span>
           </a>
-          <a href="/shop/dashboard.html#new" class="nav-item" data-filter="New">
+          <a href="/shop/dashboard.html?status=New" class="nav-item" data-filter="New">
             <span class="nav-icon" id="navNew"></span>
             <span class="nav-text">New</span>
             <span class="nav-badge" id="newCount" style="display:none;">0</span>
           </a>
-          <a href="/shop/dashboard.html#scheduled" class="nav-item" data-filter="Scheduled">
+          <a href="/shop/dashboard.html?status=Scheduled" class="nav-item" data-filter="Scheduled">
             <span class="nav-icon" id="navScheduled"></span>
             <span class="nav-text">Scheduled</span>
           </a>
-          <a href="/shop/dashboard.html#progress" class="nav-item" data-filter="In Progress">
+          <a href="/shop/dashboard.html?status=In%20Progress" class="nav-item" data-filter="In Progress">
             <span class="nav-icon" id="navInProgress"></span>
             <span class="nav-text">In Progress</span>
           </a>
-          <a href="/shop/dashboard.html#completed" class="nav-item" data-filter="Completed">
+          <a href="/shop/dashboard.html?status=Completed" class="nav-item" data-filter="Completed">
             <span class="nav-icon" id="navCompleted"></span>
             <span class="nav-text">Completed</span>
           </a>
@@ -187,6 +187,10 @@
       return localStorage.getItem(key) || sessionStorage.getItem(key);
     }
 
+    // Get current status filter from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const statusFilter = urlParams.get('status');
+
     document.addEventListener('DOMContentLoaded', async () => {
       // Initialize shop portal
       if (!initShopPortal()) return;
@@ -205,9 +209,26 @@
       // Setup logout
       setupLogout();
 
+      // Highlight active nav item based on filter
+      highlightActiveNav();
+
       // Load dashboard data
       await loadDashboardData();
     });
+
+    function highlightActiveNav() {
+      // Remove active from all nav items
+      document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+
+      // Find and activate the correct one
+      if (statusFilter) {
+        const activeLink = document.querySelector(`.nav-item[data-filter="${statusFilter}"]`);
+        if (activeLink) activeLink.classList.add('active');
+      } else {
+        // Default to dashboard
+        document.querySelector('.nav-item[href="/shop/dashboard.html"]:not([data-filter])').classList.add('active');
+      }
+    }
 
     function initIcons() {
       // Sidebar icons
@@ -338,12 +359,30 @@
     }
 
     function updateRecentVehicles(vehicles) {
-      const recent = vehicles.slice(0, 10);
+      // Apply status filter if set
+      let filtered = vehicles;
+      if (statusFilter) {
+        filtered = vehicles.filter(v => {
+          if (statusFilter === 'Scheduled') {
+            return v.status === 'Scheduled' || v.status === 'Rescheduled';
+          }
+          return v.status === statusFilter;
+        });
+      }
+
+      const recent = filtered.slice(0, 20);
+
+      // Update page title if filtering
+      const pageTitle = document.querySelector('.page-title');
+      if (pageTitle) {
+        pageTitle.textContent = statusFilter ? `${statusFilter} Vehicles` : 'Dashboard';
+      }
 
       if (recent.length === 0) {
         document.getElementById('recentVehicles').innerHTML = `
           <div class="empty-state">
-            <p>No vehicles yet. <a href="/shop/submit.html">Submit your first vehicle</a></p>
+            <p>${statusFilter ? `No ${statusFilter.toLowerCase()} vehicles` : 'No vehicles yet.'}
+            ${!statusFilter ? '<a href="/shop/submit.html">Submit your first vehicle</a>' : ''}</p>
           </div>
         `;
         return;
