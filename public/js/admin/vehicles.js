@@ -380,6 +380,17 @@ async function showVehicleDetail(roPo) {
         </details>
       ` : ''}
 
+      <!-- Reassign Action -->
+      <div style="border-top:1px solid var(--border);padding-top:16px;margin-bottom:16px;">
+        <label class="form-label">Technician Assignment</label>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span style="font-size:14px;">Currently: <strong>${escapeHtml(technician || 'Unassigned')}</strong></span>
+          <button class="btn btn-sm btn-secondary" onclick="openReassignModal('${roPoVal}', '${escapeHtml(technician || '')}')">
+            Reassign
+          </button>
+        </div>
+      </div>
+
       <!-- Status Change Actions -->
       <div style="border-top:1px solid var(--border);padding-top:16px;">
         <label class="form-label">Change Status</label>
@@ -435,7 +446,101 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') closeModal();
 });
 
+// Reassign modal functions
+let reassignRoPo = null;
+let allTechs = [];
+
+async function loadTechsForReassign() {
+  if (allTechs.length > 0) return;
+
+  try {
+    const data = await AdminAPI.get('/api/admin/techs');
+    if (data.success) {
+      allTechs = data.techs || [];
+    }
+  } catch (err) {
+    console.error('Failed to load techs:', err);
+  }
+}
+
+async function openReassignModal(roPo, currentTech) {
+  reassignRoPo = roPo;
+
+  // Load techs if not already loaded
+  await loadTechsForReassign();
+
+  // Populate tech select
+  const select = document.getElementById('reassignTechSelect');
+  select.innerHTML = '<option value="">Select technician...</option>';
+  allTechs.forEach(tech => {
+    const option = document.createElement('option');
+    option.value = tech.name;
+    option.textContent = tech.name;
+    if (tech.name === currentTech) {
+      option.disabled = true;
+      option.textContent += ' (current)';
+    }
+    select.appendChild(option);
+  });
+
+  document.getElementById('reassignRO').textContent = `RO #${roPo}`;
+  document.getElementById('reassignReason').value = '';
+  document.getElementById('reassignStatus').textContent = '';
+  document.getElementById('reassignModal').style.display = 'flex';
+}
+
+function closeReassignModal() {
+  document.getElementById('reassignModal').style.display = 'none';
+  reassignRoPo = null;
+}
+
+async function submitReassign() {
+  const newTech = document.getElementById('reassignTechSelect').value;
+  const reason = document.getElementById('reassignReason').value.trim();
+  const statusEl = document.getElementById('reassignStatus');
+
+  if (!newTech) {
+    statusEl.textContent = 'Please select a technician';
+    statusEl.style.color = 'var(--danger)';
+    return;
+  }
+
+  statusEl.textContent = 'Reassigning...';
+  statusEl.style.color = 'var(--text-secondary)';
+
+  try {
+    const data = await AdminAPI.post('/api/admin/reassign', {
+      roPo: reassignRoPo,
+      newTech: newTech,
+      reason: reason
+    });
+
+    if (data.success) {
+      statusEl.textContent = 'Reassigned successfully!';
+      statusEl.style.color = 'var(--success)';
+
+      // Close modals and refresh
+      setTimeout(() => {
+        closeReassignModal();
+        closeModal();
+        loadVehicles();
+        applyFilters();
+      }, 1000);
+    } else {
+      statusEl.textContent = 'Failed: ' + (data.error || 'Unknown error');
+      statusEl.style.color = 'var(--danger)';
+    }
+  } catch (err) {
+    console.error('Reassign error:', err);
+    statusEl.textContent = 'Failed to reassign';
+    statusEl.style.color = 'var(--danger)';
+  }
+}
+
 // Make functions available globally
 window.showVehicleDetail = showVehicleDetail;
 window.updateStatus = updateStatus;
 window.closeModal = closeModal;
+window.openReassignModal = openReassignModal;
+window.closeReassignModal = closeReassignModal;
+window.submitReassign = submitReassign;

@@ -757,6 +757,62 @@ export async function uploadDocument(req, res) {
   }
 }
 
+/**
+ * POST /api/tech/request-assignment
+ * Request to be assigned to a job
+ */
+export async function requestAssignment(req, res) {
+  try {
+    const { roPo, requestingTech, reason } = req.body;
+    const user = req.user;
+
+    if (!roPo) {
+      return res.status(400).json({ success: false, error: 'RO/PO is required' });
+    }
+
+    // Verify vehicle exists
+    const row = await sheetWriter.getScheduleRowByRO(roPo);
+    if (!row) {
+      return res.status(404).json({ success: false, error: 'Vehicle not found' });
+    }
+
+    const techName = requestingTech || user.techName;
+    const currentTech = row.technician || row.technicianAssigned || '';
+
+    console.log(`${LOG_TAG} Assignment request for RO ${roPo} by ${techName} (current: ${currentTech})`);
+
+    // Forward to Google Apps Script for processing
+    const { callGAS } = await import('../services/sheetWriter.js');
+
+    const gasResult = await callGAS('request_assignment', {
+      roPo: roPo,
+      requestingTech: techName,
+      currentTech: currentTech,
+      shopName: row.shopName || row.shop_name || '',
+      reason: reason || ''
+    });
+
+    if (!gasResult.success) {
+      return res.status(500).json({
+        success: false,
+        error: gasResult.error || 'Failed to submit request'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Assignment request submitted',
+      requestId: gasResult.requestId
+    });
+  } catch (err) {
+    console.error(`${LOG_TAG} Error requesting assignment:`, err.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to submit assignment request'
+    });
+  }
+}
+
 export default {
   getAllVehicles,
   getMyVehicles,
@@ -768,5 +824,6 @@ export default {
   addTechNote,
   getDocuments,
   getStats,
-  uploadDocument
+  uploadDocument,
+  requestAssignment
 };

@@ -527,6 +527,137 @@ export async function updateSettings(req, res) {
   res.json({ success: true, message: 'TODO - update settings' });
 }
 
+/**
+ * GET /api/admin/assignment-requests
+ * Get pending assignment requests
+ */
+export async function getAssignmentRequests(req, res) {
+  try {
+    const { callGAS } = await import('../services/sheetWriter.js');
+
+    const result = await callGAS('get_pending_requests', {});
+
+    if (!result.success) {
+      return res.status(500).json({
+        success: false,
+        error: result.error || 'Failed to fetch assignment requests'
+      });
+    }
+
+    res.json({
+      success: true,
+      requests: result.requests || []
+    });
+  } catch (err) {
+    console.error(`${LOG_TAG} Error getting assignment requests:`, err.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch assignment requests'
+    });
+  }
+}
+
+/**
+ * POST /api/admin/assignment-requests/review
+ * Approve or deny an assignment request
+ */
+export async function reviewAssignmentRequest(req, res) {
+  try {
+    const { requestId, decision, reason } = req.body;
+    const user = req.user;
+
+    if (!requestId || !decision) {
+      return res.status(400).json({
+        success: false,
+        error: 'requestId and decision are required'
+      });
+    }
+
+    if (!['Approved', 'Denied'].includes(decision)) {
+      return res.status(400).json({
+        success: false,
+        error: 'decision must be "Approved" or "Denied"'
+      });
+    }
+
+    console.log(`${LOG_TAG} Reviewing assignment request ${requestId}: ${decision} by ${user?.name || 'admin'}`);
+
+    const { callGAS } = await import('../services/sheetWriter.js');
+
+    const result = await callGAS('review_assignment_request', {
+      requestId,
+      decision,
+      reason: reason || '',
+      reviewedBy: user?.name || 'Admin'
+    });
+
+    if (!result.success) {
+      return res.status(500).json({
+        success: false,
+        error: result.error || 'Failed to process request'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `Request ${decision.toLowerCase()}`
+    });
+  } catch (err) {
+    console.error(`${LOG_TAG} Error reviewing assignment request:`, err.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to process assignment request'
+    });
+  }
+}
+
+/**
+ * POST /api/admin/reassign
+ * Admin directly reassigns a job to a different tech
+ */
+export async function adminReassign(req, res) {
+  try {
+    const { roPo, newTech, reason } = req.body;
+    const user = req.user;
+
+    if (!roPo || !newTech) {
+      return res.status(400).json({
+        success: false,
+        error: 'roPo and newTech are required'
+      });
+    }
+
+    console.log(`${LOG_TAG} Admin reassigning RO ${roPo} to ${newTech} by ${user?.name || 'admin'}`);
+
+    const { callGAS } = await import('../services/sheetWriter.js');
+
+    const result = await callGAS('admin_reassign', {
+      roPo,
+      newTech,
+      reason: reason || '',
+      reassignedBy: user?.name || 'Admin'
+    });
+
+    if (!result.success) {
+      return res.status(500).json({
+        success: false,
+        error: result.error || 'Failed to reassign job'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `Job reassigned to ${newTech}`
+    });
+  } catch (err) {
+    console.error(`${LOG_TAG} Error reassigning job:`, err.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to reassign job'
+    });
+  }
+}
+
 export default {
   getDashboard,
   getAllVehicles,
@@ -552,5 +683,8 @@ export default {
   getTechReport,
   getSystemLogs,
   getSettings,
-  updateSettings
+  updateSettings,
+  getAssignmentRequests,
+  reviewAssignmentRequest,
+  adminReassign
 };

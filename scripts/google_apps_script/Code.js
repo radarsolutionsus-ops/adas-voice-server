@@ -34,8 +34,27 @@ const BILLING_SHEET = 'Billing';
 const SHOPS_SHEET = 'Shops';
 const TECHNICIANS_SHEET = 'Technicians';
 const NOTIFICATIONS_SHEET = 'Notifications';
+const ASSIGNMENT_REQUESTS_SHEET = 'Assignment_Requests';
 const SCRUB_DETAILS_SHEET = 'Scrub_Details';
 const TOTAL_COLUMNS = 26; // A through Z
+
+// Shop to Region mapping for auto-assignment
+const SHOP_REGION_MAP = {
+  'PAINT MAX INC': 'Hialeah',
+  'AUTOSPORT INTERNATIONAL': 'Hialeah',
+  'Collision Center Of North Miami': 'North Miami',
+  'JMD AUTO BODY COLLISION': 'Broward',
+  'Reinaldo Paint & Body Shop Inc.': 'Hialeah',
+  'PAINT MAX 1': 'Hialeah'
+};
+
+// Region to Tech mapping for auto-assignment
+const REGION_TECH_MAP = {
+  'Hialeah': 'Felipe',
+  'North Miami': 'Anthony',
+  'Broward': 'Randy',
+  'South Miami': 'Martin'
+};
 
 // Column indices (0-based)
 const COL = {
@@ -315,6 +334,27 @@ function doPost(e) {
         result = uploadFileToDrive(data);
         break;
 
+      // Assignment Management
+      case 'request_assignment':
+        result = requestAssignment(data);
+        break;
+
+      case 'get_pending_requests':
+        result = getPendingAssignmentRequests();
+        break;
+
+      case 'review_assignment_request':
+        result = reviewAssignmentRequest(data);
+        break;
+
+      case 'admin_reassign':
+        result = adminReassignJob(data);
+        break;
+
+      case 'get_techs':
+        result = getAllTechs();
+        break;
+
       default:
         result = { success: false, error: `Unknown action: ${action}` };
     }
@@ -543,6 +583,9 @@ function createNewRow(sheet, data, roPo) {
   // OEM Position Statement links (Column U)
   const oemPosition = data.oem_position || data.oemPosition || data.oem_links || '';
 
+  // Auto-assign technician based on shop region if not already specified
+  const technician = data.technician || getAssignedTechForShop(shopName);
+
   // Build new row (A through U = 21 columns)
   const newRow = [
     timestamp,                                                    // A: Timestamp
@@ -553,7 +596,7 @@ function createNewRow(sheet, data, roPo) {
     status,                                                       // F: Status
     scheduledDate,                                                // G: Scheduled Date
     scheduledTime,                                                // H: Scheduled Time
-    data.technician || '',                                        // I: Technician
+    technician,                                                   // I: Technician (auto-assigned based on shop region)
     data.required_calibrations || data.requiredCalibrations || '', // J: Required Cals
     data.completed_calibrations || data.completedCalibrations || '', // K: Completed Cals
     data.dtcs || '',                                              // L: DTCs
@@ -5063,4 +5106,283 @@ function authenticateUser(data) {
   }
 
   return { success: false, error: 'Invalid credentials' };
+}
+
+// ===========================================
+// ASSIGNMENT MANAGEMENT FUNCTIONS
+// ===========================================
+
+/**
+ * Get the assigned tech for a shop based on region mapping
+ * @param {string} shopName - Name of the shop
+ * @returns {string} - Name of the assigned technician
+ */
+function getAssignedTechForShop(shopName) {
+  const region = SHOP_REGION_MAP[shopName] || 'Hialeah';
+  return REGION_TECH_MAP[region] || 'Felipe';
+}
+
+/**
+ * Get all technicians from the Technicians sheet
+ */
+function getAllTechs() {
+  try {
+    const sheet = SpreadsheetApp.getActive().getSheetByName(TECHNICIANS_SHEET);
+    if (!sheet) return { success: true, techs: [] };
+
+    const data = sheet.getDataRange().getValues();
+    const techs = [];
+
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][7] !== false) { // Column H = Active
+        techs.push({
+          name: data[i][0],      // Column A = Name
+          phone: data[i][1],     // Column B = Phone
+          email: data[i][2],     // Column C = Email
+          regions: data[i][5] ? String(data[i][5]).split(',').map(r => r.trim()) : []
+        });
+      }
+    }
+
+    return { success: true, techs };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Request job assignment (Tech Portal)
+ * @param {Object} data - {ro_po, requesting_tech, reason}
+ */
+function requestAssignment(data) {
+  const { ro_po, requesting_tech, reason } = data;
+
+  if (!reason || String(reason).trim().length < 5) {
+    return { success: false, error: 'Please provide a reason for the request' };
+  }
+
+  // Get current assignment
+  const scheduleSheet = SpreadsheetApp.getActive().getSheetByName(SCHEDULE_SHEET);
+  const scheduleData = scheduleSheet.getDataRange().getValues();
+
+  let currentTech = '';
+  let vehicle = '';
+  let shopName = '';
+
+  for (let i = 1; i < scheduleData.length; i++) {
+    if (String(scheduleData[i][COL.RO_PO]) === String(ro_po)) {
+      currentTech = scheduleData[i][COL.TECHNICIAN];
+      vehicle = scheduleData[i][COL.VEHICLE];
+      shopName = scheduleData[i][COL.SHOP_NAME];
+      break;
+    }
+  }
+
+  if (!vehicle) {
+    return { success: false, error: 'RO not found' };
+  }
+
+  if (currentTech === requesting_tech) {
+    return { success: false, error: 'This job is already assigned to you' };
+  }
+
+  // Get or create Assignment_Requests sheet
+  let requestSheet = SpreadsheetApp.getActive().getSheetByName(ASSIGNMENT_REQUESTS_SHEET);
+  if (!requestSheet) {
+    requestSheet = SpreadsheetApp.getActive().insertSheet(ASSIGNMENT_REQUESTS_SHEET);
+    requestSheet.appendRow(['Timestamp', 'RO_PO', 'Requesting_Tech', 'Current_Tech', 'Reason', 'Status', 'Reviewed_By', 'Reviewed_At', 'Denial_Reason']);
+  }
+
+  // Check for existing pending request
+  const requestData = requestSheet.getDataRange().getValues();
+  for (let i = 1; i < requestData.length; i++) {
+    if (String(requestData[i][1]) === String(ro_po) && requestData[i][5] === 'Pending') {
+      return { success: false, error: 'There is already a pending request for this job' };
+    }
+  }
+
+  // Create request
+  requestSheet.appendRow([
+    new Date(),           // A: Timestamp
+    ro_po,                // B: RO_PO
+    requesting_tech,      // C: Requesting_Tech
+    currentTech,          // D: Current_Tech
+    reason,               // E: Reason
+    'Pending',            // F: Status
+    '',                   // G: Reviewed_By
+    '',                   // H: Reviewed_At
+    ''                    // I: Denial_Reason
+  ]);
+
+  // Notify admin
+  createNotification({
+    recipientType: 'admin',
+    recipientId: 'all',
+    roPo: ro_po,
+    type: 'assignment_request',
+    message: requesting_tech + ' requests assignment of ' + vehicle + ' (RO: ' + ro_po + ') from ' + (currentTech || 'Unassigned')
+  });
+
+  return { success: true, message: 'Request submitted. Admin will review shortly.' };
+}
+
+/**
+ * Get pending assignment requests (Admin Portal)
+ */
+function getPendingAssignmentRequests() {
+  const sheet = SpreadsheetApp.getActive().getSheetByName(ASSIGNMENT_REQUESTS_SHEET);
+  if (!sheet) return { success: true, requests: [] };
+
+  const data = sheet.getDataRange().getValues();
+  const requests = [];
+
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][5] === 'Pending') {
+      requests.push({
+        rowNumber: i + 1,
+        timestamp: data[i][0],
+        ro_po: data[i][1],
+        requesting_tech: data[i][2],
+        current_tech: data[i][3],
+        reason: data[i][4],
+        status: data[i][5]
+      });
+    }
+  }
+
+  return { success: true, requests };
+}
+
+/**
+ * Approve or deny assignment request (Admin Portal)
+ * @param {Object} data - {rowNumber, approved, denial_reason, admin_name}
+ */
+function reviewAssignmentRequest(data) {
+  const { rowNumber, approved, denial_reason, admin_name } = data;
+
+  const requestSheet = SpreadsheetApp.getActive().getSheetByName(ASSIGNMENT_REQUESTS_SHEET);
+  if (!requestSheet) return { success: false, error: 'Assignment requests sheet not found' };
+
+  const requestData = requestSheet.getRange(rowNumber, 1, 1, 9).getValues()[0];
+
+  const ro_po = requestData[1];
+  const requesting_tech = requestData[2];
+  const current_tech = requestData[3];
+  const reason = requestData[4];
+
+  const now = new Date();
+
+  // Update request record
+  requestSheet.getRange(rowNumber, 6).setValue(approved ? 'Approved' : 'Denied');
+  requestSheet.getRange(rowNumber, 7).setValue(admin_name);
+  requestSheet.getRange(rowNumber, 8).setValue(now);
+  if (!approved && denial_reason) {
+    requestSheet.getRange(rowNumber, 9).setValue(denial_reason);
+  }
+
+  if (approved) {
+    // Update the job assignment
+    const scheduleSheet = SpreadsheetApp.getActive().getSheetByName(SCHEDULE_SHEET);
+    const scheduleData = scheduleSheet.getDataRange().getValues();
+
+    for (let i = 1; i < scheduleData.length; i++) {
+      if (String(scheduleData[i][COL.RO_PO]) === String(ro_po)) {
+        // Update technician
+        scheduleSheet.getRange(i + 1, COL.TECHNICIAN + 1).setValue(requesting_tech);
+
+        // Append to notes
+        const timestamp = formatTimestamp(now);
+        const currentNotes = scheduleData[i][COL.NOTES] || '';
+        const newNote = timestamp + ' | Tech reassigned: ' + current_tech + ' -> ' + requesting_tech + ' | Reason: ' + reason + ' | Requested by: ' + requesting_tech + ', Approved by: ' + admin_name;
+        scheduleSheet.getRange(i + 1, COL.NOTES + 1).setValue(currentNotes + (currentNotes ? '\n' : '') + newNote);
+
+        break;
+      }
+    }
+
+    // Notify both techs
+    createNotification({
+      recipientType: 'tech',
+      recipientId: requesting_tech,
+      roPo: ro_po,
+      type: 'assignment_approved',
+      message: 'Your request for RO ' + ro_po + ' was approved. Job is now assigned to you.'
+    });
+
+    if (current_tech) {
+      createNotification({
+        recipientType: 'tech',
+        recipientId: current_tech,
+        roPo: ro_po,
+        type: 'assignment_changed',
+        message: 'RO ' + ro_po + ' has been reassigned to ' + requesting_tech + '.'
+      });
+    }
+  } else {
+    // Notify requesting tech of denial
+    createNotification({
+      recipientType: 'tech',
+      recipientId: requesting_tech,
+      roPo: ro_po,
+      type: 'assignment_denied',
+      message: 'Your request for RO ' + ro_po + ' was denied. ' + (denial_reason || '')
+    });
+  }
+
+  return { success: true, approved: approved, message: approved ? 'Request approved' : 'Request denied' };
+}
+
+/**
+ * Admin direct reassignment (Admin Portal)
+ * @param {Object} data - {ro_po, new_tech, reason, admin_name}
+ */
+function adminReassignJob(data) {
+  const { ro_po, new_tech, reason, admin_name } = data;
+
+  const sheet = SpreadsheetApp.getActive().getSheetByName(SCHEDULE_SHEET);
+  const allData = sheet.getDataRange().getValues();
+
+  for (let i = 1; i < allData.length; i++) {
+    if (String(allData[i][COL.RO_PO]) === String(ro_po)) {
+      const old_tech = allData[i][COL.TECHNICIAN];
+      const vehicle = allData[i][COL.VEHICLE];
+
+      if (old_tech === new_tech) {
+        return { success: false, error: 'Job is already assigned to this technician' };
+      }
+
+      // Update technician
+      sheet.getRange(i + 1, COL.TECHNICIAN + 1).setValue(new_tech);
+
+      // Append to notes
+      const now = new Date();
+      const timestamp = formatTimestamp(now);
+      const currentNotes = allData[i][COL.NOTES] || '';
+      const newNote = timestamp + ' | Tech reassigned: ' + (old_tech || 'Unassigned') + ' -> ' + new_tech + ' | Reason: ' + (reason || 'Admin override') + ' | Changed by: ' + admin_name + ' (Admin Override)';
+      sheet.getRange(i + 1, COL.NOTES + 1).setValue(currentNotes + (currentNotes ? '\n' : '') + newNote);
+
+      // Notify both techs
+      createNotification({
+        recipientType: 'tech',
+        recipientId: new_tech,
+        roPo: ro_po,
+        type: 'assignment_changed',
+        message: vehicle + ' (RO: ' + ro_po + ') has been assigned to you by ' + admin_name + '.'
+      });
+
+      if (old_tech) {
+        createNotification({
+          recipientType: 'tech',
+          recipientId: old_tech,
+          roPo: ro_po,
+          type: 'assignment_changed',
+          message: vehicle + ' (RO: ' + ro_po + ') has been reassigned to ' + new_tech + '.'
+        });
+      }
+
+      return { success: true, old_tech: old_tech, new_tech: new_tech, message: 'Job reassigned from ' + (old_tech || 'Unassigned') + ' to ' + new_tech };
+    }
+  }
+
+  return { success: false, error: 'RO not found' };
 }

@@ -1668,6 +1668,9 @@ export async function getAllScheduleRows(shopName = null) {
   }
 }
 
+// Export makeGASRequest for use by other modules
+export { makeGASRequest as callGAS };
+
 export default {
   getScheduleRowByRO,
   getAllScheduleRows,  // Shop portal: get all rows for filtering
@@ -1693,5 +1696,7 @@ export default {
   saveGmailTokenToSheets,
   // Smart shop matching
   normalizeShopNameForLookup,
-  getShopEmailByName
+  getShopEmailByName,
+  // GAS direct call
+  callGAS: makeGASRequest
 };

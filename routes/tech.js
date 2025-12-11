@@ -63,6 +63,9 @@ router.get('/vehicles/:roPo/documents', techController.getDocuments);
 // Upload document (postScan, invoice, revvReport)
 router.post('/vehicles/:roPo/upload', upload.single('file'), techController.uploadDocument);
 
+// Request assignment to a job
+router.post('/request-assignment', techController.requestAssignment);
+
 // Multer error handler
 router.use((err, req, res, next) => {
   if (err instanceof multer.MulterError) {

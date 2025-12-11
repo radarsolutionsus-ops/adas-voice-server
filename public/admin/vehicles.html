@@ -206,6 +206,36 @@
     </div>
   </div>
 
+  <!-- Reassign Modal -->
+  <div class="modal-overlay" id="reassignModal" style="display:none;">
+    <div class="modal" style="max-width:400px;">
+      <div class="modal-header">
+        <h3>Reassign Job</h3>
+        <button class="modal-close" onclick="closeReassignModal()">
+          <span class="icon">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p style="margin-bottom:16px;">Reassign <strong id="reassignRO">RO #---</strong> to a different technician:</p>
+        <div class="form-group" style="margin-bottom:16px;">
+          <label class="form-label">New Technician</label>
+          <select class="form-select" id="reassignTechSelect" style="width:100%;">
+            <option value="">Select technician...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Reason (optional)</label>
+          <textarea class="form-textarea" id="reassignReason" rows="2" placeholder="Reason for reassignment..." style="width:100%;"></textarea>
+        </div>
+        <div id="reassignStatus" style="margin-top:8px;font-size:13px;"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeReassignModal()">Cancel</button>
+        <button class="btn-accent" onclick="submitReassign()">Reassign</button>
+      </div>
+    </div>
+  </div>
+
   <script src="/js/icons.js"></script>
   <script src="/js/auth.js"></script>
   <script src="/js/admin/admin-common.js"></script>

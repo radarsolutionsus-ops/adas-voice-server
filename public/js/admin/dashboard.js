@@ -4,7 +4,10 @@
 
 document.addEventListener('DOMContentLoaded', async () => {
   // Wait for admin-common.js to initialize
-  setTimeout(loadDashboard, 100);
+  setTimeout(async () => {
+    await loadDashboard();
+    await loadAssignmentRequests();
+  }, 100);
 });
 
 async function loadDashboard() {
@@ -43,6 +46,79 @@ async function loadDashboard() {
     console.error('Dashboard error:', err);
   }
 }
+
+async function loadAssignmentRequests() {
+  try {
+    const data = await AdminAPI.get('/api/admin/assignment-requests');
+
+    if (!data.success) {
+      console.error('Failed to load assignment requests:', data.error);
+      return;
+    }
+
+    const requests = data.requests || [];
+    const pendingRequests = requests.filter(r => r.status === 'Pending');
+
+    const card = document.getElementById('assignmentRequestsCard');
+    const container = document.getElementById('assignmentRequests');
+    const countEl = document.getElementById('requestsCount');
+
+    if (pendingRequests.length === 0) {
+      card.style.display = 'none';
+      return;
+    }
+
+    card.style.display = 'block';
+    countEl.textContent = pendingRequests.length;
+
+    container.innerHTML = pendingRequests.map(req => `
+      <div class="request-item" style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);">
+        <div style="flex:1;">
+          <div style="font-weight:600;margin-bottom:4px;">RO #${escapeHtml(req.roPo)}</div>
+          <div style="font-size:13px;color:var(--text-secondary);">
+            <strong>${escapeHtml(req.requestingTech)}</strong> wants to take over from
+            <strong>${escapeHtml(req.currentTech || 'Unassigned')}</strong>
+          </div>
+          ${req.reason ? `<div style="font-size:12px;color:var(--text-tertiary);margin-top:4px;">Reason: ${escapeHtml(req.reason)}</div>` : ''}
+          <div style="font-size:11px;color:var(--text-tertiary);margin-top:4px;">${escapeHtml(req.requestedAt || '')}</div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-sm btn-success" onclick="reviewRequest('${escapeHtml(req.requestId)}', 'Approved')">Approve</button>
+          <button class="btn btn-sm btn-danger" onclick="reviewRequest('${escapeHtml(req.requestId)}', 'Denied')">Deny</button>
+        </div>
+      </div>
+    `).join('');
+
+  } catch (err) {
+    console.error('Assignment requests error:', err);
+  }
+}
+
+async function reviewRequest(requestId, decision) {
+  const reason = decision === 'Denied' ? prompt('Reason for denial (optional):') : '';
+
+  try {
+    const data = await AdminAPI.post('/api/admin/assignment-requests/review', {
+      requestId,
+      decision,
+      reason
+    });
+
+    if (!data.success) {
+      alert('Failed to process request: ' + (data.error || 'Unknown error'));
+      return;
+    }
+
+    alert(decision === 'Approved' ? 'Request approved. Tech has been reassigned.' : 'Request denied.');
+    await loadAssignmentRequests();
+  } catch (err) {
+    console.error('Review request error:', err);
+    alert('Failed to process request');
+  }
+}
+
+// Make functions available globally
+window.reviewRequest = reviewRequest;
 
 function renderTodaySchedule(jobs) {
   const container = document.getElementById('todaySchedule');

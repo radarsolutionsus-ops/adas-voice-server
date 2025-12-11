@@ -125,6 +125,84 @@
     .job-card.priority-today {
       border-left: 3px solid #ff9500;
     }
+
+    /* Assignment indicator */
+    .job-card.not-assigned,
+    tr.not-assigned {
+      opacity: 0.75;
+      border-left: 3px solid var(--text-tertiary, #aeaeb2);
+    }
+
+    .job-card.not-assigned:hover {
+      opacity: 0.85;
+    }
+
+    .assignment-badge {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 500;
+    }
+
+    .assignment-badge.assigned {
+      background: rgba(52, 199, 89, 0.12);
+      color: #34c759;
+    }
+
+    .assignment-badge.unassigned {
+      background: rgba(142, 142, 147, 0.12);
+      color: #8e8e93;
+    }
+
+    .btn-request-assignment {
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 500;
+      background: var(--color-primary, #007aff);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn-request-assignment:hover {
+      background: #0063cc;
+    }
+
+    .btn-request-assignment:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* View only indicator */
+    .view-only-banner {
+      background: rgba(142, 142, 147, 0.12);
+      color: #8e8e93;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .view-only-banner .icon {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* Request assignment modal */
+    .request-form {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .request-form textarea {
+      min-height: 80px;
+    }
   </style>
 </head>
 <body>
@@ -299,6 +377,12 @@
         </button>
       </div>
       <div class="modal-body">
+        <!-- View Only Banner (shown for unassigned jobs) -->
+        <div class="view-only-banner" id="viewOnlyBanner" style="display:none;">
+          <span class="icon" id="viewOnlyIcon"></span>
+          <span>This job is assigned to another tech. View only.</span>
+        </div>
+
         <!-- Vehicle Info -->
         <div class="modal-section">
           <h4>Vehicle Information</h4>
@@ -337,7 +421,7 @@
         </div>
 
         <!-- Upload Documents -->
-        <div class="modal-section">
+        <div class="modal-section" id="uploadSection">
           <h4>Upload Documents</h4>
           <div class="upload-grid">
             <div class="upload-item">
@@ -375,7 +459,7 @@
         </div>
 
         <!-- Status Update -->
-        <div class="modal-section">
+        <div class="modal-section" id="statusSection">
           <h4>Update Status</h4>
           <div class="status-buttons">
             <button class="btn btn-secondary" onclick="updateStatus('In Progress')">
@@ -390,12 +474,27 @@
         </div>
 
         <!-- Add Note -->
-        <div class="modal-section">
+        <div class="modal-section" id="noteSection">
           <h4>Add Note</h4>
           <div class="add-note-form">
             <textarea id="newNote" class="form-textarea" rows="2" placeholder="Enter note..."></textarea>
             <button class="btn btn-secondary" onclick="addNote()">Add Note</button>
           </div>
+        </div>
+
+        <!-- Request Assignment (shown for unassigned jobs) -->
+        <div class="modal-section" id="requestSection" style="display:none;">
+          <h4>Request Assignment</h4>
+          <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">
+            Want to work on this job? Submit a request to be assigned.
+          </p>
+          <div class="request-form">
+            <textarea id="requestReason" class="form-textarea" rows="2" placeholder="Reason for request (optional)..."></textarea>
+            <button class="btn-request-assignment" onclick="requestAssignment()">
+              Request Assignment
+            </button>
+          </div>
+          <div id="requestStatus" style="margin-top:8px;font-size:13px;"></div>
         </div>
       </div>
     </div>
@@ -413,6 +512,7 @@
     let allJobs = [];
     let currentJob = null;
     let currentFilter = 'all';
+    let currentTechName = '';
 
     // Get filter from URL params
     const urlParams = new URLSearchParams(window.location.search);
@@ -438,6 +538,7 @@
 
       // Set user info
       const userName = getStorageItem('userName') || 'Technician';
+      currentTechName = userName;
       document.getElementById('userName').textContent = userName;
       document.getElementById('userAvatar').textContent = userName.charAt(0).toUpperCase();
 
@@ -577,14 +678,14 @@
     async function loadJobs() {
       try {
         const token = getStorageItem('adas_access_token') || getStorageItem('token');
-        const response = await fetch('/api/tech/jobs', {
+        const response = await fetch('/api/tech/vehicles', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();
 
         if (!data.success) throw new Error(data.error);
 
-        allJobs = data.jobs || [];
+        allJobs = data.vehicles || [];
         updateStats(allJobs);
         updateTodayJobs(allJobs);
         renderJobs(allJobs);
@@ -649,6 +750,11 @@
       }
     }
 
+    function isJobAssignedToMe(job) {
+      const jobTech = (job.technician || job.technicianAssigned || '').toLowerCase().trim();
+      return jobTech === currentTechName.toLowerCase().trim();
+    }
+
     function renderJobs(jobs) {
       if (jobs.length === 0) {
         document.getElementById('allJobs').innerHTML = '<div class="empty-state"><p>No jobs found</p></div>';
@@ -663,21 +769,30 @@
               <th>Shop</th>
               <th>Vehicle</th>
               <th>Status</th>
+              <th>Assigned</th>
               <th>Scheduled</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
-            ${jobs.map(job => `
-              <tr class="clickable" onclick="openJobModal('${job.roPo}')">
+            ${jobs.map(job => {
+              const isAssigned = isJobAssignedToMe(job);
+              const techName = job.technician || job.technicianAssigned || '-';
+              return `
+              <tr class="clickable ${isAssigned ? '' : 'not-assigned'}" onclick="openJobModal('${job.roPo}')">
                 <td><strong>${escapeHtml(job.roPo)}</strong></td>
                 <td>${escapeHtml(job.shopName || '-')}</td>
                 <td>${escapeHtml(job.vehicle || '-')}</td>
                 <td><span class="status-badge ${getStatusClass(job.status)}">${job.status || 'New'}</span></td>
+                <td>
+                  <span class="assignment-badge ${isAssigned ? 'assigned' : 'unassigned'}">
+                    ${isAssigned ? 'You' : escapeHtml(techName)}
+                  </span>
+                </td>
                 <td>${job.scheduledDate ? formatDate(job.scheduledDate) : '-'}</td>
                 <td><span class="icon">${Icons.chevronRight}</span></td>
               </tr>
-            `).join('')}
+            `}).join('')}
           </tbody>
         </table>
       `;
@@ -687,6 +802,9 @@
       currentJob = allJobs.find(j => j.roPo === roPo);
       if (!currentJob) return;
 
+      const isAssigned = isJobAssignedToMe(currentJob);
+      const techName = currentJob.technician || currentJob.technicianAssigned || 'Unassigned';
+
       document.getElementById('modalTitle').textContent = `RO #${currentJob.roPo}`;
       document.getElementById('modalShop').textContent = currentJob.shopName || '-';
       document.getElementById('modalVehicle').textContent = currentJob.vehicle || '-';
@@ -694,6 +812,35 @@
       document.getElementById('modalSchedule').textContent = currentJob.scheduledDate ? formatDate(currentJob.scheduledDate) + ' ' + (currentJob.scheduledTime || '') : '-';
       document.getElementById('modalCalibrations').textContent = currentJob.requiredCalibrations || '-';
       document.getElementById('modalNotes').textContent = currentJob.notes || 'No notes';
+
+      // Show/hide view-only banner and action sections based on assignment
+      const viewOnlyBanner = document.getElementById('viewOnlyBanner');
+      const uploadSection = document.getElementById('uploadSection');
+      const statusSection = document.getElementById('statusSection');
+      const noteSection = document.getElementById('noteSection');
+      const requestSection = document.getElementById('requestSection');
+
+      if (isAssigned) {
+        // Assigned to me - show full actions
+        if (viewOnlyBanner) viewOnlyBanner.style.display = 'none';
+        if (uploadSection) uploadSection.style.display = 'block';
+        if (statusSection) statusSection.style.display = 'block';
+        if (noteSection) noteSection.style.display = 'block';
+        if (requestSection) requestSection.style.display = 'none';
+      } else {
+        // Not assigned - view only with request option
+        if (viewOnlyBanner) {
+          viewOnlyBanner.style.display = 'flex';
+          viewOnlyBanner.innerHTML = `
+            <span class="icon">${Icons.eye}</span>
+            <span>This job is assigned to <strong>${escapeHtml(techName)}</strong>. You can view but not modify.</span>
+          `;
+        }
+        if (uploadSection) uploadSection.style.display = 'none';
+        if (statusSection) statusSection.style.display = 'none';
+        if (noteSection) noteSection.style.display = 'none';
+        if (requestSection) requestSection.style.display = 'block';
+      }
 
       // Documents
       const docs = [
@@ -768,6 +915,53 @@
         openJobModal(currentJob.roPo);
       } catch (err) {
         alert('Failed to add note: ' + err.message);
+      }
+    }
+
+    async function requestAssignment() {
+      if (!currentJob) return;
+
+      const reason = document.getElementById('requestReason')?.value.trim() || '';
+      const statusEl = document.getElementById('requestStatus');
+
+      statusEl.textContent = 'Submitting request...';
+      statusEl.style.color = 'var(--text-secondary)';
+
+      try {
+        const token = getStorageItem('adas_access_token') || getStorageItem('token');
+        const response = await fetch('/api/tech/request-assignment', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            roPo: currentJob.roPo,
+            requestingTech: currentTechName,
+            reason: reason
+          })
+        });
+
+        const data = await response.json();
+        if (!data.success) throw new Error(data.error || 'Request failed');
+
+        statusEl.textContent = 'Request submitted! Admin will review shortly.';
+        statusEl.style.color = 'var(--success, #34c759)';
+
+        // Clear the reason field
+        if (document.getElementById('requestReason')) {
+          document.getElementById('requestReason').value = '';
+        }
+
+        // Disable the button after successful request
+        const btn = document.querySelector('.btn-request-assignment');
+        if (btn) {
+          btn.disabled = true;
+          btn.textContent = 'Request Pending';
+        }
+      } catch (err) {
+        statusEl.textContent = 'Failed: ' + err.message;
+        statusEl.style.color = 'var(--danger, #ff3b30)';
       }
     }
 

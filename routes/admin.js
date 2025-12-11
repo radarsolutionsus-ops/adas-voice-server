@@ -58,4 +58,9 @@ router.get('/logs', adminController.getSystemLogs);
 router.get('/settings', adminController.getSettings);
 router.put('/settings', adminController.updateSettings);
 
+// Assignment requests
+router.get('/assignment-requests', adminController.getAssignmentRequests);
+router.post('/assignment-requests/review', adminController.reviewAssignmentRequest);
+router.post('/reassign', adminController.adminReassign);
+
 export default router;
