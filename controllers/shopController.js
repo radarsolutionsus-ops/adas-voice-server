@@ -629,7 +629,7 @@ export async function extractEstimate(req, res) {
           vehicleStr = `${data.vehicleYear || ''} ${data.vehicleMake || ''} ${data.vehicleModel || ''}`.trim();
         }
 
-        console.log(`${LOG_TAG} Extraction result - VIN: ${data.vin ? data.vin.substring(0, 5) + '***' : 'none'}, Vehicle: ${vehicleStr || 'none'}`);
+        console.log(`${LOG_TAG} Extraction result - VIN: ${data.vin ? data.vin.substring(0, 5) + '***' : 'none'}, Vehicle: ${vehicleStr || 'none'}, RO/PO: ${data.roPo || 'none'}`);
 
         return res.json({
           success: true,
@@ -638,7 +638,8 @@ export async function extractEstimate(req, res) {
             vehicle: vehicleStr,
             vehicleYear: data.vehicleYear || '',
             vehicleMake: data.vehicleMake || '',
-            vehicleModel: data.vehicleModel || ''
+            vehicleModel: data.vehicleModel || '',
+            roPo: data.roPo || ''
           }
         });
       } else {

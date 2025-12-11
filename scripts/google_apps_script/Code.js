@@ -4289,46 +4289,61 @@ function formatTimestampForNotes(date) {
 
 /**
  * Get assigned technician based on shop region
+ * Reads region from Shops tab Column G, matches tech from Technicians tab Column F (Regions)
  */
 function getAssignedTechForShop(shopName) {
-  // Shop-to-region mapping (customize for your shops)
-  const shopRegions = {
-    'JMD Body Shop': 'Hialeah',
-    'AutoSport': 'Hialeah',
-    'PaintMax': 'Hialeah',
-    'Reinaldo Body Shop': 'South Miami',
-    'CCNM': 'North Miami',
-    'Daniels Paint and Body': 'North Miami'
-  };
+  if (!shopName) return 'Felipe';
 
-  // Region-to-tech mapping
-  const regionTechs = {
-    'Hialeah': 'Felipe',
-    'North Miami': 'Anthony',
-    'South Miami': 'Martin'
-  };
+  const shopNameLower = String(shopName).toLowerCase().trim();
+  let region = 'Hialeah'; // Default region
 
-  // Try to find in Shops tab first
+  // Step 1: Find shop's region from Shops tab (Column G = index 6)
   try {
     const shopsSheet = SpreadsheetApp.getActive().getSheetByName(SHOPS_SHEET);
     if (shopsSheet) {
       const shopsData = shopsSheet.getDataRange().getValues();
       for (let i = 1; i < shopsData.length; i++) {
-        if (shopsData[i][0] === shopName) {
-          const region = shopsData[i][6]; // Column G = Region
-          if (region && regionTechs[region]) {
-            return regionTechs[region];
+        const rowShopName = String(shopsData[i][0] || '').toLowerCase().trim();
+        // Fuzzy match: exact, contains, or contained by
+        if (rowShopName === shopNameLower ||
+            rowShopName.includes(shopNameLower) ||
+            shopNameLower.includes(rowShopName)) {
+          const shopRegion = shopsData[i][6]; // Column G = Region
+          if (shopRegion) {
+            region = String(shopRegion).trim();
           }
           break;
         }
       }
     }
   } catch (e) {
-    // Fall back to hardcoded mapping
+    Logger.log('Error reading Shops sheet: ' + e.message);
   }
 
-  const region = shopRegions[shopName] || 'Hialeah';
-  return regionTechs[region] || 'Felipe';
+  // Step 2: Find active tech assigned to this region from Technicians tab
+  // Column F (index 5) = Regions (comma-separated), Column H (index 7) = Active
+  try {
+    const techsSheet = SpreadsheetApp.getActive().getSheetByName(TECHNICIANS_SHEET);
+    if (techsSheet) {
+      const techsData = techsSheet.getDataRange().getValues();
+      const regionLower = region.toLowerCase();
+
+      for (let i = 1; i < techsData.length; i++) {
+        const techRegions = String(techsData[i][5] || '').toLowerCase();
+        const isActive = techsData[i][7];
+
+        // Check if tech covers this region and is active
+        if (techRegions.includes(regionLower) && isActive === true) {
+          return techsData[i][0]; // Column A = Tech Name
+        }
+      }
+    }
+  } catch (e) {
+    Logger.log('Error reading Technicians sheet: ' + e.message);
+  }
+
+  // Default fallback
+  return 'Felipe';
 }
 
 /**
@@ -5112,15 +5127,8 @@ function authenticateUser(data) {
 // ASSIGNMENT MANAGEMENT FUNCTIONS
 // ===========================================
 
-/**
- * Get the assigned tech for a shop based on region mapping
- * @param {string} shopName - Name of the shop
- * @returns {string} - Name of the assigned technician
- */
-function getAssignedTechForShop(shopName) {
-  const region = SHOP_REGION_MAP[shopName] || 'Hialeah';
-  return REGION_TECH_MAP[region] || 'Felipe';
-}
+// Note: getAssignedTechForShop is defined earlier in PORTAL API FUNCTIONS section
+// It reads from Shops tab Column G (Region) and Technicians tab Column F (Regions)
 
 /**
  * Get all technicians from the Technicians sheet

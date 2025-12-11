@@ -6,6 +6,7 @@
 
   let currentStep = 1;
   let extractedData = {};
+  let extractedRoPo = null; // RO/PO extracted from estimate
   let uploadedFiles = {
     estimate: null,
     prescan: null
@@ -18,6 +19,7 @@
     setupCommonHandlers();
     setupFileUploads();
     setupForm();
+    setupRoSuggestion();
   });
 
   function initializeIcons() {
@@ -74,6 +76,83 @@
     }
     if (document.getElementById('successIcon')) {
       document.getElementById('successIcon').innerHTML = Icons.checkCircle;
+    }
+
+    // RO suggestion icon
+    if (document.getElementById('roSuggestionIcon')) {
+      document.getElementById('roSuggestionIcon').innerHTML = Icons.alertCircle;
+    }
+  }
+
+  function setupRoSuggestion() {
+    const useSuggestedBtn = document.getElementById('useSuggestedRo');
+    if (useSuggestedBtn) {
+      useSuggestedBtn.addEventListener('click', () => {
+        if (extractedRoPo) {
+          document.getElementById('roPo').value = extractedRoPo;
+          hideRoSuggestion();
+        }
+      });
+    }
+
+    // Watch for changes to RO input to re-compare
+    const roInput = document.getElementById('roPo');
+    if (roInput) {
+      roInput.addEventListener('input', () => {
+        compareRoPoWithExtracted();
+      });
+    }
+  }
+
+  function showRoSuggestion(suggestedRo) {
+    const suggestionBox = document.getElementById('roSuggestion');
+    const suggestedRoEl = document.getElementById('suggestedRo');
+
+    if (suggestionBox && suggestedRoEl) {
+      suggestedRoEl.textContent = suggestedRo;
+      suggestionBox.style.display = 'flex';
+
+      // Re-init icon in case it wasn't set
+      const iconEl = document.getElementById('roSuggestionIcon');
+      if (iconEl && Icons.alertCircle) {
+        iconEl.innerHTML = Icons.alertCircle;
+      }
+    }
+  }
+
+  function hideRoSuggestion() {
+    const suggestionBox = document.getElementById('roSuggestion');
+    if (suggestionBox) {
+      suggestionBox.style.display = 'none';
+    }
+  }
+
+  function compareRoPoWithExtracted() {
+    if (!extractedRoPo) {
+      hideRoSuggestion();
+      return;
+    }
+
+    const userRo = (document.getElementById('roPo')?.value || '').trim();
+    const extractedRoNorm = extractedRoPo.toLowerCase().trim();
+    const userRoNorm = userRo.toLowerCase().trim();
+
+    // Show suggestion if:
+    // 1. User has entered something
+    // 2. Extracted RO is different from user input
+    // 3. Extracted RO is "more complete" (e.g., 12317-1 vs 12317)
+    if (userRo && extractedRoNorm !== userRoNorm) {
+      // Check if extracted appears to be more complete
+      const isMoreComplete = extractedRoNorm.includes(userRoNorm) ||
+                             extractedRoNorm.length > userRoNorm.length;
+
+      if (isMoreComplete || extractedRoNorm !== userRoNorm) {
+        showRoSuggestion(extractedRoPo);
+      } else {
+        hideRoSuggestion();
+      }
+    } else {
+      hideRoSuggestion();
     }
   }
 
@@ -226,6 +305,14 @@
           vin: result.extracted.vin || '',
           vehicle: result.extracted.vehicle || ''
         };
+
+        // Store extracted RO/PO for suggestion comparison
+        if (result.extracted.roPo) {
+          extractedRoPo = result.extracted.roPo;
+          console.log('[SUBMIT] Extracted RO/PO from estimate:', extractedRoPo);
+          // Compare with user's current input
+          compareRoPoWithExtracted();
+        }
 
         console.log('[SUBMIT] Extracted from estimate:', extractedData);
 
