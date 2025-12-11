@@ -149,6 +149,7 @@ function isValidVinCandidate(vin) {
 function extractBestVinFromText(text) {
   if (!text) return null;
 
+  // First, try to find VIN with standard word boundaries
   const vinPattern = /\b([A-HJ-NPR-Z0-9]{17})\b/gi;
   const candidates = [];
   let match;
@@ -167,7 +168,44 @@ function extractBestVinFromText(text) {
     candidates.push({ vin: candidate, nearVinLabel, positionScore });
   }
 
-  if (candidates.length === 0) return null;
+  // If no candidates found, try looking for VIN near a "VIN" label
+  // PDF text extraction sometimes adds spaces or newlines in VINs
+  if (candidates.length === 0) {
+    // Look for "VIN" or "VIN:" or "VIN #" followed by a VIN-like string
+    const vinLabelPattern = /VIN[:\s#]*([A-HJ-NPR-Z0-9\s]{17,25})/gi;
+    let labelMatch;
+    while ((labelMatch = vinLabelPattern.exec(text)) !== null) {
+      // Remove spaces/newlines and check if it's 17 chars
+      const cleanedVin = labelMatch[1].replace(/[\s\n\r]/g, '').toUpperCase();
+      if (cleanedVin.length >= 17) {
+        const potentialVin = cleanedVin.substring(0, 17);
+        if (isValidVinCandidate(potentialVin)) {
+          console.log(`${LOG_TAG} Found VIN near label: ${potentialVin}`);
+          candidates.push({ vin: potentialVin, nearVinLabel: true, positionScore: 0.9 });
+        }
+      }
+    }
+  }
+
+  // Still no candidates? Try a more aggressive search removing all whitespace first
+  if (candidates.length === 0) {
+    const compactText = text.replace(/[\s\n\r]+/g, ' ');
+    const compactPattern = /\b([A-HJ-NPR-Z0-9]{17})\b/gi;
+    while ((match = compactPattern.exec(compactText)) !== null) {
+      const candidate = match[1].toUpperCase();
+      if (isValidVinCandidate(candidate)) {
+        console.log(`${LOG_TAG} Found VIN in compacted text: ${candidate}`);
+        candidates.push({ vin: candidate, nearVinLabel: false, positionScore: 0.5 });
+      }
+    }
+  }
+
+  if (candidates.length === 0) {
+    console.log(`${LOG_TAG} No VIN candidates found in text (${text.length} chars)`);
+    // Log first 500 chars to help debug
+    console.log(`${LOG_TAG} Text sample: ${text.substring(0, 500).replace(/\n/g, ' ')}`);
+    return null;
+  }
 
   // Sort by quality: near VIN label > position
   candidates.sort((a, b) => {
