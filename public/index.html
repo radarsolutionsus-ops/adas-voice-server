@@ -156,9 +156,9 @@
         return;
       }
 
-      // Check for existing token
-      const token = localStorage.getItem('token');
-      const role = localStorage.getItem('userRole');
+      // Check for existing token (try both key formats)
+      const token = localStorage.getItem('adas_access_token') || localStorage.getItem('token');
+      const role = localStorage.getItem('adas_user_role') || localStorage.getItem('userRole');
 
       // No token, stay on login page
       if (!token || !role) return;
@@ -216,12 +216,15 @@
           throw new Error(data.error || 'Invalid username or password');
         }
 
-        // Store auth data - server returns accessToken and refreshToken
-        localStorage.setItem('token', data.accessToken);
-        localStorage.setItem('refreshToken', data.refreshToken);
-        localStorage.setItem('userRole', data.user.role);
+        // Store auth data - use same keys as auth.js
+        localStorage.setItem('adas_access_token', data.accessToken);
+        localStorage.setItem('adas_refresh_token', data.refreshToken);
+        localStorage.setItem('adas_user_role', data.user.role);
         localStorage.setItem('userName', data.user.name);
         localStorage.setItem('userShopName', data.user.shopName || '');
+        // Also store legacy keys for compatibility
+        localStorage.setItem('token', data.accessToken);
+        localStorage.setItem('userRole', data.user.role);
 
         // Redirect
         redirectToPortal(data.user.role);
