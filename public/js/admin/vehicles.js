@@ -141,7 +141,7 @@ function renderVehicles(vehicles) {
     tbody.innerHTML = `
       <tr><td colspan="7" style="text-align:center;padding:48px;">
         <div class="empty-state">
-          <div class="empty-icon">&#128663;</div>
+          <div class="empty-icon" style="width:64px;height:64px;margin:0 auto 16px;color:var(--text-tertiary);">${Icons.car}</div>
           <h3>No vehicles found</h3>
           <p>Try adjusting your filters</p>
         </div>
@@ -183,6 +183,20 @@ async function showVehicleDetail(roPo) {
     }
 
     const v = data.vehicle;
+
+    // Build documents section with all document types
+    const docs = [
+      { name: 'Estimate', url: v.estimatePdf, icon: Icons.fileText },
+      { name: 'Pre-Scan', url: v.preScanPdf || v.postScanPdf, icon: Icons.clipboard },
+      { name: 'Revv Report', url: v.revvReportPdf, icon: Icons.barChart },
+      { name: 'Post-Scan', url: v.postScanPdf, icon: Icons.clipboard },
+      { name: 'Invoice', url: v.invoicePdf, icon: Icons.receipt }
+    ].filter(d => d.url && d.url.startsWith('http'));
+
+    // Render flow history entries
+    const flowHistory = v.flowHistory || v.flow_history || '';
+    const flowEntries = flowHistory ? flowHistory.split('\n').filter(e => e.trim()) : [];
+
     modalBody.innerHTML = `
       <div style="display:grid;gap:16px;">
         <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;">
@@ -208,7 +222,7 @@ async function showVehicleDetail(roPo) {
 
         <div>
           <label class="form-label">Shop</label>
-          <p>${escapeHtml(v.shopName || '-')}</p>
+          <p>${escapeHtml(v.shopName || v.shop_name || '-')}</p>
         </div>
 
         <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;">
@@ -224,27 +238,48 @@ async function showVehicleDetail(roPo) {
 
         <div>
           <label class="form-label">Technician</label>
-          <p>${escapeHtml(v.technician || v.technicianAssigned || 'Unassigned')}</p>
+          <p>${escapeHtml(v.technician || v.technicianAssigned || v.technician_assigned || 'Unassigned')}</p>
         </div>
 
         <div>
           <label class="form-label">Required Calibrations</label>
-          <p>${escapeHtml(v.requiredCalibrations || '-')}</p>
+          <p>${escapeHtml(v.requiredCalibrations || v.required_calibrations || '-')}</p>
         </div>
+
+        ${docs.length > 0 ? `
+          <div>
+            <label class="form-label">Documents</label>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              ${docs.map(d => `
+                <a href="${d.url}" target="_blank" class="btn btn-sm btn-secondary" style="display:inline-flex;align-items:center;gap:4px;">
+                  <span style="width:14px;height:14px;">${d.icon}</span>
+                  ${d.name}
+                </a>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
 
         <div>
           <label class="form-label">Notes</label>
           <p style="white-space:pre-wrap;background:var(--bg);padding:12px;border-radius:8px;max-height:150px;overflow-y:auto;">${escapeHtml(v.notes || 'No notes')}</p>
         </div>
 
-        ${v.estimatePdf || v.revvReportPdf || v.invoicePdf ? `
+        ${flowEntries.length > 0 ? `
           <div>
-            <label class="form-label">Documents</label>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;">
-              ${v.estimatePdf ? `<a href="${v.estimatePdf}" target="_blank" class="btn btn-sm btn-secondary">Estimate</a>` : ''}
-              ${v.revvReportPdf ? `<a href="${v.revvReportPdf}" target="_blank" class="btn btn-sm btn-secondary">Revv Report</a>` : ''}
-              ${v.postScanPdf ? `<a href="${v.postScanPdf}" target="_blank" class="btn btn-sm btn-secondary">Post Scan</a>` : ''}
-              ${v.invoicePdf ? `<a href="${v.invoicePdf}" target="_blank" class="btn btn-sm btn-secondary">Invoice</a>` : ''}
+            <label class="form-label">Activity Log</label>
+            <div style="background:var(--bg);padding:12px;border-radius:8px;max-height:200px;overflow-y:auto;">
+              ${flowEntries.map(entry => {
+                const parts = entry.match(/^(\d{1,2}\/\d{1,2}\s+\d{1,2}:\d{2}[ap]?)\s+(\w+)\s+(.*)$/i);
+                if (parts) {
+                  return `<div style="display:flex;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);font-size:13px;">
+                    <span style="color:var(--text-tertiary);min-width:80px;">${escapeHtml(parts[1])}</span>
+                    <span class="status-badge ${getStatusClass(parts[2])}" style="font-size:11px;padding:2px 6px;">${escapeHtml(parts[2])}</span>
+                    <span style="flex:1;">${escapeHtml(parts[3])}</span>
+                  </div>`;
+                }
+                return `<div style="padding:4px 0;font-size:13px;">${escapeHtml(entry)}</div>`;
+              }).join('')}
             </div>
           </div>
         ` : ''}
