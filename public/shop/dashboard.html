@@ -30,11 +30,6 @@
 
         <div class="nav-section">
           <div class="nav-section-title">Vehicles</div>
-          <a href="/shop/dashboard.html" class="nav-item" data-filter="all">
-            <span class="nav-icon" id="navAllVehicles"></span>
-            <span class="nav-text">All Vehicles</span>
-            <span class="nav-badge" id="totalCount">0</span>
-          </a>
           <a href="/shop/dashboard.html?status=New" class="nav-item" data-filter="New">
             <span class="nav-icon" id="navNew"></span>
             <span class="nav-text">New</span>
@@ -90,8 +85,8 @@
       </header>
 
       <div class="content-area">
-        <!-- Stats Grid -->
-        <div class="stats-grid">
+        <!-- Stats Grid (hidden when filtering) -->
+        <div class="stats-grid" id="statsGrid">
           <div class="stat-card clickable" onclick="window.location='/shop/dashboard.html'">
             <div class="stat-icon blue" id="statIconTotal"></div>
             <div class="stat-content">
@@ -123,9 +118,9 @@
         </div>
 
         <!-- Main Grid -->
-        <div class="grid-2">
-          <!-- Today's Schedule -->
-          <div class="card">
+        <div class="grid-2" id="dashboardGrid">
+          <!-- Today's Schedule (hidden when filtering) -->
+          <div class="card" id="scheduledCard">
             <div class="card-header">
               <h3 class="card-title">Scheduled Jobs</h3>
               <span class="status-badge scheduled" id="scheduledCount">0 jobs</span>
@@ -135,8 +130,8 @@
             </div>
           </div>
 
-          <!-- Quick Actions -->
-          <div class="card">
+          <!-- Quick Actions (hidden when filtering) -->
+          <div class="card" id="quickActionsCard">
             <div class="card-header">
               <h3 class="card-title">Quick Actions</h3>
             </div>
@@ -160,11 +155,11 @@
             </div>
           </div>
 
-          <!-- Recent Vehicles -->
-          <div class="card" style="grid-column: span 2;">
+          <!-- Vehicles Table -->
+          <div class="card" id="vehiclesCard" style="grid-column: span 2;">
             <div class="card-header">
-              <h3 class="card-title">Recent Vehicles</h3>
-              <a href="/shop/vehicles.html" class="btn btn-sm btn-secondary">View All</a>
+              <h3 class="card-title" id="vehiclesCardTitle">Recent Vehicles</h3>
+              <a href="/shop/dashboard.html" class="btn btn-sm btn-secondary" id="viewAllBtn">View All</a>
             </div>
             <div class="card-body no-padding">
               <div id="recentVehicles">
@@ -212,9 +207,32 @@
       // Highlight active nav item based on filter
       highlightActiveNav();
 
+      // Apply filter view (hide cards if filtering)
+      applyFilterView();
+
       // Load dashboard data
       await loadDashboardData();
     });
+
+    function applyFilterView() {
+      if (statusFilter) {
+        // Hide stats, scheduled jobs, and quick actions when filtering
+        document.getElementById('statsGrid').style.display = 'none';
+        document.getElementById('scheduledCard').style.display = 'none';
+        document.getElementById('quickActionsCard').style.display = 'none';
+
+        // Update vehicles card to span full width without grid
+        document.getElementById('dashboardGrid').className = '';
+        document.getElementById('vehiclesCard').style.gridColumn = '';
+
+        // Update card title and hide view all button
+        document.getElementById('vehiclesCardTitle').textContent = `${statusFilter} Vehicles`;
+        document.getElementById('viewAllBtn').style.display = 'inline-flex';
+      } else {
+        // Show all cards on dashboard
+        document.getElementById('viewAllBtn').style.display = 'none';
+      }
+    }
 
     function highlightActiveNav() {
       // Remove active from all nav items
@@ -235,7 +253,6 @@
       document.getElementById('toggleIcon').innerHTML = Icons.menu;
       document.getElementById('mobileMenuIcon').innerHTML = Icons.menu;
       document.getElementById('navDashboard').innerHTML = Icons.chart;
-      document.getElementById('navAllVehicles').innerHTML = Icons.car;
       document.getElementById('navNew').innerHTML = Icons.sparkles;
       document.getElementById('navScheduled').innerHTML = Icons.calendar;
       document.getElementById('navInProgress').innerHTML = Icons.wrench;
@@ -370,7 +387,8 @@
         });
       }
 
-      const recent = filtered.slice(0, 20);
+      // Show all when filtering, limit to 20 on dashboard
+      const recent = statusFilter ? filtered : filtered.slice(0, 20);
 
       // Update page title if filtering
       const pageTitle = document.querySelector('.page-title');

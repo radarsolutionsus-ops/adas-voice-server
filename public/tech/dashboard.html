@@ -35,10 +35,9 @@
             <span class="nav-text">Today's Jobs</span>
             <span class="nav-badge" id="todayBadge" style="display:none;">0</span>
           </a>
-          <a href="/tech/dashboard.html" class="nav-item" data-filter="all">
-            <span class="nav-icon" id="navAllJobs"></span>
-            <span class="nav-text">All Jobs</span>
-            <span class="nav-badge" id="totalCount">0</span>
+          <a href="/tech/dashboard.html?status=Scheduled" class="nav-item" data-filter="Scheduled">
+            <span class="nav-icon" id="navScheduled"></span>
+            <span class="nav-text">Scheduled</span>
           </a>
           <a href="/tech/dashboard.html?status=In%20Progress" class="nav-item" data-filter="In Progress">
             <span class="nav-icon" id="navInProgress"></span>
@@ -82,8 +81,8 @@
       </header>
 
       <div class="content-area">
-        <!-- Stats Grid -->
-        <div class="stats-grid">
+        <!-- Stats Grid (hidden when filtering) -->
+        <div class="stats-grid" id="statsGrid">
           <div class="stat-card">
             <div class="stat-icon blue" id="statIconToday"></div>
             <div class="stat-content">
@@ -115,9 +114,9 @@
         </div>
 
         <!-- Main Grid -->
-        <div class="grid-2">
-          <!-- Today's Jobs -->
-          <div class="card">
+        <div class="grid-2" id="dashboardGrid">
+          <!-- Today's Jobs (hidden when filtering) -->
+          <div class="card" id="todayCard">
             <div class="card-header">
               <h3 class="card-title">Today's Jobs</h3>
               <span class="status-badge scheduled" id="todayCount">0 jobs</span>
@@ -127,8 +126,8 @@
             </div>
           </div>
 
-          <!-- Quick Actions -->
-          <div class="card">
+          <!-- Quick Actions (hidden when filtering) -->
+          <div class="card" id="quickActionsCard">
             <div class="card-header">
               <h3 class="card-title">Quick Actions</h3>
             </div>
@@ -145,23 +144,18 @@
                 <div class="quick-action-icon green" id="qaCompletedIcon"></div>
                 <span class="text">View Completed</span>
               </a>
-              <a href="/tech/dashboard.html" class="quick-action">
-                <div class="quick-action-icon blue" id="qaAllIcon"></div>
-                <span class="text">View All Jobs</span>
+              <a href="/tech/dashboard.html?filter=today" class="quick-action">
+                <div class="quick-action-icon blue" id="qaTodayIcon"></div>
+                <span class="text">View Today's Jobs</span>
               </a>
             </div>
           </div>
 
-          <!-- All Jobs -->
-          <div class="card" style="grid-column: span 2;">
+          <!-- Jobs Table -->
+          <div class="card" id="jobsCard" style="grid-column: span 2;">
             <div class="card-header">
-              <h3 class="card-title">All Jobs</h3>
-              <div class="filter-pills">
-                <button class="pill active" data-status="all">All</button>
-                <button class="pill" data-status="Scheduled">Scheduled</button>
-                <button class="pill" data-status="In Progress">In Progress</button>
-                <button class="pill" data-status="Completed">Completed</button>
-              </div>
+              <h3 class="card-title" id="jobsCardTitle">All Jobs</h3>
+              <a href="/tech/dashboard.html" class="btn btn-sm btn-secondary" id="viewAllBtn" style="display:none;">View All</a>
             </div>
             <div class="card-body no-padding">
               <div id="allJobs">
@@ -303,11 +297,11 @@
       // Setup logout
       setupLogout();
 
-      // Setup filter pills
-      setupFilters();
-
       // Highlight active nav based on URL params
       highlightActiveNav();
+
+      // Apply filter view (hide cards if filtering)
+      applyFilterView();
 
       // Load data
       await loadJobs();
@@ -315,6 +309,25 @@
       // Apply URL filter after data loads
       applyUrlFilter();
     });
+
+    function applyFilterView() {
+      const isFiltering = statusFilter || todayFilter;
+      if (isFiltering) {
+        // Hide stats, today's jobs card, and quick actions when filtering
+        document.getElementById('statsGrid').style.display = 'none';
+        document.getElementById('todayCard').style.display = 'none';
+        document.getElementById('quickActionsCard').style.display = 'none';
+
+        // Update jobs card to span full width without grid
+        document.getElementById('dashboardGrid').className = '';
+        document.getElementById('jobsCard').style.gridColumn = '';
+
+        // Update card title and show view all button
+        const title = todayFilter === 'today' ? "Today's Jobs" : `${statusFilter} Jobs`;
+        document.getElementById('jobsCardTitle').textContent = title;
+        document.getElementById('viewAllBtn').style.display = 'inline-flex';
+      }
+    }
 
     function highlightActiveNav() {
       // Remove active from all nav items
@@ -359,7 +372,7 @@
       document.getElementById('mobileMenuIcon').innerHTML = Icons.menu;
       document.getElementById('navDashboard').innerHTML = Icons.chart;
       document.getElementById('navToday').innerHTML = Icons.calendar;
-      document.getElementById('navAllJobs').innerHTML = Icons.list;
+      document.getElementById('navScheduled').innerHTML = Icons.clock;
       document.getElementById('navInProgress').innerHTML = Icons.wrench;
       document.getElementById('navCompleted').innerHTML = Icons.checkCircle;
 
@@ -376,7 +389,7 @@
       document.getElementById('qaProgressIcon').innerHTML = Icons.wrench;
       document.getElementById('qaScheduledIcon').innerHTML = Icons.calendar;
       document.getElementById('qaCompletedIcon').innerHTML = Icons.checkCircle;
-      document.getElementById('qaAllIcon').innerHTML = Icons.list;
+      document.getElementById('qaTodayIcon').innerHTML = Icons.calendar;
 
       // Modal icons
       document.getElementById('closeModalIcon').innerHTML = Icons.x;
@@ -400,16 +413,6 @@
         localStorage.clear();
         sessionStorage.clear();
         window.location.replace('/?logout=true');
-      });
-    }
-
-    function setupFilters() {
-      document.querySelectorAll('.pill').forEach(pill => {
-        pill.addEventListener('click', () => {
-          document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
-          pill.classList.add('active');
-          filterJobs(pill.dataset.status);
-        });
       });
     }
 
@@ -447,7 +450,6 @@
       document.getElementById('statInProgress').textContent = jobs.filter(j => j.status === 'In Progress').length;
       document.getElementById('statCompleted').textContent = jobs.filter(j => j.status === 'Completed').length;
 
-      document.getElementById('totalCount').textContent = jobs.length;
       if (todayJobs.length > 0) {
         document.getElementById('todayBadge').textContent = todayJobs.length;
         document.getElementById('todayBadge').style.display = '';
@@ -482,10 +484,6 @@
 
     function filterJobs(status) {
       currentFilter = status;
-      document.querySelectorAll('.pill').forEach(p => {
-        p.classList.toggle('active', p.dataset.status === status);
-      });
-
       if (status === 'all') {
         renderJobs(allJobs);
       } else {
