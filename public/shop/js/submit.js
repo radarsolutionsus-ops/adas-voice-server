@@ -91,15 +91,8 @@
         if (extractedRoPo) {
           document.getElementById('roPo').value = extractedRoPo;
           hideRoSuggestion();
+          Toast.success(`RO updated to: ${extractedRoPo}`);
         }
-      });
-    }
-
-    // Watch for changes to RO input to re-compare
-    const roInput = document.getElementById('roPo');
-    if (roInput) {
-      roInput.addEventListener('input', () => {
-        compareRoPoWithExtracted();
       });
     }
   }

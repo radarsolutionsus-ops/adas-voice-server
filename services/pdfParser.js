@@ -372,6 +372,51 @@ function extractShopNameFromPDF(text, pdfType = null) {
 }
 
 /**
+ * Extract RO/PO number from estimate text content
+ * Looks for common patterns like "RO: 12317-PM-FOX", "RO #12317", "Repair Order: 12317"
+ * @param {string} text - PDF text content
+ * @returns {string|null} - RO/PO number or null
+ */
+function extractRoPoFromText(text) {
+  if (!text) return null;
+
+  // Get first 3000 chars (header area where RO is usually found)
+  const header = text.substring(0, 3000);
+
+  // Patterns to match RO/PO numbers (in order of specificity)
+  const patterns = [
+    // "RO: 12317-PM-FOX" or "RO #12317-PM-FOX" or "RO Number: 12317-PM-FOX"
+    /(?:RO|R\.O\.|Repair Order)[\s:#]*([A-Za-z0-9]+-[A-Za-z0-9]+-?[A-Za-z0-9]*)/i,
+    // "PO: 12317-PM-FOX" or "PO #12317-PM-FOX"
+    /(?:PO|P\.O\.|Purchase Order)[\s:#]*([A-Za-z0-9]+-[A-Za-z0-9]+-?[A-Za-z0-9]*)/i,
+    // "WO: 12317-PM-FOX" or "Work Order: 12317-PM-FOX"
+    /(?:WO|W\.O\.|Work Order)[\s:#]*([A-Za-z0-9]+-[A-Za-z0-9]+-?[A-Za-z0-9]*)/i,
+    // "RO: 12317" or "RO #12317" (simpler pattern)
+    /(?:RO|R\.O\.|Repair Order)[\s:#]*(\d{4,10}(?:-[A-Za-z0-9]+)*)/i,
+    // "PO: 12317" or "PO #12317"
+    /(?:PO|P\.O\.|Purchase Order)[\s:#]*(\d{4,10}(?:-[A-Za-z0-9]+)*)/i,
+    // Claim Number patterns
+    /(?:Claim|Claim\s*#|Claim\s*Number)[\s:#]*([A-Za-z0-9]+-?[A-Za-z0-9]*-?[A-Za-z0-9]*)/i,
+    // File Number / Reference Number
+    /(?:File|File\s*#|Reference)[\s:#]*(\d{4,10}(?:-[A-Za-z0-9]+)*)/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = header.match(pattern);
+    if (match && match[1]) {
+      const roPo = match[1].trim();
+      // Skip very short matches (likely false positives)
+      if (roPo.length >= 4) {
+        console.log(`${LOG_TAG} Extracted RO/PO from text: ${roPo}`);
+        return roPo;
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
  * Extract vehicle info (Year Make Model) from estimate text
  * @param {string} text - PDF text content
  * @returns {object|null} - { year, make, model, full } or null
@@ -851,12 +896,22 @@ export async function parsePDF(pdfBuffer, filename, roPo = null) {
       // Extract vehicle info (Year Make Model) from estimate text
       const vehicleInfo = extractVehicleInfoFromText(textContent);
 
+      // Extract RO/PO from text content first, fall back to filename
+      let extractedRoPo = extractRoPoFromText(textContent);
+      if (!extractedRoPo) {
+        extractedRoPo = extractROFromFilename(filename);
+        if (extractedRoPo) {
+          console.log(`${LOG_TAG} RO/PO extracted from filename: ${extractedRoPo}`);
+        }
+      }
+
       return {
         success: true,
         pdfType,
         data: {
           documentType: pdfType === PDF_TYPES.SHOP_ESTIMATE ? 'shop_estimate' : 'estimate',
           shopName: extractedShopName,
+          roPo: extractedRoPo,
           vin: extractedVin,
           vehicleMake: extractedBrand,
           vehicleYear: vehicleInfo?.year || null,
@@ -1186,6 +1241,7 @@ export async function parseAndMergePDFs(pdfs, roPo = null) {
  * - "RO_12345.pdf" → "12345"
  * - "11999-PM_estimate.pdf" → "11999-PM"
  * - "Estimate_12345-1.pdf" → "12345-1"
+ * - "p.o 12317 atlas.pdf" → "12317"
  *
  * @param {string} filename - Original filename
  * @returns {string|null} - Extracted RO or null
@@ -1195,9 +1251,11 @@ function extractROFromFilename(filename) {
 
   // Remove extension
   const baseName = filename.replace(/\.[^.]+$/, '');
+  console.log(`${LOG_TAG} extractROFromFilename: baseName="${baseName}"`);
 
-  // Pattern 1: PO_ or RO_ prefix
-  const prefixMatch = baseName.match(/(?:PO|RO)[_\-]?([A-Za-z0-9]+-?[A-Za-z0-9]*)/i);
+  // Pattern 1: PO/P.O/RO/R.O prefix with underscore, hyphen, space, or nothing
+  // Handles: "PO_12317", "p.o 12317", "RO-12345", "P.O. 12317"
+  const prefixMatch = baseName.match(/(?:P\.?O\.?|R\.?O\.?)[\s_\-]*(\d{4,10}(?:-[A-Za-z0-9]+)*)/i);
   if (prefixMatch && prefixMatch[1]) {
     // Clean up trailing underscores and numbers that are suffixes (like __3_)
     const cleaned = prefixMatch[1].replace(/_+\d*_*$/, '');

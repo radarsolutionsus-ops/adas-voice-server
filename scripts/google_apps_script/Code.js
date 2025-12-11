@@ -565,6 +565,8 @@ function createNewRow(sheet, data, roPo) {
   }
 
   const shopName = data.shop_name || data.shopName || data.shop || '';
+  Logger.log('createNewRow: shopName = "' + shopName + '"');
+
   const vin = data.vin || '';
 
   // Log VIN validation status on new row creation
@@ -4292,16 +4294,24 @@ function formatTimestampForNotes(date) {
  * Reads region from Shops tab Column G, matches tech from Technicians tab Column F (Regions)
  */
 function getAssignedTechForShop(shopName) {
-  if (!shopName) return 'Felipe';
+  Logger.log('getAssignedTechForShop called with: "' + shopName + '"');
+
+  if (!shopName) {
+    Logger.log('No shop name provided, returning default Felipe');
+    return 'Felipe';
+  }
 
   const shopNameLower = String(shopName).toLowerCase().trim();
   let region = 'Hialeah'; // Default region
+  let foundShop = false;
 
   // Step 1: Find shop's region from Shops tab (Column G = index 6)
   try {
     const shopsSheet = SpreadsheetApp.getActive().getSheetByName(SHOPS_SHEET);
     if (shopsSheet) {
       const shopsData = shopsSheet.getDataRange().getValues();
+      Logger.log('Shops sheet has ' + shopsData.length + ' rows');
+
       for (let i = 1; i < shopsData.length; i++) {
         const rowShopName = String(shopsData[i][0] || '').toLowerCase().trim();
         // Fuzzy match: exact, contains, or contained by
@@ -4309,12 +4319,20 @@ function getAssignedTechForShop(shopName) {
             rowShopName.includes(shopNameLower) ||
             shopNameLower.includes(rowShopName)) {
           const shopRegion = shopsData[i][6]; // Column G = Region
+          Logger.log('Found shop match: "' + shopsData[i][0] + '" → Region: "' + shopRegion + '"');
           if (shopRegion) {
             region = String(shopRegion).trim();
           }
+          foundShop = true;
           break;
         }
       }
+
+      if (!foundShop) {
+        Logger.log('No shop match found for: "' + shopName + '" - using default region: ' + region);
+      }
+    } else {
+      Logger.log('Shops sheet not found!');
     }
   } catch (e) {
     Logger.log('Error reading Shops sheet: ' + e.message);
@@ -4327,22 +4345,37 @@ function getAssignedTechForShop(shopName) {
     if (techsSheet) {
       const techsData = techsSheet.getDataRange().getValues();
       const regionLower = region.toLowerCase();
+      Logger.log('Looking for tech with region containing: "' + regionLower + '"');
 
       for (let i = 1; i < techsData.length; i++) {
+        const techName = techsData[i][0];
         const techRegions = String(techsData[i][5] || '').toLowerCase();
-        const isActive = techsData[i][7];
+        const isActiveRaw = techsData[i][7];
+        // Handle various "active" representations: true, TRUE, "TRUE", "Yes", 1, etc.
+        const isActive = isActiveRaw === true ||
+                         String(isActiveRaw).toLowerCase() === 'true' ||
+                         String(isActiveRaw).toLowerCase() === 'yes' ||
+                         isActiveRaw === 1;
+
+        Logger.log('Tech "' + techName + '": regions="' + techRegions + '", active=' + isActiveRaw + ' (parsed: ' + isActive + ')');
 
         // Check if tech covers this region and is active
-        if (techRegions.includes(regionLower) && isActive === true) {
-          return techsData[i][0]; // Column A = Tech Name
+        if (techRegions.includes(regionLower) && isActive) {
+          Logger.log('MATCH! Assigning tech: ' + techName);
+          return techName; // Column A = Tech Name
         }
       }
+
+      Logger.log('No active tech found for region: ' + region);
+    } else {
+      Logger.log('Technicians sheet not found!');
     }
   } catch (e) {
     Logger.log('Error reading Technicians sheet: ' + e.message);
   }
 
   // Default fallback
+  Logger.log('Using default fallback: Felipe');
   return 'Felipe';
 }
 

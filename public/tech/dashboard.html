@@ -7,1026 +7,365 @@
   <link rel="stylesheet" href="/css/apple-style.css">
   <link rel="stylesheet" href="/css/portal.css">
   <style>
-    /* Tech Portal - Apple Style Enhancements */
-    .job-status-tabs {
-      display: flex;
-      gap: 4px;
-      padding: 4px;
-      background: var(--bg-grouped, #f2f2f7);
-      border-radius: 12px;
-      margin-bottom: 20px;
+    /* Simplified Tech Portal Styles */
+    .dashboard-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
     }
 
-    .status-tab {
-      padding: 10px 20px;
-      font-size: 14px;
-      font-weight: 500;
+    .dashboard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 32px;
+    }
+
+    .dashboard-title {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text-primary, #1d1d1f);
+    }
+
+    .tech-name {
+      font-size: 15px;
       color: var(--text-secondary, #86868b);
-      background: transparent;
-      border: none;
-      border-radius: 8px;
+      margin-top: 4px;
+    }
+
+    /* Section Styles */
+    .section {
+      margin-bottom: 32px;
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
       cursor: pointer;
-      transition: all 0.15s ease;
+    }
+
+    .section-header h2 {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text-primary, #1d1d1f);
       display: flex;
       align-items: center;
       gap: 8px;
     }
 
-    .status-tab:hover {
-      color: var(--text-primary, #1d1d1f);
-      background: rgba(0, 0, 0, 0.04);
-    }
-
-    .status-tab.active {
-      color: var(--text-primary, #1d1d1f);
-      background: #ffffff;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-      font-weight: 600;
-    }
-
-    .status-tab .count {
-      background: rgba(0, 0, 0, 0.08);
-      padding: 2px 8px;
-      border-radius: 10px;
-      font-size: 12px;
-      font-weight: 600;
-    }
-
-    .status-tab.active .count {
-      background: var(--color-primary, #007aff);
-      color: #fff;
-    }
-
-    /* Job Cards */
-    .job-cards-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-      gap: 16px;
-    }
-
-    .job-card {
-      background: #ffffff;
-      border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.06));
+    .section-count {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-secondary, #86868b);
+      background: var(--bg-grouped, #f2f2f7);
+      padding: 4px 12px;
       border-radius: 12px;
-      padding: 20px;
-      cursor: pointer;
-      transition: all 0.2s ease;
     }
 
-    .job-card:hover {
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-      transform: translateY(-1px);
+    .section-toggle {
+      width: 24px;
+      height: 24px;
+      color: var(--text-tertiary, #aeaeb2);
+      transition: transform 0.2s ease;
     }
 
-    .job-card-header {
+    .section.collapsed .section-toggle {
+      transform: rotate(-90deg);
+    }
+
+    .section.collapsed .section-content {
+      display: none;
+    }
+
+    /* Subsection Styles */
+    .subsection {
+      margin-bottom: 24px;
+    }
+
+    .subsection-header {
       display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
+      align-items: center;
+      gap: 8px;
       margin-bottom: 12px;
     }
 
-    .job-card-ro {
-      font-size: 17px;
+    .subsection-header h3 {
+      font-size: 14px;
       font-weight: 600;
-      color: var(--text-primary, #1d1d1f);
-    }
-
-    .job-card-shop {
-      font-size: 15px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
       color: var(--text-secondary, #86868b);
-      margin-bottom: 8px;
     }
 
-    .job-card-vehicle {
-      font-size: 14px;
-      color: var(--text-tertiary, #aeaeb2);
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
     }
 
-    .job-card-footer {
+    .status-dot.red { background: #ff3b30; }
+    .status-dot.blue { background: #007aff; }
+    .status-dot.purple { background: #af52de; }
+    .status-dot.green { background: #34c759; }
+    .status-dot.orange { background: #ff9500; }
+    .status-dot.gray { background: #8e8e93; }
+
+    /* Job Card Styles */
+    .job-list {
       display: flex;
-      justify-content: space-between;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .job-row {
+      display: flex;
       align-items: center;
-      padding-top: 12px;
-      border-top: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.06));
-      margin-top: 12px;
-    }
-
-    .job-card-time {
-      font-size: 14px;
-      font-weight: 500;
-      color: var(--color-primary, #007aff);
-    }
-
-    /* Priority indicator */
-    .job-card.priority-high {
-      border-left: 3px solid #ff3b30;
-    }
-
-    .job-card.priority-today {
-      border-left: 3px solid #ff9500;
-    }
-
-    /* Assignment indicator */
-    .job-card.not-assigned,
-    tr.not-assigned {
-      opacity: 0.75;
-      border-left: 3px solid var(--text-tertiary, #aeaeb2);
-    }
-
-    .job-card.not-assigned:hover {
-      opacity: 0.85;
-    }
-
-    .assignment-badge {
-      font-size: 11px;
-      padding: 2px 8px;
-      border-radius: 10px;
-      font-weight: 500;
-    }
-
-    .assignment-badge.assigned {
-      background: rgba(52, 199, 89, 0.12);
-      color: #34c759;
-    }
-
-    .assignment-badge.unassigned {
-      background: rgba(142, 142, 147, 0.12);
-      color: #8e8e93;
-    }
-
-    .btn-request-assignment {
-      padding: 6px 12px;
-      font-size: 12px;
-      font-weight: 500;
-      background: var(--color-primary, #007aff);
-      color: white;
-      border: none;
-      border-radius: 6px;
+      padding: 16px;
+      background: #fff;
+      border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.06));
+      border-radius: 12px;
       cursor: pointer;
       transition: all 0.15s ease;
     }
 
-    .btn-request-assignment:hover {
-      background: #0063cc;
+    .job-row:hover {
+      background: var(--bg-grouped, #f2f2f7);
+      border-color: var(--border, rgba(0, 0, 0, 0.1));
     }
 
-    .btn-request-assignment:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
+    .job-row.needs-action {
+      border-left: 3px solid #ff3b30;
     }
 
-    /* View only indicator */
-    .view-only-banner {
-      background: rgba(142, 142, 147, 0.12);
-      color: #8e8e93;
-      padding: 8px 16px;
-      border-radius: 8px;
-      font-size: 13px;
-      margin-bottom: 16px;
+    .job-row.scheduled {
+      border-left: 3px solid #007aff;
+    }
+
+    .job-row.in-progress {
+      border-left: 3px solid #af52de;
+    }
+
+    .job-row.completed {
+      border-left: 3px solid #34c759;
+    }
+
+    .job-row.view-only {
+      opacity: 0.7;
+      border-left: 3px solid #8e8e93;
+    }
+
+    .job-row.view-only:hover {
+      opacity: 0.85;
+    }
+
+    .job-status-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 16px;
+      flex-shrink: 0;
+    }
+
+    .job-status-indicator.red { background: #ff3b30; }
+    .job-status-indicator.blue { background: #007aff; }
+    .job-status-indicator.purple { background: #af52de; }
+    .job-status-indicator.green { background: #34c759; }
+    .job-status-indicator.orange { background: #ff9500; }
+    .job-status-indicator.gray { background: #8e8e93; }
+
+    .job-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .job-ro {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary, #1d1d1f);
+      margin-bottom: 4px;
+    }
+
+    .job-details {
+      font-size: 14px;
+      color: var(--text-secondary, #86868b);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .job-meta {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 12px;
+      flex-shrink: 0;
+      margin-left: 16px;
     }
 
-    .view-only-banner .icon {
+    .job-time {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-secondary, #86868b);
+    }
+
+    .job-badge {
+      font-size: 12px;
+      font-weight: 500;
+      padding: 4px 10px;
+      border-radius: 6px;
+    }
+
+    .job-badge.needs-revv {
+      background: rgba(255, 59, 48, 0.1);
+      color: #ff3b30;
+    }
+
+    .job-badge.scheduled {
+      background: rgba(0, 122, 255, 0.1);
+      color: #007aff;
+    }
+
+    .job-badge.in-progress {
+      background: rgba(175, 82, 222, 0.1);
+      color: #af52de;
+    }
+
+    .job-badge.completed {
+      background: rgba(52, 199, 89, 0.1);
+      color: #34c759;
+    }
+
+    .job-badge.view-only {
+      background: rgba(142, 142, 147, 0.1);
+      color: #8e8e93;
+    }
+
+    .job-arrow {
+      width: 16px;
+      height: 16px;
+      color: var(--text-tertiary, #aeaeb2);
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 32px 16px;
+      color: var(--text-secondary, #86868b);
+    }
+
+    .empty-state .icon {
+      width: 48px;
+      height: 48px;
+      margin: 0 auto 12px;
+      color: var(--text-tertiary, #aeaeb2);
+    }
+
+    .empty-state p {
+      font-size: 15px;
+    }
+
+    /* All Jobs Section (collapsible) */
+    .all-jobs-section {
+      background: var(--bg-grouped, #f2f2f7);
+      border-radius: 16px;
+      padding: 20px;
+    }
+
+    .all-jobs-section .section-header {
+      margin-bottom: 0;
+    }
+
+    .all-jobs-section.expanded .section-header {
+      margin-bottom: 16px;
+    }
+
+    .all-jobs-section .section-content {
+      display: none;
+    }
+
+    .all-jobs-section.expanded .section-content {
+      display: block;
+    }
+
+    .view-only-note {
+      font-size: 13px;
+      color: var(--text-tertiary, #aeaeb2);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Header Styles */
+    .simple-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 24px;
+      background: #fff;
+      border-bottom: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.06));
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #007aff 0%, #5856d6 100%);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 700;
+      font-size: 16px;
+    }
+
+    .logo-text {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-primary, #1d1d1f);
+    }
+
+    .btn-logout {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-secondary, #86868b);
+      background: var(--bg-grouped, #f2f2f7);
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn-logout:hover {
+      background: var(--bg, #e5e5ea);
+      color: var(--text-primary, #1d1d1f);
+    }
+
+    .btn-logout .icon {
       width: 16px;
       height: 16px;
     }
 
-    /* Request assignment modal */
-    .request-form {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    .request-form textarea {
-      min-height: 80px;
-    }
-  </style>
-</head>
-<body>
-  <div class="portal-layout">
-    <!-- Sidebar -->
-    <aside class="sidebar" id="sidebar">
-      <div class="sidebar-header">
-        <div class="sidebar-logo">
-          <div class="logo-icon">A</div>
-          <span class="logo-text">ADAS F1RST</span>
-        </div>
-        <button class="sidebar-toggle" id="sidebarToggle" title="Toggle Sidebar">
-          <span class="icon" id="toggleIcon"></span>
-        </button>
-      </div>
-
-      <nav class="sidebar-nav">
-        <div class="nav-section">
-          <a href="/tech/dashboard.html" class="nav-item active">
-            <span class="nav-icon" id="navDashboard"></span>
-            <span class="nav-text">Dashboard</span>
-          </a>
-        </div>
-
-        <div class="nav-section">
-          <div class="nav-section-title">Jobs</div>
-          <a href="/tech/dashboard.html?filter=today" class="nav-item" id="navTodayLink" data-filter="today">
-            <span class="nav-icon" id="navToday"></span>
-            <span class="nav-text">Today's Jobs</span>
-            <span class="nav-badge" id="todayBadge" style="display:none;">0</span>
-          </a>
-          <a href="/tech/dashboard.html?status=Scheduled" class="nav-item" data-filter="Scheduled">
-            <span class="nav-icon" id="navScheduled"></span>
-            <span class="nav-text">Scheduled</span>
-          </a>
-          <a href="/tech/dashboard.html?status=In%20Progress" class="nav-item" data-filter="In Progress">
-            <span class="nav-icon" id="navInProgress"></span>
-            <span class="nav-text">In Progress</span>
-          </a>
-          <a href="/tech/dashboard.html?status=Completed" class="nav-item" data-filter="Completed">
-            <span class="nav-icon" id="navCompleted"></span>
-            <span class="nav-text">Completed</span>
-          </a>
-        </div>
-      </nav>
-
-      <div class="sidebar-footer">
-        <div class="sidebar-user">
-          <div class="user-avatar" id="userAvatar">T</div>
-          <div class="user-info">
-            <div class="user-name" id="userName">Technician</div>
-            <div class="user-role">Technician</div>
-          </div>
-        </div>
-      </div>
-    </aside>
-
-    <div class="sidebar-overlay" id="sidebarOverlay"></div>
-
-    <!-- Main Content -->
-    <main class="main-content">
-      <header class="top-header">
-        <div class="header-left">
-          <button class="mobile-menu-btn" id="mobileMenuBtn">
-            <span class="icon" id="mobileMenuIcon"></span>
-          </button>
-          <h1 class="page-title">Dashboard</h1>
-        </div>
-        <div class="header-right">
-          <button class="btn-logout" id="logoutBtn">
-            <span class="icon icon-sm" id="logoutIcon"></span>
-            Sign Out
-          </button>
-        </div>
-      </header>
-
-      <div class="content-area">
-        <!-- Stats Grid (hidden when filtering) -->
-        <div class="stats-grid" id="statsGrid">
-          <div class="stat-card">
-            <div class="stat-icon blue" id="statIconToday"></div>
-            <div class="stat-content">
-              <div class="stat-value" id="statToday">-</div>
-              <div class="stat-label">Today's Jobs</div>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon purple" id="statIconScheduled"></div>
-            <div class="stat-content">
-              <div class="stat-value" id="statScheduled">-</div>
-              <div class="stat-label">Scheduled</div>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon yellow" id="statIconProgress"></div>
-            <div class="stat-content">
-              <div class="stat-value" id="statInProgress">-</div>
-              <div class="stat-label">In Progress</div>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon green" id="statIconCompleted"></div>
-            <div class="stat-content">
-              <div class="stat-value" id="statCompleted">-</div>
-              <div class="stat-label">Completed</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Main Grid -->
-        <div class="grid-2" id="dashboardGrid">
-          <!-- Today's Jobs (hidden when filtering) -->
-          <div class="card" id="todayCard">
-            <div class="card-header">
-              <h3 class="card-title">Today's Jobs</h3>
-              <span class="status-badge scheduled" id="todayCount">0 jobs</span>
-            </div>
-            <div class="card-body" id="todayJobs">
-              <div class="loading"><div class="spinner"></div></div>
-            </div>
-          </div>
-
-          <!-- Quick Actions (hidden when filtering) -->
-          <div class="card" id="quickActionsCard">
-            <div class="card-header">
-              <h3 class="card-title">Quick Actions</h3>
-            </div>
-            <div class="card-body">
-              <a href="/tech/dashboard.html?status=In%20Progress" class="quick-action">
-                <div class="quick-action-icon orange" id="qaProgressIcon"></div>
-                <span class="text">View In Progress</span>
-              </a>
-              <a href="/tech/dashboard.html?status=Scheduled" class="quick-action">
-                <div class="quick-action-icon purple" id="qaScheduledIcon"></div>
-                <span class="text">View Scheduled</span>
-              </a>
-              <a href="/tech/dashboard.html?status=Completed" class="quick-action">
-                <div class="quick-action-icon green" id="qaCompletedIcon"></div>
-                <span class="text">View Completed</span>
-              </a>
-              <a href="/tech/dashboard.html?filter=today" class="quick-action">
-                <div class="quick-action-icon blue" id="qaTodayIcon"></div>
-                <span class="text">View Today's Jobs</span>
-              </a>
-            </div>
-          </div>
-
-          <!-- Jobs Table -->
-          <div class="card" id="jobsCard" style="grid-column: span 2;">
-            <div class="card-header">
-              <h3 class="card-title" id="jobsCardTitle">All Jobs</h3>
-              <a href="/tech/dashboard.html" class="btn btn-sm btn-secondary" id="viewAllBtn" style="display:none;">View All</a>
-            </div>
-            <div class="card-body no-padding">
-              <div id="allJobs">
-                <div class="loading"><div class="spinner"></div></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </main>
-  </div>
-
-  <!-- Job Detail Modal -->
-  <div class="modal-overlay" id="jobModal">
-    <div class="modal modal-large">
-      <div class="modal-header">
-        <h3 id="modalTitle">RO #---</h3>
-        <button class="modal-close" onclick="closeModal()">
-          <span class="icon" id="closeModalIcon"></span>
-        </button>
-      </div>
-      <div class="modal-body">
-        <!-- View Only Banner (shown for unassigned jobs) -->
-        <div class="view-only-banner" id="viewOnlyBanner" style="display:none;">
-          <span class="icon" id="viewOnlyIcon"></span>
-          <span>This job is assigned to another tech. View only.</span>
-        </div>
-
-        <!-- Vehicle Info -->
-        <div class="modal-section">
-          <h4>Vehicle Information</h4>
-          <div class="info-grid">
-            <div class="info-item">
-              <span class="info-label">Shop</span>
-              <span class="info-value" id="modalShop">-</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">Vehicle</span>
-              <span class="info-value" id="modalVehicle">-</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">VIN</span>
-              <span class="info-value mono" id="modalVin">-</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">Scheduled</span>
-              <span class="info-value" id="modalSchedule">-</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Calibrations -->
-        <div class="modal-section">
-          <h4>Calibrations Required</h4>
-          <div class="calibrations-box" id="modalCalibrations">-</div>
-        </div>
-
-        <!-- Documents -->
-        <div class="modal-section">
-          <h4>Documents</h4>
-          <div class="doc-cards" id="modalDocuments">
-            <!-- Populated by JS -->
-          </div>
-        </div>
-
-        <!-- Upload Documents -->
-        <div class="modal-section" id="uploadSection">
-          <h4>Upload Documents</h4>
-          <div class="upload-grid">
-            <div class="upload-item">
-              <label class="upload-label" for="uploadPostScan">
-                <span class="upload-icon" id="uploadIconPostScan"></span>
-                Post-Scan
-              </label>
-              <input type="file" id="uploadPostScan" accept=".pdf" style="display:none;" onchange="uploadDoc('postScan', this.files[0])">
-              <button class="btn btn-sm btn-secondary" onclick="document.getElementById('uploadPostScan').click()">Upload</button>
-            </div>
-            <div class="upload-item">
-              <label class="upload-label" for="uploadInvoice">
-                <span class="upload-icon" id="uploadIconInvoice"></span>
-                Invoice
-              </label>
-              <input type="file" id="uploadInvoice" accept=".pdf" style="display:none;" onchange="uploadDoc('invoice', this.files[0])">
-              <button class="btn btn-sm btn-secondary" onclick="document.getElementById('uploadInvoice').click()">Upload</button>
-            </div>
-            <div class="upload-item">
-              <label class="upload-label" for="uploadRevv">
-                <span class="upload-icon" id="uploadIconRevv"></span>
-                Revv Report
-              </label>
-              <input type="file" id="uploadRevv" accept=".pdf" style="display:none;" onchange="uploadDoc('revvReport', this.files[0])">
-              <button class="btn btn-sm btn-secondary" onclick="document.getElementById('uploadRevv').click()">Upload</button>
-            </div>
-          </div>
-          <div id="uploadStatus" style="margin-top:8px;font-size:13px;color:var(--text-secondary);"></div>
-        </div>
-
-        <!-- Notes -->
-        <div class="modal-section">
-          <h4>Notes</h4>
-          <div class="notes-box" id="modalNotes">-</div>
-        </div>
-
-        <!-- Status Update -->
-        <div class="modal-section" id="statusSection">
-          <h4>Update Status</h4>
-          <div class="status-buttons">
-            <button class="btn btn-secondary" onclick="updateStatus('In Progress')">
-              <span class="icon" id="statusWrenchIcon"></span>
-              Start Job
-            </button>
-            <button class="btn btn-success" onclick="updateStatus('Completed')">
-              <span class="icon" id="statusCheckIcon"></span>
-              Mark Complete
-            </button>
-          </div>
-        </div>
-
-        <!-- Add Note -->
-        <div class="modal-section" id="noteSection">
-          <h4>Add Note</h4>
-          <div class="add-note-form">
-            <textarea id="newNote" class="form-textarea" rows="2" placeholder="Enter note..."></textarea>
-            <button class="btn btn-secondary" onclick="addNote()">Add Note</button>
-          </div>
-        </div>
-
-        <!-- Request Assignment (shown for unassigned jobs) -->
-        <div class="modal-section" id="requestSection" style="display:none;">
-          <h4>Request Assignment</h4>
-          <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">
-            Want to work on this job? Submit a request to be assigned.
-          </p>
-          <div class="request-form">
-            <textarea id="requestReason" class="form-textarea" rows="2" placeholder="Reason for request (optional)..."></textarea>
-            <button class="btn-request-assignment" onclick="requestAssignment()">
-              Request Assignment
-            </button>
-          </div>
-          <div id="requestStatus" style="margin-top:8px;font-size:13px;"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <script src="/js/icons.js"></script>
-  <script src="/js/auth.js"></script>
-  <script src="/js/api.js"></script>
-  <script>
-    // Helper to get from either storage
-    function getStorageItem(key) {
-      return localStorage.getItem(key) || sessionStorage.getItem(key);
-    }
-
-    let allJobs = [];
-    let currentJob = null;
-    let currentFilter = 'all';
-    let currentTechName = '';
-
-    // Get filter from URL params
-    const urlParams = new URLSearchParams(window.location.search);
-    const statusFilter = urlParams.get('status');
-    const todayFilter = urlParams.get('filter');
-
-    document.addEventListener('DOMContentLoaded', async () => {
-      // Check auth
-      const token = getStorageItem('adas_access_token') || getStorageItem('token');
-      const role = getStorageItem('adas_user_role') || getStorageItem('userRole');
-
-      if (!token) {
-        window.location.replace('/?logout=true');
-        return;
-      }
-
-      if (role !== 'tech') {
-        localStorage.clear();
-        sessionStorage.clear();
-        window.location.replace('/?logout=true');
-        return;
-      }
-
-      // Set user info
-      const userName = getStorageItem('userName') || 'Technician';
-      currentTechName = userName;
-      document.getElementById('userName').textContent = userName;
-      document.getElementById('userAvatar').textContent = userName.charAt(0).toUpperCase();
-
-      // Initialize icons
-      initIcons();
-
-      // Setup sidebar
-      setupSidebar();
-
-      // Setup logout
-      setupLogout();
-
-      // Highlight active nav based on URL params
-      highlightActiveNav();
-
-      // Apply filter view (hide cards if filtering)
-      applyFilterView();
-
-      // Load data
-      await loadJobs();
-
-      // Apply URL filter after data loads
-      applyUrlFilter();
-    });
-
-    function applyFilterView() {
-      const isFiltering = statusFilter || todayFilter;
-      if (isFiltering) {
-        // Hide stats, today's jobs card, and quick actions when filtering
-        document.getElementById('statsGrid').style.display = 'none';
-        document.getElementById('todayCard').style.display = 'none';
-        document.getElementById('quickActionsCard').style.display = 'none';
-
-        // Update jobs card to span full width without grid
-        document.getElementById('dashboardGrid').className = '';
-        document.getElementById('jobsCard').style.gridColumn = '';
-
-        // Update card title and show view all button
-        const title = todayFilter === 'today' ? "Today's Jobs" : `${statusFilter} Jobs`;
-        document.getElementById('jobsCardTitle').textContent = title;
-        document.getElementById('viewAllBtn').style.display = 'inline-flex';
-      }
-    }
-
-    function highlightActiveNav() {
-      // Remove active from all nav items
-      document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-
-      // Find and activate the correct one
-      if (statusFilter) {
-        const activeLink = document.querySelector(`.nav-item[data-filter="${statusFilter}"]`);
-        if (activeLink) activeLink.classList.add('active');
-      } else if (todayFilter === 'today') {
-        document.getElementById('navTodayLink').classList.add('active');
-      } else {
-        // Default to dashboard
-        const dashboardLink = document.querySelector('.nav-item[href="/tech/dashboard.html"]:not([data-filter])');
-        if (dashboardLink) dashboardLink.classList.add('active');
-        else document.querySelector('.nav-item[data-filter="all"]')?.classList.add('active');
-      }
-    }
-
-    function applyUrlFilter() {
-      // Update page title based on filter
-      const pageTitle = document.querySelector('.page-title');
-
-      if (todayFilter === 'today') {
-        if (pageTitle) pageTitle.textContent = "Today's Jobs";
-        // Show only today's jobs in the main table
-        const today = new Date().toDateString();
-        const todayJobs = allJobs.filter(j => {
-          if (!j.scheduledDate) return false;
-          return new Date(j.scheduledDate).toDateString() === today;
-        });
-        renderJobs(todayJobs);
-      } else if (statusFilter) {
-        if (pageTitle) pageTitle.textContent = `${statusFilter} Jobs`;
-        filterJobs(statusFilter);
-      }
-    }
-
-    function initIcons() {
-      // Sidebar icons
-      document.getElementById('toggleIcon').innerHTML = Icons.menu;
-      document.getElementById('mobileMenuIcon').innerHTML = Icons.menu;
-      document.getElementById('navDashboard').innerHTML = Icons.chart;
-      document.getElementById('navToday').innerHTML = Icons.calendar;
-      document.getElementById('navScheduled').innerHTML = Icons.clock;
-      document.getElementById('navInProgress').innerHTML = Icons.wrench;
-      document.getElementById('navCompleted').innerHTML = Icons.checkCircle;
-
-      // Header icons
-      document.getElementById('logoutIcon').innerHTML = Icons.logout;
-
-      // Stat card icons
-      document.getElementById('statIconToday').innerHTML = Icons.calendar;
-      document.getElementById('statIconScheduled').innerHTML = Icons.clock;
-      document.getElementById('statIconProgress').innerHTML = Icons.wrench;
-      document.getElementById('statIconCompleted').innerHTML = Icons.checkCircle;
-
-      // Quick action icons
-      document.getElementById('qaProgressIcon').innerHTML = Icons.wrench;
-      document.getElementById('qaScheduledIcon').innerHTML = Icons.calendar;
-      document.getElementById('qaCompletedIcon').innerHTML = Icons.checkCircle;
-      document.getElementById('qaTodayIcon').innerHTML = Icons.calendar;
-
-      // Modal icons
-      document.getElementById('closeModalIcon').innerHTML = Icons.x;
-      document.getElementById('statusWrenchIcon').innerHTML = Icons.wrench;
-      document.getElementById('statusCheckIcon').innerHTML = Icons.checkCircle;
-
-      // Upload icons
-      document.getElementById('uploadIconPostScan').innerHTML = Icons.clipboard;
-      document.getElementById('uploadIconInvoice').innerHTML = Icons.receipt || Icons.file;
-      document.getElementById('uploadIconRevv').innerHTML = Icons.barChart;
-    }
-
-    function setupSidebar() {
-      const sidebar = document.getElementById('sidebar');
-      const toggle = document.getElementById('sidebarToggle');
-      const mobileBtn = document.getElementById('mobileMenuBtn');
-      const overlay = document.getElementById('sidebarOverlay');
-
-      toggle?.addEventListener('click', () => sidebar.classList.toggle('collapsed'));
-      mobileBtn?.addEventListener('click', () => sidebar.classList.toggle('open'));
-      overlay?.addEventListener('click', () => sidebar.classList.remove('open'));
-    }
-
-    function setupLogout() {
-      document.getElementById('logoutBtn')?.addEventListener('click', () => {
-        localStorage.clear();
-        sessionStorage.clear();
-        window.location.replace('/?logout=true');
-      });
-    }
-
-    async function loadJobs() {
-      try {
-        const token = getStorageItem('adas_access_token') || getStorageItem('token');
-        const response = await fetch('/api/tech/vehicles', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await response.json();
-
-        if (!data.success) throw new Error(data.error);
-
-        allJobs = data.vehicles || [];
-        updateStats(allJobs);
-        updateTodayJobs(allJobs);
-        renderJobs(allJobs);
-
-      } catch (err) {
-        console.error('Load error:', err);
-        document.getElementById('todayJobs').innerHTML = '<div class="empty-state"><p>Failed to load jobs</p></div>';
-        document.getElementById('allJobs').innerHTML = '<div class="empty-state"><p>Failed to load jobs</p></div>';
-      }
-    }
-
-    function updateStats(jobs) {
-      const today = new Date().toDateString();
-      const todayJobs = jobs.filter(j => {
-        if (!j.scheduledDate) return false;
-        return new Date(j.scheduledDate).toDateString() === today;
-      });
-
-      document.getElementById('statToday').textContent = todayJobs.length;
-      document.getElementById('statScheduled').textContent = jobs.filter(j => j.status === 'Scheduled' || j.status === 'Rescheduled').length;
-      document.getElementById('statInProgress').textContent = jobs.filter(j => j.status === 'In Progress').length;
-      document.getElementById('statCompleted').textContent = jobs.filter(j => j.status === 'Completed').length;
-
-      if (todayJobs.length > 0) {
-        document.getElementById('todayBadge').textContent = todayJobs.length;
-        document.getElementById('todayBadge').style.display = '';
-      }
-    }
-
-    function updateTodayJobs(jobs) {
-      const today = new Date().toDateString();
-      const todayJobs = jobs.filter(j => {
-        if (!j.scheduledDate) return false;
-        return new Date(j.scheduledDate).toDateString() === today;
-      });
-
-      document.getElementById('todayCount').textContent = `${todayJobs.length} jobs`;
-
-      if (todayJobs.length === 0) {
-        document.getElementById('todayJobs').innerHTML = '<div class="empty-state"><p>No jobs scheduled for today</p></div>';
-        return;
-      }
-
-      document.getElementById('todayJobs').innerHTML = todayJobs.map(job => `
-        <div class="schedule-item" onclick="openJobModal('${job.roPo}')">
-          <div class="schedule-time">${job.scheduledTime || 'TBD'}</div>
-          <div class="schedule-info">
-            <div class="schedule-ro">RO #${escapeHtml(job.roPo)}</div>
-            <div class="schedule-shop">${escapeHtml(job.shopName || 'Unknown Shop')}</div>
-          </div>
-          <span class="status-badge ${getStatusClass(job.status)}">${job.status}</span>
-        </div>
-      `).join('');
-    }
-
-    function filterJobs(status) {
-      currentFilter = status;
-      if (status === 'all') {
-        renderJobs(allJobs);
-      } else {
-        renderJobs(allJobs.filter(j => j.status === status || (status === 'Scheduled' && j.status === 'Rescheduled')));
-      }
-    }
-
-    function isJobAssignedToMe(job) {
-      const jobTech = (job.technician || job.technicianAssigned || '').toLowerCase().trim();
-      return jobTech === currentTechName.toLowerCase().trim();
-    }
-
-    function renderJobs(jobs) {
-      if (jobs.length === 0) {
-        document.getElementById('allJobs').innerHTML = '<div class="empty-state"><p>No jobs found</p></div>';
-        return;
-      }
-
-      document.getElementById('allJobs').innerHTML = `
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>RO #</th>
-              <th>Shop</th>
-              <th>Vehicle</th>
-              <th>Status</th>
-              <th>Assigned</th>
-              <th>Scheduled</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            ${jobs.map(job => {
-              const isAssigned = isJobAssignedToMe(job);
-              const techName = job.technician || job.technicianAssigned || '-';
-              return `
-              <tr class="clickable ${isAssigned ? '' : 'not-assigned'}" onclick="openJobModal('${job.roPo}')">
-                <td><strong>${escapeHtml(job.roPo)}</strong></td>
-                <td>${escapeHtml(job.shopName || '-')}</td>
-                <td>${escapeHtml(job.vehicle || '-')}</td>
-                <td><span class="status-badge ${getStatusClass(job.status)}">${job.status || 'New'}</span></td>
-                <td>
-                  <span class="assignment-badge ${isAssigned ? 'assigned' : 'unassigned'}">
-                    ${isAssigned ? 'You' : escapeHtml(techName)}
-                  </span>
-                </td>
-                <td>${job.scheduledDate ? formatDate(job.scheduledDate) : '-'}</td>
-                <td><span class="icon">${Icons.chevronRight}</span></td>
-              </tr>
-            `}).join('')}
-          </tbody>
-        </table>
-      `;
-    }
-
-    function openJobModal(roPo) {
-      currentJob = allJobs.find(j => j.roPo === roPo);
-      if (!currentJob) return;
-
-      const isAssigned = isJobAssignedToMe(currentJob);
-      const techName = currentJob.technician || currentJob.technicianAssigned || 'Unassigned';
-
-      document.getElementById('modalTitle').textContent = `RO #${currentJob.roPo}`;
-      document.getElementById('modalShop').textContent = currentJob.shopName || '-';
-      document.getElementById('modalVehicle').textContent = currentJob.vehicle || '-';
-      document.getElementById('modalVin').textContent = currentJob.vin || '-';
-      document.getElementById('modalSchedule').textContent = currentJob.scheduledDate ? formatDate(currentJob.scheduledDate) + ' ' + (currentJob.scheduledTime || '') : '-';
-      document.getElementById('modalCalibrations').textContent = currentJob.requiredCalibrations || '-';
-      document.getElementById('modalNotes').textContent = currentJob.notes || 'No notes';
-
-      // Show/hide view-only banner and action sections based on assignment
-      const viewOnlyBanner = document.getElementById('viewOnlyBanner');
-      const uploadSection = document.getElementById('uploadSection');
-      const statusSection = document.getElementById('statusSection');
-      const noteSection = document.getElementById('noteSection');
-      const requestSection = document.getElementById('requestSection');
-
-      if (isAssigned) {
-        // Assigned to me - show full actions
-        if (viewOnlyBanner) viewOnlyBanner.style.display = 'none';
-        if (uploadSection) uploadSection.style.display = 'block';
-        if (statusSection) statusSection.style.display = 'block';
-        if (noteSection) noteSection.style.display = 'block';
-        if (requestSection) requestSection.style.display = 'none';
-      } else {
-        // Not assigned - view only with request option
-        if (viewOnlyBanner) {
-          viewOnlyBanner.style.display = 'flex';
-          viewOnlyBanner.innerHTML = `
-            <span class="icon">${Icons.eye}</span>
-            <span>This job is assigned to <strong>${escapeHtml(techName)}</strong>. You can view but not modify.</span>
-          `;
-        }
-        if (uploadSection) uploadSection.style.display = 'none';
-        if (statusSection) statusSection.style.display = 'none';
-        if (noteSection) noteSection.style.display = 'none';
-        if (requestSection) requestSection.style.display = 'block';
-      }
-
-      // Documents
-      const docs = [
-        { name: 'Estimate', url: currentJob.estimatePdfUrl },
-        { name: 'Pre-Scan', url: currentJob.preScanPdfUrl },
-        { name: 'Revv Report', url: currentJob.revvReportUrl },
-        { name: 'Post-Scan', url: currentJob.postScanPdfUrl },
-        { name: 'Invoice', url: currentJob.invoicePdfUrl }
-      ];
-
-      document.getElementById('modalDocuments').innerHTML = docs.map(doc => `
-        <div class="doc-card ${doc.url ? 'available' : 'unavailable'}" ${doc.url ? `onclick="window.open('${doc.url}', '_blank')"` : ''}>
-          <div class="doc-card-icon">${Icons.file}</div>
-          <div class="doc-card-name">${doc.name}</div>
-          <div class="doc-card-status">${doc.url ? 'View' : 'Not available'}</div>
-        </div>
-      `).join('');
-
-      document.getElementById('jobModal').classList.add('open');
-    }
-
-    function closeModal() {
-      document.getElementById('jobModal').classList.remove('open');
-      currentJob = null;
-    }
-
-    async function updateStatus(status) {
-      if (!currentJob) return;
-
-      try {
-        const token = getStorageItem('adas_access_token') || getStorageItem('token');
-        const response = await fetch(`/api/tech/jobs/${currentJob.roPo}/status`, {
-          method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ status })
-        });
-
-        const data = await response.json();
-        if (!data.success) throw new Error(data.error);
-
-        closeModal();
-        await loadJobs();
-      } catch (err) {
-        alert('Failed to update status: ' + err.message);
-      }
-    }
-
-    async function addNote() {
-      if (!currentJob) return;
-      const note = document.getElementById('newNote').value.trim();
-      if (!note) return;
-
-      try {
-        const token = getStorageItem('adas_access_token') || getStorageItem('token');
-        const response = await fetch(`/api/tech/jobs/${currentJob.roPo}/notes`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ note })
-        });
-
-        const data = await response.json();
-        if (!data.success) throw new Error(data.error);
-
-        document.getElementById('newNote').value = '';
-        await loadJobs();
-        openJobModal(currentJob.roPo);
-      } catch (err) {
-        alert('Failed to add note: ' + err.message);
-      }
-    }
-
-    async function requestAssignment() {
-      if (!currentJob) return;
-
-      const reason = document.getElementById('requestReason')?.value.trim() || '';
-      const statusEl = document.getElementById('requestStatus');
-
-      statusEl.textContent = 'Submitting request...';
-      statusEl.style.color = 'var(--text-secondary)';
-
-      try {
-        const token = getStorageItem('adas_access_token') || getStorageItem('token');
-        const response = await fetch('/api/tech/request-assignment', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            roPo: currentJob.roPo,
-            requestingTech: currentTechName,
-            reason: reason
-          })
-        });
-
-        const data = await response.json();
-        if (!data.success) throw new Error(data.error || 'Request failed');
-
-        statusEl.textContent = 'Request submitted! Admin will review shortly.';
-        statusEl.style.color = 'var(--success, #34c759)';
-
-        // Clear the reason field
-        if (document.getElementById('requestReason')) {
-          document.getElementById('requestReason').value = '';
-        }
-
-        // Disable the button after successful request
-        const btn = document.querySelector('.btn-request-assignment');
-        if (btn) {
-          btn.disabled = true;
-          btn.textContent = 'Request Pending';
-        }
-      } catch (err) {
-        statusEl.textContent = 'Failed: ' + err.message;
-        statusEl.style.color = 'var(--danger, #ff3b30)';
-      }
-    }
-
-    async function uploadDoc(docType, file) {
-      if (!currentJob || !file) return;
-
-      const statusEl = document.getElementById('uploadStatus');
-      statusEl.textContent = `Uploading ${docType}...`;
-      statusEl.style.color = 'var(--text-secondary)';
-
-      try {
-        const token = getStorageItem('adas_access_token') || getStorageItem('token');
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('docType', docType);
-
-        const response = await fetch(`/api/tech/vehicles/${currentJob.roPo}/upload`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          },
-          body: formData
-        });
-
-        const data = await response.json();
-        if (!data.success) throw new Error(data.error);
-
-        statusEl.textContent = `${docType} uploaded successfully!`;
-        statusEl.style.color = 'var(--success)';
-
-        // Refresh job data to show new document
-        await loadJobs();
-        openJobModal(currentJob.roPo);
-      } catch (err) {
-        statusEl.textContent = `Failed to upload: ${err.message}`;
-        statusEl.style.color = 'var(--danger)';
-      }
-    }
-
-    function formatDate(dateStr) {
-      if (!dateStr || dateStr.includes('1899')) return '';
-      try {
-        return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      } catch { return dateStr; }
-    }
-
-    function getStatusClass(status) {
-      if (!status) return 'new';
-      return status.toLowerCase().replace(/\s+/g, '-');
-    }
-
-    function escapeHtml(text) {
-      if (!text) return '';
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
-    }
-  </script>
-
-  <style>
     /* Modal Styles */
     .modal-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.5);
+      background: rgba(0, 0, 0, 0.5);
       display: none;
       align-items: center;
       justify-content: center;
@@ -1040,22 +379,18 @@
 
     .modal {
       background: white;
-      border-radius: 12px;
+      border-radius: 16px;
       width: 100%;
-      max-width: 600px;
+      max-width: 560px;
       max-height: 90vh;
       overflow: hidden;
       display: flex;
       flex-direction: column;
     }
 
-    .modal-large {
-      max-width: 700px;
-    }
-
     .modal-header {
       padding: 20px 24px;
-      border-bottom: 1px solid var(--border);
+      border-bottom: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.06));
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -1067,15 +402,19 @@
     }
 
     .modal-close {
-      background: none;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-grouped, #f2f2f7);
       border: none;
-      padding: 8px;
+      border-radius: 50%;
       cursor: pointer;
-      border-radius: 6px;
     }
 
     .modal-close:hover {
-      background: var(--bg);
+      background: var(--bg, #e5e5ea);
     }
 
     .modal-body {
@@ -1096,133 +435,708 @@
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      color: var(--text-secondary);
-      margin-bottom: 12px;
+      color: var(--text-secondary, #86868b);
+      margin-bottom: 8px;
     }
 
-    .info-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 16px;
-    }
-
-    .info-item {
+    .info-row {
       display: flex;
-      flex-direction: column;
-      gap: 4px;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.06));
+    }
+
+    .info-row:last-child {
+      border-bottom: none;
     }
 
     .info-label {
-      font-size: 12px;
-      color: var(--text-secondary);
+      font-size: 14px;
+      color: var(--text-secondary, #86868b);
     }
 
     .info-value {
       font-size: 14px;
+      font-weight: 500;
+      color: var(--text-primary, #1d1d1f);
     }
 
     .info-value.mono {
-      font-family: monospace;
+      font-family: ui-monospace, monospace;
+      font-size: 13px;
     }
 
-    .calibrations-box,
-    .notes-box {
-      background: var(--bg);
+    .calibrations-box {
+      background: var(--bg-grouped, #f2f2f7);
       padding: 12px 16px;
       border-radius: 8px;
       font-size: 14px;
+      color: var(--text-primary, #1d1d1f);
     }
 
-    .status-buttons {
-      display: flex;
-      gap: 12px;
-    }
-
-    .add-note-form {
-      display: flex;
-      gap: 12px;
-      align-items: flex-start;
-    }
-
-    .add-note-form textarea {
-      flex: 1;
-    }
-
-    .form-textarea {
-      width: 100%;
-      padding: 12px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      font-family: inherit;
-      font-size: 14px;
-      resize: vertical;
-    }
-
-    /* Filter Pills */
-    .filter-pills {
-      display: flex;
-      gap: 8px;
-    }
-
-    .pill {
-      padding: 6px 14px;
-      border-radius: 20px;
-      border: 1px solid var(--border);
-      background: white;
-      font-size: 13px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .pill:hover {
-      background: var(--bg);
-    }
-
-    .pill.active {
-      background: var(--primary);
-      color: white;
-      border-color: var(--primary);
-    }
-
-    /* Upload Grid */
-    .upload-grid {
+    .doc-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-    }
-
-    .upload-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
       gap: 8px;
-      padding: 12px;
-      border: 1px dashed var(--border);
-      border-radius: 8px;
-      background: var(--bg);
     }
 
-    .upload-label {
+    .doc-item {
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 4px;
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--text-secondary);
+      padding: 12px 8px;
+      background: var(--bg-grouped, #f2f2f7);
+      border-radius: 8px;
+      font-size: 12px;
+      color: var(--text-secondary, #86868b);
+      text-decoration: none;
+      transition: all 0.15s ease;
     }
 
-    .upload-icon {
+    .doc-item.available {
+      color: var(--text-primary, #1d1d1f);
+      cursor: pointer;
+    }
+
+    .doc-item.available:hover {
+      background: var(--bg, #e5e5ea);
+    }
+
+    .doc-item .icon {
       width: 24px;
       height: 24px;
-      color: var(--text-tertiary);
     }
 
-    @media (max-width: 500px) {
-      .upload-grid {
-        grid-template-columns: 1fr;
+    .doc-item.available .icon {
+      color: #007aff;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 12px;
+    }
+
+    .action-buttons .btn {
+      flex: 1;
+      padding: 12px 16px;
+      font-size: 15px;
+      font-weight: 500;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.15s ease;
+    }
+
+    .action-buttons .btn .icon {
+      width: 18px;
+      height: 18px;
+    }
+
+    .btn-start {
+      background: #af52de;
+      color: white;
+    }
+
+    .btn-start:hover {
+      background: #9b47c7;
+    }
+
+    .btn-complete {
+      background: #34c759;
+      color: white;
+    }
+
+    .btn-complete:hover {
+      background: #2db84d;
+    }
+
+    .btn-disabled {
+      background: var(--bg-grouped, #f2f2f7);
+      color: var(--text-tertiary, #aeaeb2);
+      cursor: not-allowed;
+    }
+
+    .view-only-banner {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      background: rgba(142, 142, 147, 0.1);
+      border-radius: 8px;
+      font-size: 14px;
+      color: #8e8e93;
+      margin-bottom: 16px;
+    }
+
+    .view-only-banner .icon {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+    }
+
+    /* Loading */
+    .loading {
+      display: flex;
+      justify-content: center;
+      padding: 32px;
+    }
+
+    .spinner {
+      width: 24px;
+      height: 24px;
+      border: 2px solid var(--border);
+      border-top-color: var(--primary, #007aff);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      .dashboard-container {
+        padding: 16px;
+      }
+
+      .dashboard-title {
+        font-size: 24px;
+      }
+
+      .job-row {
+        padding: 12px;
+      }
+
+      .job-meta {
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 6px;
+      }
+
+      .action-buttons {
+        flex-direction: column;
       }
     }
   </style>
+</head>
+<body>
+  <!-- Simple Header -->
+  <header class="simple-header">
+    <div class="header-logo">
+      <div class="logo-icon">A</div>
+      <span class="logo-text">ADAS F1RST</span>
+    </div>
+    <button class="btn-logout" id="logoutBtn">
+      <span class="icon" id="logoutIcon"></span>
+      Sign Out
+    </button>
+  </header>
+
+  <div class="dashboard-container">
+    <!-- Dashboard Header -->
+    <div class="dashboard-header">
+      <div>
+        <h1 class="dashboard-title">Your Dashboard</h1>
+        <p class="tech-name" id="techName">Loading...</p>
+      </div>
+    </div>
+
+    <!-- YOUR JOBS Section -->
+    <div class="section" id="yourJobsSection">
+      <div class="section-header">
+        <h2>
+          <span class="status-dot blue"></span>
+          Your Jobs
+        </h2>
+        <span class="section-count" id="yourJobsCount">0</span>
+      </div>
+
+      <div class="section-content" id="yourJobsContent">
+        <!-- Needs RevvADAS -->
+        <div class="subsection" id="needsRevvSection">
+          <div class="subsection-header">
+            <span class="status-dot red"></span>
+            <h3>Needs RevvADAS Report</h3>
+          </div>
+          <div class="job-list" id="needsRevvList">
+            <div class="loading"><div class="spinner"></div></div>
+          </div>
+        </div>
+
+        <!-- Today's Schedule -->
+        <div class="subsection" id="todaySection">
+          <div class="subsection-header">
+            <span class="status-dot blue"></span>
+            <h3>Today's Schedule</h3>
+          </div>
+          <div class="job-list" id="todayList">
+            <div class="loading"><div class="spinner"></div></div>
+          </div>
+        </div>
+
+        <!-- In Progress -->
+        <div class="subsection" id="inProgressSection">
+          <div class="subsection-header">
+            <span class="status-dot purple"></span>
+            <h3>In Progress</h3>
+          </div>
+          <div class="job-list" id="inProgressList">
+            <div class="loading"><div class="spinner"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ALL JOBS Section (Collapsed by default) -->
+    <div class="section all-jobs-section" id="allJobsSection">
+      <div class="section-header" onclick="toggleAllJobs()">
+        <h2>
+          <span class="status-dot gray"></span>
+          All Jobs
+        </h2>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span class="section-count" id="allJobsCount">0</span>
+          <span class="section-toggle" id="allJobsToggle"></span>
+        </div>
+      </div>
+      <div class="section-content" id="allJobsContent">
+        <p class="view-only-note">
+          <span class="icon" id="viewOnlyIcon"></span>
+          Jobs assigned to other technicians (view only)
+        </p>
+        <div class="job-list" id="allJobsList">
+          <div class="loading"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Job Detail Modal -->
+  <div class="modal-overlay" id="jobModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modalTitle">RO #---</h3>
+        <button class="modal-close" onclick="closeModal()">
+          <span class="icon" id="closeModalIcon"></span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <!-- View Only Banner -->
+        <div class="view-only-banner" id="viewOnlyBanner" style="display:none;">
+          <span class="icon" id="bannerIcon"></span>
+          <span id="bannerText">This job is assigned to another technician.</span>
+        </div>
+
+        <!-- Vehicle Info -->
+        <div class="modal-section">
+          <h4>Vehicle Information</h4>
+          <div class="info-row">
+            <span class="info-label">Shop</span>
+            <span class="info-value" id="modalShop">-</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Vehicle</span>
+            <span class="info-value" id="modalVehicle">-</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">VIN</span>
+            <span class="info-value mono" id="modalVin">-</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Scheduled</span>
+            <span class="info-value" id="modalSchedule">-</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Status</span>
+            <span class="info-value" id="modalStatus">-</span>
+          </div>
+        </div>
+
+        <!-- Calibrations -->
+        <div class="modal-section">
+          <h4>Required Calibrations</h4>
+          <div class="calibrations-box" id="modalCalibrations">-</div>
+        </div>
+
+        <!-- Documents -->
+        <div class="modal-section">
+          <h4>Documents</h4>
+          <div class="doc-grid" id="modalDocuments">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+
+        <!-- Actions (hidden for view-only) -->
+        <div class="modal-section" id="actionsSection">
+          <h4>Actions</h4>
+          <div class="action-buttons">
+            <button class="btn btn-start" id="btnStart" onclick="updateStatus('In Progress')">
+              <span class="icon" id="startIcon"></span>
+              Start Job
+            </button>
+            <button class="btn btn-complete" id="btnComplete" onclick="updateStatus('Completed')">
+              <span class="icon" id="completeIcon"></span>
+              Complete
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/icons.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/api.js"></script>
+  <script>
+    // State
+    let allJobs = [];
+    let myJobs = [];
+    let otherJobs = [];
+    let currentJob = null;
+    let currentTechName = '';
+    let isAllJobsExpanded = false;
+
+    // Helper functions
+    function getStorageItem(key) {
+      return localStorage.getItem(key) || sessionStorage.getItem(key);
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Check auth
+      const token = getStorageItem('adas_access_token') || getStorageItem('token');
+      const role = getStorageItem('adas_user_role') || getStorageItem('userRole');
+
+      if (!token) {
+        window.location.replace('/?logout=true');
+        return;
+      }
+
+      if (role !== 'tech') {
+        localStorage.clear();
+        sessionStorage.clear();
+        window.location.replace('/?logout=true');
+        return;
+      }
+
+      // Get tech name
+      currentTechName = getStorageItem('userName') || 'Technician';
+      document.getElementById('techName').textContent = `Welcome, ${currentTechName}`;
+
+      // Initialize icons
+      initIcons();
+
+      // Setup logout
+      document.getElementById('logoutBtn').addEventListener('click', () => {
+        localStorage.clear();
+        sessionStorage.clear();
+        window.location.replace('/?logout=true');
+      });
+
+      // Load jobs
+      await loadJobs();
+    });
+
+    function initIcons() {
+      document.getElementById('logoutIcon').innerHTML = Icons.logout;
+      document.getElementById('closeModalIcon').innerHTML = Icons.x;
+      document.getElementById('allJobsToggle').innerHTML = Icons.chevronRight;
+      document.getElementById('viewOnlyIcon').innerHTML = Icons.eye;
+      document.getElementById('bannerIcon').innerHTML = Icons.eye;
+      document.getElementById('startIcon').innerHTML = Icons.wrench;
+      document.getElementById('completeIcon').innerHTML = Icons.checkCircle;
+    }
+
+    async function loadJobs() {
+      try {
+        const token = getStorageItem('adas_access_token') || getStorageItem('token');
+        const response = await fetch('/api/tech/vehicles', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+
+        if (!data.success) throw new Error(data.error);
+
+        allJobs = data.vehicles || [];
+
+        // Split into my jobs vs other jobs
+        const techNameLower = currentTechName.toLowerCase().trim();
+        myJobs = allJobs.filter(j => {
+          const jobTech = (j.technician || j.technicianAssigned || '').toLowerCase().trim();
+          return jobTech === techNameLower;
+        });
+        otherJobs = allJobs.filter(j => {
+          const jobTech = (j.technician || j.technicianAssigned || '').toLowerCase().trim();
+          return jobTech !== techNameLower;
+        });
+
+        renderYourJobs();
+        renderAllJobs();
+
+      } catch (err) {
+        console.error('Load error:', err);
+        document.getElementById('needsRevvList').innerHTML = '<div class="empty-state"><p>Failed to load jobs</p></div>';
+      }
+    }
+
+    function renderYourJobs() {
+      const today = new Date().toDateString();
+
+      // Filter into categories
+      const needsRevv = myJobs.filter(j => {
+        const status = (j.status || '').toLowerCase();
+        const hasRevv = j.revvReportUrl || j.revvPdf || j.revv_pdf || j.revvReportPdf;
+        return !hasRevv && status !== 'completed' && status !== 'cancelled';
+      });
+
+      const todayJobs = myJobs.filter(j => {
+        if (!j.scheduledDate) return false;
+        const jobDate = new Date(j.scheduledDate).toDateString();
+        const status = (j.status || '').toLowerCase();
+        return jobDate === today && status !== 'completed';
+      });
+
+      const inProgress = myJobs.filter(j => {
+        const status = (j.status || '').toLowerCase();
+        return status === 'in progress';
+      });
+
+      // Update counts
+      document.getElementById('yourJobsCount').textContent = myJobs.length;
+
+      // Render Needs RevvADAS
+      if (needsRevv.length === 0) {
+        document.getElementById('needsRevvSection').style.display = 'none';
+      } else {
+        document.getElementById('needsRevvSection').style.display = 'block';
+        document.getElementById('needsRevvList').innerHTML = needsRevv.map(j => renderJobRow(j, 'needs-action', 'red')).join('');
+      }
+
+      // Render Today
+      if (todayJobs.length === 0) {
+        document.getElementById('todayList').innerHTML = `
+          <div class="empty-state">
+            <span class="icon">${Icons.calendar}</span>
+            <p>No jobs scheduled for today</p>
+          </div>
+        `;
+      } else {
+        document.getElementById('todayList').innerHTML = todayJobs.map(j => {
+          const status = (j.status || '').toLowerCase();
+          const colorClass = status === 'in progress' ? 'in-progress' : 'scheduled';
+          const dotColor = status === 'in progress' ? 'purple' : 'blue';
+          return renderJobRow(j, colorClass, dotColor);
+        }).join('');
+      }
+
+      // Render In Progress
+      if (inProgress.length === 0) {
+        document.getElementById('inProgressSection').style.display = 'none';
+      } else {
+        document.getElementById('inProgressSection').style.display = 'block';
+        document.getElementById('inProgressList').innerHTML = inProgress.map(j => renderJobRow(j, 'in-progress', 'purple')).join('');
+      }
+    }
+
+    function renderAllJobs() {
+      document.getElementById('allJobsCount').textContent = otherJobs.length;
+
+      if (otherJobs.length === 0) {
+        document.getElementById('allJobsList').innerHTML = `
+          <div class="empty-state">
+            <span class="icon">${Icons.checkCircle}</span>
+            <p>No other jobs available</p>
+          </div>
+        `;
+      } else {
+        document.getElementById('allJobsList').innerHTML = otherJobs.map(j => renderJobRow(j, 'view-only', 'gray', true)).join('');
+      }
+    }
+
+    function renderJobRow(job, statusClass, dotColor, viewOnly = false) {
+      const roPo = escapeHtml(job.roPo || '');
+      const shop = escapeHtml(job.shopName || 'Unknown Shop');
+      const vehicle = escapeHtml(job.vehicle || 'Unknown Vehicle');
+      const time = job.scheduledTime || '';
+      const status = job.status || 'New';
+
+      let badgeClass = 'scheduled';
+      let badgeText = status;
+      if (statusClass === 'needs-action') {
+        badgeClass = 'needs-revv';
+        badgeText = 'Needs Revv';
+      } else if (statusClass === 'in-progress') {
+        badgeClass = 'in-progress';
+        badgeText = 'In Progress';
+      } else if (statusClass === 'completed') {
+        badgeClass = 'completed';
+        badgeText = 'Completed';
+      } else if (viewOnly) {
+        badgeClass = 'view-only';
+        badgeText = job.technician || job.technicianAssigned || 'Unassigned';
+      }
+
+      return `
+        <div class="job-row ${statusClass}" onclick="openModal('${roPo}', ${viewOnly})">
+          <div class="job-status-indicator ${dotColor}"></div>
+          <div class="job-info">
+            <div class="job-ro">RO #${roPo}</div>
+            <div class="job-details">${shop} - ${vehicle}</div>
+          </div>
+          <div class="job-meta">
+            ${time ? `<span class="job-time">${escapeHtml(time)}</span>` : ''}
+            <span class="job-badge ${badgeClass}">${escapeHtml(badgeText)}</span>
+            <span class="job-arrow">${Icons.chevronRight}</span>
+          </div>
+        </div>
+      `;
+    }
+
+    function toggleAllJobs() {
+      const section = document.getElementById('allJobsSection');
+      const toggle = document.getElementById('allJobsToggle');
+
+      isAllJobsExpanded = !isAllJobsExpanded;
+
+      if (isAllJobsExpanded) {
+        section.classList.add('expanded');
+        toggle.style.transform = 'rotate(90deg)';
+      } else {
+        section.classList.remove('expanded');
+        toggle.style.transform = 'rotate(0deg)';
+      }
+    }
+
+    function openModal(roPo, viewOnly) {
+      currentJob = allJobs.find(j => j.roPo === roPo);
+      if (!currentJob) return;
+
+      document.getElementById('modalTitle').textContent = `RO #${currentJob.roPo}`;
+      document.getElementById('modalShop').textContent = currentJob.shopName || '-';
+      document.getElementById('modalVehicle').textContent = currentJob.vehicle || '-';
+      document.getElementById('modalVin').textContent = currentJob.vin || '-';
+      document.getElementById('modalStatus').textContent = currentJob.status || 'New';
+
+      // Schedule
+      let scheduleText = '-';
+      if (currentJob.scheduledDate) {
+        const date = new Date(currentJob.scheduledDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        scheduleText = currentJob.scheduledTime ? `${date} at ${currentJob.scheduledTime}` : date;
+      }
+      document.getElementById('modalSchedule').textContent = scheduleText;
+
+      // Calibrations
+      document.getElementById('modalCalibrations').textContent = currentJob.requiredCalibrations || 'Not determined yet';
+
+      // Documents
+      const docs = [
+        { name: 'Estimate', url: currentJob.estimatePdf || currentJob.estimate_pdf || currentJob.estimatePdfUrl },
+        { name: 'Pre-Scan', url: currentJob.prescanPdf || currentJob.preScanPdf || currentJob.preScanPdfUrl },
+        { name: 'Revv Report', url: currentJob.revvPdf || currentJob.revvReportPdf || currentJob.revvReportUrl },
+        { name: 'Post-Scan', url: currentJob.postscanPdf || currentJob.postScanPdf || currentJob.postScanPdfUrl },
+        { name: 'Invoice', url: currentJob.invoicePdf || currentJob.invoice_pdf || currentJob.invoicePdfUrl }
+      ];
+
+      document.getElementById('modalDocuments').innerHTML = docs.map(doc => {
+        const hasUrl = doc.url && doc.url.startsWith('http');
+        return `
+          <${hasUrl ? 'a href="' + doc.url + '" target="_blank"' : 'div'} class="doc-item ${hasUrl ? 'available' : ''}">
+            <span class="icon">${Icons.file}</span>
+            <span>${doc.name}</span>
+          </${hasUrl ? 'a' : 'div'}>
+        `;
+      }).join('');
+
+      // Show/hide actions based on view-only
+      const actionsSection = document.getElementById('actionsSection');
+      const viewOnlyBanner = document.getElementById('viewOnlyBanner');
+
+      if (viewOnly) {
+        actionsSection.style.display = 'none';
+        viewOnlyBanner.style.display = 'flex';
+        const tech = currentJob.technician || currentJob.technicianAssigned || 'another technician';
+        document.getElementById('bannerText').textContent = `Assigned to ${tech} (view only)`;
+      } else {
+        actionsSection.style.display = 'block';
+        viewOnlyBanner.style.display = 'none';
+
+        // Update button states based on current status
+        const status = (currentJob.status || '').toLowerCase();
+        const btnStart = document.getElementById('btnStart');
+        const btnComplete = document.getElementById('btnComplete');
+
+        if (status === 'in progress') {
+          btnStart.classList.add('btn-disabled');
+          btnStart.disabled = true;
+          btnComplete.classList.remove('btn-disabled');
+          btnComplete.disabled = false;
+        } else if (status === 'completed') {
+          btnStart.classList.add('btn-disabled');
+          btnStart.disabled = true;
+          btnComplete.classList.add('btn-disabled');
+          btnComplete.disabled = true;
+        } else {
+          btnStart.classList.remove('btn-disabled');
+          btnStart.disabled = false;
+          btnComplete.classList.remove('btn-disabled');
+          btnComplete.disabled = false;
+        }
+      }
+
+      document.getElementById('jobModal').classList.add('open');
+    }
+
+    function closeModal() {
+      document.getElementById('jobModal').classList.remove('open');
+      currentJob = null;
+    }
+
+    async function updateStatus(newStatus) {
+      if (!currentJob) return;
+
+      try {
+        const token = getStorageItem('adas_access_token') || getStorageItem('token');
+        const response = await fetch(`/api/tech/vehicles/${currentJob.roPo}/status`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ status: newStatus })
+        });
+
+        const data = await response.json();
+        if (!data.success) throw new Error(data.error);
+
+        closeModal();
+        await loadJobs();
+      } catch (err) {
+        alert('Failed to update status: ' + err.message);
+      }
+    }
+
+    // Close on escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeModal();
+    });
+
+    // Close on backdrop click
+    document.getElementById('jobModal').addEventListener('click', (e) => {
+      if (e.target.classList.contains('modal-overlay')) closeModal();
+    });
+  </script>
 </body>
 </html>
