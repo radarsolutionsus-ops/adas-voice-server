@@ -216,8 +216,9 @@
           throw new Error(data.error || 'Invalid username or password');
         }
 
-        // Store auth data
-        localStorage.setItem('token', data.token);
+        // Store auth data - server returns accessToken and refreshToken
+        localStorage.setItem('token', data.accessToken);
+        localStorage.setItem('refreshToken', data.refreshToken);
         localStorage.setItem('userRole', data.user.role);
         localStorage.setItem('userName', data.user.name);
         localStorage.setItem('userShopName', data.user.shopName || '');
