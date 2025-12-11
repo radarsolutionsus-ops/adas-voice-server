@@ -90,9 +90,11 @@ function setupCommonHandlers() {
     logoutBtn.addEventListener('click', async (e) => {
       e.preventDefault();
       e.stopPropagation();
+      console.log('[SHOP] Logout clicked');
 
       // Clear all auth data
       localStorage.clear();
+      console.log('[SHOP] localStorage cleared');
 
       // Also call Auth.logout() for server-side cleanup
       try {
