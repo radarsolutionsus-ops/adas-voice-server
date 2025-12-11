@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Settings - ADAS F1RST Admin</title>
+  <link rel="stylesheet" href="/css/apple-style.css">
   <link rel="stylesheet" href="/admin/css/admin.css">
 </head>
 <body>
@@ -15,44 +16,46 @@
           <div class="logo-icon">A</div>
           <span class="logo-text">ADAS F1RST</span>
         </div>
-        <button class="sidebar-toggle" id="sidebarToggle">&#9776;</button>
+        <button class="sidebar-toggle" id="sidebarToggle">
+          <span class="icon" id="menuIcon"></span>
+        </button>
       </div>
       <nav class="sidebar-nav">
         <div class="nav-section">
           <a href="/admin/dashboard.html" class="nav-item">
-            <span class="nav-icon">&#128200;</span>
+            <span class="icon" id="navDashboard"></span>
             <span class="nav-text">Dashboard</span>
           </a>
         </div>
         <div class="nav-section">
           <div class="nav-section-title">Vehicles</div>
           <a href="/admin/vehicles.html" class="nav-item">
-            <span class="nav-icon">&#128663;</span>
+            <span class="icon" id="navVehicles"></span>
             <span class="nav-text">All Vehicles</span>
           </a>
         </div>
         <div class="nav-section">
           <div class="nav-section-title">Management</div>
           <a href="/admin/shops.html" class="nav-item">
-            <span class="nav-icon">&#127978;</span>
+            <span class="icon" id="navShops"></span>
             <span class="nav-text">Shops</span>
           </a>
           <a href="/admin/techs.html" class="nav-item">
-            <span class="nav-icon">&#128119;</span>
+            <span class="icon" id="navTechs"></span>
             <span class="nav-text">Technicians</span>
           </a>
         </div>
         <div class="nav-section">
           <div class="nav-section-title">Billing</div>
           <a href="/admin/billing.html" class="nav-item">
-            <span class="nav-icon">&#128176;</span>
+            <span class="icon" id="navBilling"></span>
             <span class="nav-text">Overview</span>
           </a>
         </div>
         <div class="nav-section">
           <div class="nav-section-title">System</div>
           <a href="/admin/settings.html" class="nav-item active">
-            <span class="nav-icon">&#9881;</span>
+            <span class="icon" id="navSettings"></span>
             <span class="nav-text">Settings</span>
           </a>
         </div>
@@ -74,11 +77,16 @@
     <main class="main-content">
       <header class="top-header">
         <div class="header-left">
-          <button class="mobile-menu-btn" id="mobileMenuBtn">&#9776;</button>
+          <button class="mobile-menu-btn" id="mobileMenuBtn">
+            <span class="icon" id="mobileMenuIcon"></span>
+          </button>
           <h1 class="page-title">Settings</h1>
         </div>
         <div class="header-right">
-          <button class="btn-logout" id="logoutBtn">Logout</button>
+          <button class="btn-logout" id="logoutBtn">
+            <span class="icon icon-sm" id="logoutIcon"></span>
+            Sign Out
+          </button>
         </div>
       </header>
 
@@ -90,11 +98,19 @@
               <h3 class="card-title">User Management</h3>
             </div>
             <div class="card-body">
-              <p style="color:var(--text-secondary);margin-bottom:16px;">
+              <p class="text-secondary mb-2">
                 Manage shop and technician accounts
               </p>
-              <a href="/admin/shops.html" class="btn btn-secondary" style="margin-right:8px;">Manage Shops</a>
-              <a href="/admin/techs.html" class="btn btn-secondary">Manage Techs</a>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <a href="/admin/shops.html" class="btn-secondary">
+                  <span class="icon icon-sm" id="btnShopsIcon"></span>
+                  Manage Shops
+                </a>
+                <a href="/admin/techs.html" class="btn-secondary">
+                  <span class="icon icon-sm" id="btnTechsIcon"></span>
+                  Manage Techs
+                </a>
+              </div>
             </div>
           </div>
 
@@ -104,10 +120,13 @@
               <h3 class="card-title">Password Management</h3>
             </div>
             <div class="card-body">
-              <p style="color:var(--text-secondary);margin-bottom:16px;">
+              <p class="text-secondary mb-2">
                 Contact support to reset user passwords.
               </p>
-              <a href="mailto:radarsolutionsus@gmail.com" class="btn btn-secondary">Request Password Reset</a>
+              <a href="mailto:radarsolutionsus@gmail.com" class="btn-secondary">
+                <span class="icon icon-sm" id="btnMailIcon"></span>
+                Request Password Reset
+              </a>
             </div>
           </div>
 
@@ -117,11 +136,14 @@
               <h3 class="card-title">Support</h3>
             </div>
             <div class="card-body">
-              <p style="color:var(--text-secondary);margin-bottom:16px;">
+              <p class="text-secondary mb-2">
                 Need help with the system?
               </p>
-              <div style="display:flex;flex-direction:column;gap:8px;font-size:14px;">
-                <div>&#128231; <a href="mailto:radarsolutionsus@gmail.com">radarsolutionsus@gmail.com</a></div>
+              <div class="help-item" style="border:none;padding:0;">
+                <span class="icon" id="supportMailIcon"></span>
+                <div class="help-item-content">
+                  <a href="mailto:radarsolutionsus@gmail.com">radarsolutionsus@gmail.com</a>
+                </div>
               </div>
             </div>
           </div>
@@ -130,7 +152,30 @@
     </main>
   </div>
 
+  <script src="/js/icons.js"></script>
   <script src="/js/auth.js"></script>
   <script src="/js/admin/admin-common.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Initialize icons
+      document.getElementById('menuIcon').innerHTML = Icons.menu;
+      document.getElementById('mobileMenuIcon').innerHTML = Icons.menu;
+      document.getElementById('logoutIcon').innerHTML = Icons.logout;
+
+      // Nav icons
+      document.getElementById('navDashboard').innerHTML = Icons.chart;
+      document.getElementById('navVehicles').innerHTML = Icons.car;
+      document.getElementById('navShops').innerHTML = Icons.building;
+      document.getElementById('navTechs').innerHTML = Icons.users;
+      document.getElementById('navBilling').innerHTML = Icons.wallet;
+      document.getElementById('navSettings').innerHTML = Icons.settings;
+
+      // Button icons
+      document.getElementById('btnShopsIcon').innerHTML = Icons.building;
+      document.getElementById('btnTechsIcon').innerHTML = Icons.users;
+      document.getElementById('btnMailIcon').innerHTML = Icons.mail;
+      document.getElementById('supportMailIcon').innerHTML = Icons.mail;
+    });
+  </script>
 </body>
 </html>

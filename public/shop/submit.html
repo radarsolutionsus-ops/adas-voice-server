@@ -4,489 +4,218 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Submit Vehicle - ADAS F1RST</title>
-  <link rel="stylesheet" href="/shop/css/shop.css">
-  <style>
-    .progress-bar {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 32px;
-      padding: 0 16px;
-    }
-    .progress-step {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .step-circle {
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      background: var(--border);
-      color: var(--text-muted);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 600;
-      transition: all 0.3s;
-    }
-    .step-circle.active {
-      background: var(--primary);
-      color: white;
-    }
-    .step-circle.completed {
-      background: var(--success);
-      color: white;
-    }
-    .step-label {
-      font-size: 14px;
-      color: var(--text-muted);
-      display: none;
-    }
-    @media (min-width: 600px) {
-      .step-label { display: block; }
-    }
-    .step-line {
-      width: 40px;
-      height: 3px;
-      background: var(--border);
-      border-radius: 2px;
-    }
-    .step-line.completed {
-      background: var(--success);
-    }
-
-    .form-step {
-      display: none;
-    }
-    .form-step.active {
-      display: block;
-      animation: fadeIn 0.3s ease;
-    }
-
-    .form-group {
-      margin-bottom: 24px;
-    }
-    .form-label {
-      display: block;
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text-secondary);
-      margin-bottom: 8px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    .form-input {
-      width: 100%;
-      padding: 16px;
-      font-size: 18px;
-      border: 2px solid var(--border);
-      border-radius: 12px;
-      background: var(--background);
-      transition: border-color 0.2s, box-shadow 0.2s;
-    }
-    .form-input:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 4px rgba(26, 115, 232, 0.1);
-    }
-    .form-input::placeholder {
-      color: var(--text-muted);
-    }
-    textarea.form-input {
-      min-height: 120px;
-      resize: vertical;
-    }
-
-    .upload-zone {
-      border: 3px dashed var(--border);
-      border-radius: 16px;
-      padding: 40px 24px;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.3s;
-      background: var(--background);
-    }
-    .upload-zone:hover, .upload-zone.dragover {
-      border-color: var(--primary);
-      background: rgba(26, 115, 232, 0.05);
-    }
-    .upload-zone .icon {
-      font-size: 48px;
-      margin-bottom: 16px;
-    }
-    .upload-zone .title {
-      font-size: 18px;
-      font-weight: 600;
-      margin-bottom: 8px;
-    }
-    .upload-zone .subtitle {
-      font-size: 14px;
-      color: var(--text-muted);
-    }
-    .upload-zone input[type="file"] {
-      display: none;
-    }
-
-    .file-preview {
-      margin-top: 16px;
-      padding: 16px;
-      background: var(--surface);
-      border-radius: 12px;
-      display: none;
-    }
-    .file-preview.has-file {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .file-preview .file-icon {
-      font-size: 32px;
-    }
-    .file-preview .file-info {
-      flex: 1;
-    }
-    .file-preview .file-name {
-      font-weight: 600;
-      word-break: break-all;
-    }
-    .file-preview .file-size {
-      font-size: 13px;
-      color: var(--text-muted);
-    }
-    .file-preview .file-remove {
-      background: none;
-      border: none;
-      font-size: 24px;
-      color: var(--text-muted);
-      cursor: pointer;
-      padding: 8px;
-    }
-
-    .btn-nav {
-      display: flex;
-      gap: 16px;
-      margin-top: 32px;
-    }
-    .btn-back {
-      flex: 1;
-      padding: 18px 24px;
-      font-size: 18px;
-      font-weight: 600;
-      border: 2px solid var(--border);
-      border-radius: 12px;
-      background: white;
-      color: var(--text-secondary);
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .btn-back:hover {
-      background: var(--background);
-    }
-    .btn-next {
-      flex: 2;
-      padding: 18px 24px;
-      font-size: 18px;
-      font-weight: 600;
-      border: none;
-      border-radius: 12px;
-      background: var(--primary);
-      color: white;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .btn-next:hover {
-      background: var(--primary-dark);
-    }
-    .btn-next:disabled {
-      background: var(--border);
-      cursor: not-allowed;
-    }
-    .btn-submit {
-      width: 100%;
-      padding: 20px 32px;
-      font-size: 20px;
-      font-weight: 700;
-      border: none;
-      border-radius: 12px;
-      background: var(--success);
-      color: white;
-      cursor: pointer;
-      transition: all 0.2s;
-      margin-top: 24px;
-    }
-    .btn-submit:hover {
-      background: #15803d;
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
-    }
-    .btn-submit:disabled {
-      background: var(--border);
-      cursor: not-allowed;
-      transform: none;
-      box-shadow: none;
-    }
-
-    .review-section {
-      background: var(--background);
-      border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 16px;
-    }
-    .review-section h3 {
-      font-size: 14px;
-      text-transform: uppercase;
-      color: var(--text-muted);
-      margin-bottom: 12px;
-    }
-    .review-item {
-      display: flex;
-      justify-content: space-between;
-      padding: 8px 0;
-      border-bottom: 1px solid var(--border);
-    }
-    .review-item:last-child {
-      border-bottom: none;
-    }
-    .review-label {
-      color: var(--text-secondary);
-    }
-    .review-value {
-      font-weight: 600;
-      text-align: right;
-      word-break: break-all;
-    }
-
-    .checkbox-group {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      margin-top: 8px;
-    }
-    .checkbox-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 12px 16px;
-      background: var(--background);
-      border: 2px solid var(--border);
-      border-radius: 10px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .checkbox-item:hover {
-      border-color: var(--primary);
-    }
-    .checkbox-item.selected {
-      background: rgba(26, 115, 232, 0.1);
-      border-color: var(--primary);
-    }
-    .checkbox-item input {
-      width: 20px;
-      height: 20px;
-      accent-color: var(--primary);
-    }
-    .checkbox-item label {
-      font-size: 16px;
-      cursor: pointer;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-  </style>
+  <link rel="stylesheet" href="/css/apple-style.css">
 </head>
 <body>
-  <header class="shop-header">
-    <div class="header-left">
-      <span class="logo">ADAS F1RST</span>
-    </div>
+  <!-- Header -->
+  <header class="app-header">
+    <div class="app-logo">ADAS F1RST</div>
     <div class="header-center">
-      <span class="shop-name" id="shopName">Loading...</span>
+      <span class="shop-badge" id="shopName">Loading...</span>
     </div>
-    <div class="header-right">
-      <button class="btn-icon" id="helpBtn" title="Need Help?">&#10067;</button>
-      <button class="btn-logout" id="logoutBtn">Logout</button>
+    <div class="header-actions">
+      <button class="header-btn" id="helpBtn" title="Help">
+        <span class="icon" id="helpIcon"></span>
+      </button>
+      <button class="btn-logout" id="logoutBtn">
+        <span class="icon icon-sm" id="logoutIcon"></span>
+        Sign Out
+      </button>
     </div>
   </header>
 
-  <main class="shop-main">
-    <!-- Back Button -->
-    <div style="margin-bottom:24px;">
-      <a href="/shop/dashboard.html" class="btn-secondary" style="display:inline-flex;align-items:center;gap:8px;">
-        &#8592; Back to Dashboard
-      </a>
-    </div>
+  <main class="app-main">
+    <!-- Back Link -->
+    <a href="/shop/dashboard.html" class="back-link">
+      <span class="icon" id="backIcon"></span>
+      Back to Dashboard
+    </a>
 
-    <div class="card">
-      <div class="card-header">
-        <h1 style="font-size:24px;">Submit New Vehicle</h1>
+    <!-- Form Card -->
+    <div class="form-card">
+      <div class="form-header">
+        <h2>Submit New Vehicle</h2>
+        <p>Complete the form below to submit a vehicle for calibration</p>
       </div>
-      <div class="card-body">
-        <!-- Progress Bar -->
-        <div class="progress-bar">
-          <div class="progress-step">
-            <div class="step-circle active" id="step1Circle">1</div>
-            <span class="step-label">Vehicle Info</span>
+
+      <!-- Progress Steps -->
+      <div class="form-steps">
+        <div class="form-step-indicator">
+          <div class="step-number active" id="step1Circle">1</div>
+          <span class="step-label active">Vehicle Info</span>
+        </div>
+        <div class="step-line" id="line1"></div>
+        <div class="form-step-indicator">
+          <div class="step-number" id="step2Circle">2</div>
+          <span class="step-label">Documents</span>
+        </div>
+        <div class="step-line" id="line2"></div>
+        <div class="form-step-indicator">
+          <div class="step-number" id="step3Circle">3</div>
+          <span class="step-label">Review</span>
+        </div>
+      </div>
+
+      <form id="submitForm">
+        <!-- Step 1: Vehicle Information -->
+        <div class="form-step active" id="step1">
+          <div class="form-group">
+            <label class="form-label">RO/PO Number *</label>
+            <input type="text" class="form-input" id="roNumber" placeholder="Enter RO or PO number" required>
           </div>
-          <div class="step-line" id="line1"></div>
-          <div class="progress-step">
-            <div class="step-circle" id="step2Circle">2</div>
-            <span class="step-label">Documents</span>
+
+          <div class="form-group">
+            <label class="form-label">Vehicle Year, Make, Model *</label>
+            <input type="text" class="form-input" id="vehicle" placeholder="e.g., 2023 Toyota Camry" required>
           </div>
-          <div class="step-line" id="line2"></div>
-          <div class="progress-step">
-            <div class="step-circle" id="step3Circle">3</div>
-            <span class="step-label">Review</span>
+
+          <div class="form-group">
+            <label class="form-label">VIN (Recommended)</label>
+            <input type="text" class="form-input" id="vin" placeholder="17-character VIN" maxlength="17" style="text-transform:uppercase;">
+            <p class="form-hint">VIN helps us identify exact calibration requirements</p>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Notes / Special Instructions</label>
+            <textarea class="form-input form-textarea" id="notes" placeholder="Any additional information about the vehicle or service needed..."></textarea>
+          </div>
+
+          <div class="form-actions form-actions-center">
+            <button type="button" class="btn-accent btn-large btn-full" onclick="goToStep(2)">
+              Continue to Documents
+              <span class="icon icon-sm" id="nextIcon1"></span>
+            </button>
           </div>
         </div>
 
-        <form id="submitForm">
-          <!-- Step 1: Vehicle Information -->
-          <div class="form-step active" id="step1">
-            <div class="form-group">
-              <label class="form-label">RO/PO Number *</label>
-              <input type="text" class="form-input" id="roNumber" placeholder="Enter RO or PO number" required>
+        <!-- Step 2: Documents -->
+        <div class="form-step" id="step2">
+          <div class="form-group">
+            <label class="form-label">Estimate PDF *</label>
+            <div class="file-upload" id="estimateZone">
+              <span class="icon icon-lg" id="uploadIcon1"></span>
+              <div class="file-upload-title">Click to upload estimate</div>
+              <div class="file-upload-subtitle">or drag and drop PDF file here</div>
+              <input type="file" id="estimateFile" accept=".pdf">
             </div>
-
-            <div class="form-group">
-              <label class="form-label">Vehicle Year, Make, Model *</label>
-              <input type="text" class="form-input" id="vehicle" placeholder="e.g., 2023 Toyota Camry" required>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">VIN (Recommended)</label>
-              <input type="text" class="form-input" id="vin" placeholder="17-character VIN" maxlength="17" style="text-transform:uppercase;">
-              <small style="color:var(--text-muted);display:block;margin-top:6px;">VIN helps us identify exact calibration requirements</small>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Notes / Special Instructions</label>
-              <textarea class="form-input" id="notes" placeholder="Any additional information about the vehicle or service needed..."></textarea>
-            </div>
-
-            <div class="btn-nav">
-              <button type="button" class="btn-next" onclick="goToStep(2)">Continue to Documents &#8594;</button>
-            </div>
-          </div>
-
-          <!-- Step 2: Documents -->
-          <div class="form-step" id="step2">
-            <div class="form-group">
-              <label class="form-label">Estimate PDF *</label>
-              <div class="upload-zone" id="estimateZone">
-                <div class="icon">&#128196;</div>
-                <div class="title">Tap to upload estimate</div>
-                <div class="subtitle">or drag and drop PDF file here</div>
-                <input type="file" id="estimateFile" accept=".pdf">
+            <div class="file-preview" id="estimatePreview">
+              <span class="icon" id="fileIcon1"></span>
+              <div class="file-preview-info">
+                <div class="file-preview-name" id="estimateFileName"></div>
+                <div class="file-preview-size" id="estimateFileSize"></div>
               </div>
-              <div class="file-preview" id="estimatePreview">
-                <div class="file-icon">&#128196;</div>
-                <div class="file-info">
-                  <div class="file-name" id="estimateFileName"></div>
-                  <div class="file-size" id="estimateFileSize"></div>
-                </div>
-                <button type="button" class="file-remove" onclick="removeFile('estimate')">&times;</button>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Pre-Scan PDF</label>
-              <div class="upload-zone" id="prescanZone">
-                <div class="icon">&#128203;</div>
-                <div class="title">Tap to upload pre-scan</div>
-                <div class="subtitle">or drag and drop PDF file here</div>
-                <input type="file" id="prescanFile" accept=".pdf">
-              </div>
-              <div class="file-preview" id="prescanPreview">
-                <div class="file-icon">&#128203;</div>
-                <div class="file-info">
-                  <div class="file-name" id="prescanFileName"></div>
-                  <div class="file-size" id="prescanFileSize"></div>
-                </div>
-                <button type="button" class="file-remove" onclick="removeFile('prescan')">&times;</button>
-              </div>
-
-              <div style="margin-top:16px;padding:16px;background:var(--background);border-radius:10px;border:2px solid var(--border);">
-                <label style="display:flex;align-items:center;gap:12px;cursor:pointer;">
-                  <input type="checkbox" id="noDtcConfirm" style="width:20px;height:20px;accent-color:var(--primary);">
-                  <span style="font-size:15px;">No pre-scan available - I confirm there are no active DTC codes</span>
-                </label>
-              </div>
-            </div>
-
-            <div class="btn-nav">
-              <button type="button" class="btn-back" onclick="goToStep(1)">&#8592; Back</button>
-              <button type="button" class="btn-next" onclick="goToStep(3)">Review Submission &#8594;</button>
-            </div>
-          </div>
-
-          <!-- Step 3: Review -->
-          <div class="form-step" id="step3">
-            <div class="review-section">
-              <h3>Vehicle Information</h3>
-              <div class="review-item">
-                <span class="review-label">RO/PO Number</span>
-                <span class="review-value" id="reviewRo"></span>
-              </div>
-              <div class="review-item">
-                <span class="review-label">Vehicle</span>
-                <span class="review-value" id="reviewVehicle"></span>
-              </div>
-              <div class="review-item">
-                <span class="review-label">VIN</span>
-                <span class="review-value" id="reviewVin"></span>
-              </div>
-              <div class="review-item">
-                <span class="review-label">Notes</span>
-                <span class="review-value" id="reviewNotes"></span>
-              </div>
-            </div>
-
-            <div class="review-section">
-              <h3>Documents</h3>
-              <div class="review-item">
-                <span class="review-label">Estimate</span>
-                <span class="review-value" id="reviewEstimate"></span>
-              </div>
-              <div class="review-item">
-                <span class="review-label">Pre-Scan</span>
-                <span class="review-value" id="reviewPrescan"></span>
-              </div>
-            </div>
-
-            <div class="btn-nav" style="flex-direction:column;">
-              <button type="submit" class="btn-submit" id="submitBtn">
-                &#10003; Submit Vehicle
+              <button type="button" class="file-preview-remove" onclick="removeFile('estimate')">
+                <span class="icon icon-sm" id="removeIcon1"></span>
               </button>
-              <button type="button" class="btn-back" style="flex:1;margin-top:12px;" onclick="goToStep(1)">&#8592; Edit Information</button>
             </div>
           </div>
-        </form>
-      </div>
+
+          <div class="form-group">
+            <label class="form-label">Pre-Scan PDF</label>
+            <div class="file-upload" id="prescanZone">
+              <span class="icon icon-lg" id="uploadIcon2"></span>
+              <div class="file-upload-title">Click to upload pre-scan</div>
+              <div class="file-upload-subtitle">or drag and drop PDF file here</div>
+              <input type="file" id="prescanFile" accept=".pdf">
+            </div>
+            <div class="file-preview" id="prescanPreview">
+              <span class="icon" id="fileIcon2"></span>
+              <div class="file-preview-info">
+                <div class="file-preview-name" id="prescanFileName"></div>
+                <div class="file-preview-size" id="prescanFileSize"></div>
+              </div>
+              <button type="button" class="file-preview-remove" onclick="removeFile('prescan')">
+                <span class="icon icon-sm" id="removeIcon2"></span>
+              </button>
+            </div>
+
+            <div class="checkbox-option">
+              <input type="checkbox" id="noDtcConfirm">
+              <span>No pre-scan available - I confirm there are no active DTC codes</span>
+            </div>
+          </div>
+
+          <div class="form-actions form-actions-between">
+            <button type="button" class="btn-secondary" onclick="goToStep(1)">
+              <span class="icon icon-sm" id="backIcon2"></span>
+              Back
+            </button>
+            <button type="button" class="btn-accent" onclick="goToStep(3)">
+              Review Submission
+              <span class="icon icon-sm" id="nextIcon2"></span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 3: Review -->
+        <div class="form-step" id="step3">
+          <div class="review-section">
+            <h3>Vehicle Information</h3>
+            <div class="review-item">
+              <span class="review-label">RO/PO Number</span>
+              <span class="review-value" id="reviewRo"></span>
+            </div>
+            <div class="review-item">
+              <span class="review-label">Vehicle</span>
+              <span class="review-value" id="reviewVehicle"></span>
+            </div>
+            <div class="review-item">
+              <span class="review-label">VIN</span>
+              <span class="review-value" id="reviewVin"></span>
+            </div>
+            <div class="review-item">
+              <span class="review-label">Notes</span>
+              <span class="review-value" id="reviewNotes"></span>
+            </div>
+          </div>
+
+          <div class="review-section">
+            <h3>Documents</h3>
+            <div class="review-item">
+              <span class="review-label">Estimate</span>
+              <span class="review-value" id="reviewEstimate"></span>
+            </div>
+            <div class="review-item">
+              <span class="review-label">Pre-Scan</span>
+              <span class="review-value" id="reviewPrescan"></span>
+            </div>
+          </div>
+
+          <div class="form-actions" style="flex-direction:column;gap:12px;">
+            <button type="submit" class="btn-accent btn-large btn-full" id="submitBtn">
+              <span class="icon" id="checkIcon"></span>
+              Submit Vehicle
+            </button>
+            <button type="button" class="btn-ghost btn-full" onclick="goToStep(1)">
+              <span class="icon icon-sm" id="editIcon"></span>
+              Edit Information
+            </button>
+          </div>
+        </div>
+      </form>
     </div>
   </main>
 
   <!-- Help Modal -->
-  <div class="modal" id="helpModal">
-    <div class="modal-content">
+  <div class="modal-overlay" id="helpModal">
+    <div class="modal">
       <div class="modal-header">
         <h3>Need Help?</h3>
-        <button class="modal-close">&times;</button>
+        <button class="modal-close" id="helpModalClose">
+          <span class="icon icon-sm" id="closeIcon"></span>
+        </button>
       </div>
       <div class="modal-body">
         <div class="help-item">
-          <span class="help-icon">&#128222;</span>
-          <div>
+          <span class="icon" id="helpPhoneIcon"></span>
+          <div class="help-item-content">
             <strong>Call Us</strong>
             <p><a href="tel:+13055551234">305-555-1234</a></p>
           </div>
         </div>
         <div class="help-item">
-          <span class="help-icon">&#128231;</span>
-          <div>
+          <span class="icon" id="helpMailIcon"></span>
+          <div class="help-item-content">
             <strong>Email Support</strong>
             <p><a href="mailto:adasf1rstservice@gmail.com">adasf1rstservice@gmail.com</a></p>
           </div>
@@ -496,17 +225,18 @@
   </div>
 
   <!-- Success Modal -->
-  <div class="modal" id="successModal">
-    <div class="modal-content" style="text-align:center;padding:40px;">
-      <div style="font-size:64px;margin-bottom:16px;">&#9989;</div>
-      <h2 style="margin-bottom:8px;">Vehicle Submitted!</h2>
-      <p style="color:var(--text-secondary);margin-bottom:24px;">Your vehicle has been submitted successfully. We'll be in touch shortly.</p>
-      <a href="/shop/dashboard.html" class="btn-primary" style="display:inline-block;padding:16px 32px;font-size:18px;">
-        Back to Dashboard
-      </a>
+  <div class="modal-overlay" id="successModal">
+    <div class="modal">
+      <div class="modal-success">
+        <span class="icon" id="successIcon"></span>
+        <h2>Vehicle Submitted!</h2>
+        <p>Your vehicle has been submitted successfully. We'll be in touch shortly.</p>
+        <a href="/shop/dashboard.html" class="btn-accent btn-large">Back to Dashboard</a>
+      </div>
     </div>
   </div>
 
+  <script src="/js/icons.js"></script>
   <script src="/js/auth.js"></script>
   <script src="/js/api.js"></script>
   <script src="/shop/js/shop-common.js"></script>
@@ -520,10 +250,38 @@
     document.addEventListener('DOMContentLoaded', () => {
       if (!initShopPortal()) return;
       setupCommonHandlers();
+      initializeIcons();
       setupFileUploads();
-      setupCheckboxes();
       setupFormSubmit();
     });
+
+    function initializeIcons() {
+      // Header icons
+      document.getElementById('helpIcon').innerHTML = Icons.help;
+      document.getElementById('logoutIcon').innerHTML = Icons.logout;
+      document.getElementById('backIcon').innerHTML = Icons.arrowLeft;
+
+      // Form icons
+      document.getElementById('nextIcon1').innerHTML = Icons.arrowRight;
+      document.getElementById('nextIcon2').innerHTML = Icons.arrowRight;
+      document.getElementById('backIcon2').innerHTML = Icons.arrowLeft;
+      document.getElementById('checkIcon').innerHTML = Icons.check;
+      document.getElementById('editIcon').innerHTML = Icons.edit;
+
+      // Upload icons
+      document.getElementById('uploadIcon1').innerHTML = Icons.upload;
+      document.getElementById('uploadIcon2').innerHTML = Icons.upload;
+      document.getElementById('fileIcon1').innerHTML = Icons.fileText;
+      document.getElementById('fileIcon2').innerHTML = Icons.fileText;
+      document.getElementById('removeIcon1').innerHTML = Icons.x;
+      document.getElementById('removeIcon2').innerHTML = Icons.x;
+
+      // Modal icons
+      document.getElementById('closeIcon').innerHTML = Icons.x;
+      document.getElementById('helpPhoneIcon').innerHTML = Icons.phone;
+      document.getElementById('helpMailIcon').innerHTML = Icons.mail;
+      document.getElementById('successIcon').innerHTML = Icons.checkCircle;
+    }
 
     function goToStep(step) {
       // Validate step 1 before proceeding
@@ -540,11 +298,12 @@
       for (let i = 1; i <= 3; i++) {
         const circle = document.getElementById(`step${i}Circle`);
         const line = document.getElementById(`line${i - 1}`);
+        const labels = document.querySelectorAll('.step-label');
 
         circle.classList.remove('active', 'completed');
         if (i < step) {
           circle.classList.add('completed');
-          circle.innerHTML = '&#10003;';
+          circle.innerHTML = Icons.check;
         } else if (i === step) {
           circle.classList.add('active');
           circle.textContent = i;
@@ -555,6 +314,9 @@
         if (line) {
           line.classList.toggle('completed', i < step);
         }
+
+        // Update labels
+        labels[i - 1]?.classList.toggle('active', i === step);
       }
 
       // Show/hide steps
@@ -639,10 +401,6 @@
       return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
     }
 
-    function setupCheckboxes() {
-      // No calibration checkboxes anymore - this function is kept for compatibility
-    }
-
     function populateReview() {
       document.getElementById('reviewRo').textContent = document.getElementById('roNumber').value || '-';
       document.getElementById('reviewVehicle').textContent = document.getElementById('vehicle').value || '-';
@@ -681,7 +439,7 @@
 
         const submitBtn = document.getElementById('submitBtn');
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<span class="spinner" style="width:20px;height:20px;border-width:3px;display:inline-block;vertical-align:middle;margin-right:8px;"></span> Submitting...';
+        submitBtn.innerHTML = '<div class="spinner" style="width:20px;height:20px;margin-right:8px;"></div> Submitting...';
 
         try {
           const formData = new FormData();
@@ -714,13 +472,13 @@
           } else {
             Toast.error(result.error || 'Failed to submit vehicle');
             submitBtn.disabled = false;
-            submitBtn.innerHTML = '&#10003; Submit Vehicle';
+            submitBtn.innerHTML = `${Icons.check} Submit Vehicle`;
           }
         } catch (err) {
           console.error('Submit error:', err);
           Toast.error('Failed to submit vehicle. Please try again.');
           submitBtn.disabled = false;
-          submitBtn.innerHTML = '&#10003; Submit Vehicle';
+          submitBtn.innerHTML = `${Icons.check} Submit Vehicle`;
         }
       });
     }

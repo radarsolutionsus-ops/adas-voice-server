@@ -1,5 +1,5 @@
 /**
- * shop/dashboard.js - Shop dashboard with card-based vehicle display
+ * shop/dashboard.js - Shop dashboard with Apple-style vehicle cards
  */
 
 let allVehicles = [];
@@ -47,7 +47,13 @@ async function loadVehicles() {
     const response = await ShopAPI.get('/api/shop/vehicles');
 
     if (!response.success) {
-      list.innerHTML = '<p class="error">Failed to load vehicles. Please refresh the page.</p>';
+      list.innerHTML = `
+        <div class="empty-state">
+          <span class="icon icon-xl">${Icons.alertCircle}</span>
+          <h3>Failed to load vehicles</h3>
+          <p>Please refresh the page to try again.</p>
+        </div>
+      `;
       return;
     }
 
@@ -58,17 +64,23 @@ async function loadVehicles() {
 
     // Show vehicles or empty state
     if (allVehicles.length === 0) {
-      list.style.display = 'none';
-      emptyState.style.display = 'block';
+      list.classList.add('hidden');
+      emptyState.classList.remove('hidden');
     } else {
-      list.style.display = 'flex';
-      emptyState.style.display = 'none';
+      list.classList.remove('hidden');
+      emptyState.classList.add('hidden');
       renderVehicles(allVehicles);
     }
 
   } catch (err) {
     console.error('Load error:', err);
-    list.innerHTML = '<p class="error">Failed to load vehicles. Please refresh the page.</p>';
+    list.innerHTML = `
+      <div class="empty-state">
+        <span class="icon icon-xl">${Icons.alertCircle}</span>
+        <h3>Failed to load vehicles</h3>
+        <p>Please refresh the page to try again.</p>
+      </div>
+    `;
   }
 }
 
@@ -90,8 +102,10 @@ function renderVehicles(vehicles) {
 
   if (vehicles.length === 0) {
     list.innerHTML = `
-      <div class="loading-state">
-        <p>No vehicles match your filter</p>
+      <div class="empty-state">
+        <span class="icon icon-xl">${Icons.filter}</span>
+        <h3>No vehicles match your filter</h3>
+        <p>Try adjusting your search or filter criteria</p>
       </div>
     `;
     return;
@@ -99,45 +113,37 @@ function renderVehicles(vehicles) {
 
   list.innerHTML = vehicles.map(v => `
     <div class="vehicle-card" data-status="${v.status}" data-ro="${v.roPo}">
-      <div class="vehicle-info">
-        <div class="vehicle-header">
-          <span class="vehicle-ro">RO #${escapeHtml(v.roPo)}</span>
-          <span class="vehicle-status ${getStatusClass(v.status)}">${escapeHtml(v.status || 'New')}</span>
+      <div class="vehicle-main">
+        <div class="vehicle-ro">RO #${escapeHtml(v.roPo)}</div>
+        <div class="vehicle-info">
+          <div class="vehicle-name">${escapeHtml(v.vehicle || 'Unknown Vehicle')}</div>
+          <div class="vehicle-vin">${escapeHtml(v.vin ? '...' + v.vin.slice(-6) : 'No VIN')}</div>
         </div>
-
-        <div class="vehicle-details">
-          <span class="vehicle-detail">
-            <span class="vehicle-detail-icon">&#128663;</span>
-            ${escapeHtml(v.vehicle || 'Unknown Vehicle')}
-          </span>
-          <span class="vehicle-detail">
-            <span class="vehicle-detail-icon">&#128178;</span>
-            ${escapeHtml(v.vin ? v.vin.slice(-6) : 'No VIN')}
-          </span>
-        </div>
-
         ${v.requiredCalibrations ? `
-          <div class="vehicle-calibrations">
-            &#128208; ${escapeHtml(v.requiredCalibrations)}
-          </div>
-        ` : ''}
-
-        ${(v.status === 'Scheduled' || v.status === 'Rescheduled') && v.scheduledDate ? `
-          <div class="scheduled-info">
-            <span class="icon">&#128197;</span>
-            <span class="date">${formatDate(v.scheduledDate)}</span>
-            ${v.scheduledTime ? `<span class="time">at ${formatTime(v.scheduledTime)}</span>` : ''}
-          </div>
+          <div class="vehicle-calibration">${escapeHtml(v.requiredCalibrations)}</div>
         ` : ''}
       </div>
 
+      ${(v.status === 'Scheduled' || v.status === 'Rescheduled') && v.scheduledDate ? `
+        <div class="vehicle-schedule">
+          <div class="schedule-date">${formatDate(v.scheduledDate)}</div>
+          ${v.scheduledTime ? `<div class="schedule-time">${formatTime(v.scheduledTime)}</div>` : ''}
+        </div>
+      ` : ''}
+
+      <div class="vehicle-status">
+        <span class="status-badge ${getStatusClass(v.status)}">${escapeHtml(v.status || 'New')}</span>
+      </div>
+
       <div class="vehicle-actions">
-        <a href="/shop/vehicle.html?ro=${encodeURIComponent(v.roPo)}" class="btn-action btn-view">
-          View Details
+        <a href="/shop/vehicle.html?ro=${encodeURIComponent(v.roPo)}" class="btn-secondary">
+          ${Icons.eye}
+          <span>View</span>
         </a>
         ${v.status !== 'Completed' && v.status !== 'In Progress' && v.status !== 'Cancelled' ? `
-          <a href="/shop/schedule.html?ro=${encodeURIComponent(v.roPo)}" class="btn-action btn-schedule">
-            ${v.status === 'Scheduled' || v.status === 'Rescheduled' ? 'Reschedule' : 'Schedule'}
+          <a href="/shop/schedule.html?ro=${encodeURIComponent(v.roPo)}" class="btn-accent">
+            ${Icons.calendar}
+            <span>${v.status === 'Scheduled' || v.status === 'Rescheduled' ? 'Reschedule' : 'Schedule'}</span>
           </a>
         ` : ''}
       </div>

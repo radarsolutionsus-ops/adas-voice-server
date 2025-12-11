@@ -3,65 +3,76 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>My Vehicles - ADAS F1RST</title>
-  <link rel="stylesheet" href="/shop/css/shop.css">
+  <title>Dashboard - ADAS F1RST</title>
+  <link rel="stylesheet" href="/css/apple-style.css">
 </head>
 <body>
-  <!-- Simple Top Nav -->
-  <header class="shop-header">
-    <div class="header-left">
-      <span class="logo">ADAS F1RST</span>
-    </div>
+  <!-- Header -->
+  <header class="app-header">
+    <div class="app-logo">ADAS F1RST</div>
     <div class="header-center">
-      <span class="shop-name" id="shopName">Loading...</span>
+      <span class="shop-badge" id="shopName">Loading...</span>
     </div>
-    <div class="header-right">
-      <button class="btn-icon" id="helpBtn" title="Need Help?">&#10067;</button>
-      <button class="btn-logout" id="logoutBtn">Logout</button>
+    <div class="header-actions">
+      <button class="header-btn" id="helpBtn" title="Help">
+        <span class="icon" id="helpIcon"></span>
+      </button>
+      <button class="btn-logout" id="logoutBtn">
+        <span class="icon icon-sm" id="logoutIcon"></span>
+        Sign Out
+      </button>
     </div>
   </header>
 
-  <main class="shop-main">
-    <!-- Welcome Banner -->
-    <div class="welcome-banner">
-      <div class="welcome-text">
-        <h1>Welcome back!</h1>
+  <main class="app-main">
+    <!-- Welcome Section -->
+    <div class="welcome-section">
+      <div class="welcome-content">
+        <h1>Welcome back</h1>
         <p>Here's what's happening with your vehicles</p>
       </div>
       <a href="/shop/submit.html" class="btn-primary btn-large">
-        <span>+</span>
+        <span class="icon" id="plusIcon"></span>
         Submit New Vehicle
       </a>
     </div>
 
-    <!-- Quick Stats - Large, Tappable Cards -->
-    <div class="quick-stats">
-      <div class="stat-card tappable" onclick="filterByStatus('all')">
-        <div class="stat-icon">&#128663;</div>
-        <div class="stat-number" id="statTotal">0</div>
+    <!-- Stats Grid -->
+    <div class="stats-grid">
+      <div class="stat-card" onclick="filterByStatus('all')">
+        <div class="stat-card-icon blue">
+          <span class="icon" id="statIconTotal"></span>
+        </div>
+        <div class="stat-value" id="statTotal">0</div>
         <div class="stat-label">Total Vehicles</div>
       </div>
 
-      <div class="stat-card tappable new" onclick="filterByStatus('Scheduled')">
-        <div class="stat-icon">&#128197;</div>
-        <div class="stat-number" id="statScheduled">0</div>
+      <div class="stat-card" onclick="filterByStatus('Scheduled')">
+        <div class="stat-card-icon purple">
+          <span class="icon" id="statIconScheduled"></span>
+        </div>
+        <div class="stat-value" id="statScheduled">0</div>
         <div class="stat-label">Scheduled</div>
       </div>
 
-      <div class="stat-card tappable in-progress" onclick="filterByStatus('In Progress')">
-        <div class="stat-icon">&#128295;</div>
-        <div class="stat-number" id="statInProgress">0</div>
+      <div class="stat-card" onclick="filterByStatus('In Progress')">
+        <div class="stat-card-icon orange">
+          <span class="icon" id="statIconProgress"></span>
+        </div>
+        <div class="stat-value" id="statInProgress">0</div>
         <div class="stat-label">In Progress</div>
       </div>
 
-      <div class="stat-card tappable completed" onclick="filterByStatus('Completed')">
-        <div class="stat-icon">&#9989;</div>
-        <div class="stat-number" id="statCompleted">0</div>
+      <div class="stat-card" onclick="filterByStatus('Completed')">
+        <div class="stat-card-icon green">
+          <span class="icon" id="statIconCompleted"></span>
+        </div>
+        <div class="stat-value" id="statCompleted">0</div>
         <div class="stat-label">Completed</div>
       </div>
     </div>
 
-    <!-- Simple Filter Bar -->
+    <!-- Filter Bar -->
     <div class="filter-bar">
       <div class="filter-tabs">
         <button class="filter-tab active" data-status="all">All</button>
@@ -70,12 +81,13 @@
         <button class="filter-tab" data-status="In Progress">In Progress</button>
         <button class="filter-tab" data-status="Completed">Completed</button>
       </div>
-      <div class="search-box">
+      <div class="search-input">
+        <span class="icon" id="searchIcon"></span>
         <input type="text" id="searchInput" placeholder="Search RO or VIN...">
       </div>
     </div>
 
-    <!-- Vehicle Cards - Not a Table, Cards are Easier -->
+    <!-- Vehicle List -->
     <div class="vehicle-list" id="vehicleList">
       <div class="loading-state">
         <div class="spinner"></div>
@@ -84,39 +96,41 @@
     </div>
 
     <!-- Empty State -->
-    <div class="empty-state" id="emptyState" style="display:none;">
-      <div class="empty-icon">&#128663;</div>
-      <h2>No vehicles yet</h2>
+    <div class="empty-state hidden" id="emptyState">
+      <span class="icon icon-xl" id="emptyIcon"></span>
+      <h3>No vehicles yet</h3>
       <p>Submit your first vehicle to get started</p>
-      <a href="/shop/submit.html" class="btn-primary btn-large">Submit a Vehicle</a>
+      <a href="/shop/submit.html" class="btn-accent btn-large">Submit a Vehicle</a>
     </div>
   </main>
 
   <!-- Help Modal -->
-  <div class="modal" id="helpModal">
-    <div class="modal-content">
+  <div class="modal-overlay" id="helpModal">
+    <div class="modal">
       <div class="modal-header">
         <h3>Need Help?</h3>
-        <button class="modal-close">&times;</button>
+        <button class="modal-close" id="helpModalClose">
+          <span class="icon icon-sm" id="closeIcon"></span>
+        </button>
       </div>
       <div class="modal-body">
         <div class="help-item">
-          <span class="help-icon">&#128222;</span>
-          <div>
+          <span class="icon" id="helpPhoneIcon"></span>
+          <div class="help-item-content">
             <strong>Call Us</strong>
             <p><a href="tel:+13055551234">305-555-1234</a></p>
           </div>
         </div>
         <div class="help-item">
-          <span class="help-icon">&#128231;</span>
-          <div>
+          <span class="icon" id="helpMailIcon"></span>
+          <div class="help-item-content">
             <strong>Email Support</strong>
             <p><a href="mailto:adasf1rstservice@gmail.com">adasf1rstservice@gmail.com</a></p>
           </div>
         </div>
         <div class="help-item">
-          <span class="help-icon">&#128336;</span>
-          <div>
+          <span class="icon" id="helpClockIcon"></span>
+          <div class="help-item-content">
             <strong>Hours</strong>
             <p>Mon-Fri 8AM-6PM, Sat 9AM-2PM</p>
           </div>
@@ -125,9 +139,35 @@
     </div>
   </div>
 
+  <script src="/js/icons.js"></script>
   <script src="/js/auth.js"></script>
   <script src="/js/api.js"></script>
   <script src="/shop/js/shop-common.js"></script>
   <script src="/shop/js/dashboard.js"></script>
+  <script>
+    // Initialize icons after DOM load
+    document.addEventListener('DOMContentLoaded', () => {
+      // Header icons
+      document.getElementById('helpIcon').innerHTML = Icons.help;
+      document.getElementById('logoutIcon').innerHTML = Icons.logout;
+      document.getElementById('plusIcon').innerHTML = Icons.plus;
+      document.getElementById('searchIcon').innerHTML = Icons.search;
+
+      // Stat icons
+      document.getElementById('statIconTotal').innerHTML = Icons.car;
+      document.getElementById('statIconScheduled').innerHTML = Icons.calendar;
+      document.getElementById('statIconProgress').innerHTML = Icons.wrench;
+      document.getElementById('statIconCompleted').innerHTML = Icons.checkCircle;
+
+      // Empty state icon
+      document.getElementById('emptyIcon').innerHTML = Icons.car;
+
+      // Modal icons
+      document.getElementById('closeIcon').innerHTML = Icons.x;
+      document.getElementById('helpPhoneIcon').innerHTML = Icons.phone;
+      document.getElementById('helpMailIcon').innerHTML = Icons.mail;
+      document.getElementById('helpClockIcon').innerHTML = Icons.clock;
+    });
+  </script>
 </body>
 </html>

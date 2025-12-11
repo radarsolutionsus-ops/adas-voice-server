@@ -1,5 +1,5 @@
 /**
- * shop-common.js - Shared functionality for shop portal
+ * shop-common.js - Shared functionality for shop portal (Apple-style design)
  */
 
 // Shop API wrapper
@@ -109,11 +109,12 @@ function setupCommonHandlers() {
   // Help modal
   const helpBtn = document.getElementById('helpBtn');
   const helpModal = document.getElementById('helpModal');
+  const helpModalClose = document.getElementById('helpModalClose');
 
   if (helpBtn && helpModal) {
     helpBtn.addEventListener('click', () => helpModal.classList.add('open'));
 
-    helpModal.querySelector('.modal-close')?.addEventListener('click', () => {
+    helpModalClose?.addEventListener('click', () => {
       helpModal.classList.remove('open');
     });
 
@@ -167,36 +168,27 @@ function getStatusClass(status) {
   return status.toLowerCase().replace(/\s+/g, '-');
 }
 
-// Toast notifications
+// Toast notifications (Apple-style)
 const Toast = {
   show(message, type = 'info', duration = 3000) {
     // Remove existing toast
-    const existing = document.querySelector('.toast-notification');
+    const existing = document.querySelector('.toast');
     if (existing) existing.remove();
 
     const toast = document.createElement('div');
-    toast.className = `toast-notification toast-${type}`;
+    toast.className = `toast ${type}`;
     toast.textContent = message;
-    toast.style.cssText = `
-      position: fixed;
-      bottom: 24px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: ${type === 'error' ? '#dc2626' : type === 'success' ? '#16a34a' : '#1a73e8'};
-      color: white;
-      padding: 14px 24px;
-      border-radius: 8px;
-      font-weight: 500;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      z-index: 1000;
-      animation: slideUp 0.3s ease;
-    `;
 
     document.body.appendChild(toast);
 
+    // Trigger animation
+    requestAnimationFrame(() => {
+      toast.classList.add('show');
+    });
+
     setTimeout(() => {
-      toast.style.animation = 'slideDown 0.3s ease';
-      setTimeout(() => toast.remove(), 300);
+      toast.classList.remove('show');
+      setTimeout(() => toast.remove(), 200);
     }, duration);
   },
 
@@ -208,20 +200,6 @@ const Toast = {
     this.show(message, 'error');
   }
 };
-
-// Add toast animation styles
-const style = document.createElement('style');
-style.textContent = `
-  @keyframes slideUp {
-    from { transform: translateX(-50%) translateY(100%); opacity: 0; }
-    to { transform: translateX(-50%) translateY(0); opacity: 1; }
-  }
-  @keyframes slideDown {
-    from { transform: translateX(-50%) translateY(0); opacity: 1; }
-    to { transform: translateX(-50%) translateY(100%); opacity: 0; }
-  }
-`;
-document.head.appendChild(style);
 
 // Export
 window.ShopAPI = ShopAPI;
