@@ -176,8 +176,7 @@
           <div id="scheduledBanner" class="scheduled-banner" style="display:none;">
             <span class="icon" id="calendarIcon"></span>
             <div>
-              <strong id="scheduledDate"></strong>
-              <span id="scheduledTime" style="color:var(--text-secondary);margin-left:8px;"></span>
+              <strong id="scheduledDateTime"></strong>
             </div>
           </div>
         </div>
@@ -346,13 +345,12 @@
       document.getElementById('vehicleCalibrations').textContent = v.requiredCalibrations || 'Not determined';
       document.getElementById('vehicleNotes').textContent = v.notes || 'No notes';
 
-      // Scheduled date
+      // Scheduled date with time
       if ((v.status === 'Scheduled' || v.status === 'Rescheduled') && v.scheduledDate) {
         document.getElementById('scheduledBanner').style.display = 'flex';
         document.getElementById('calendarIcon').innerHTML = Icons.calendar;
-        document.getElementById('scheduledDate').textContent = formatDate(v.scheduledDate);
-        const timeDisplay = v.scheduledTime ? formatTime(v.scheduledTime) : '';
-        document.getElementById('scheduledTime').textContent = timeDisplay ? `at ${timeDisplay}` : '';
+        const timeDisplay = v.scheduledTime ? formatTime(v.scheduledTime) : 'TBD';
+        document.getElementById('scheduledDateTime').textContent = `${formatDate(v.scheduledDate)} at ${timeDisplay}`;
       }
 
       // Documents

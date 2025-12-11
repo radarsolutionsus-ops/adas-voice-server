@@ -185,18 +185,21 @@ async function showVehicleDetail(roPo) {
     const v = data.vehicle;
 
     // Normalize field names (GAS returns snake_case, we prefer camelCase)
-    const roPo = v.roPo || v.ro_po || '';
+    const roPoVal = v.roPo || v.ro_po || '';
     const shopName = v.shopName || v.shop_name || '';
     const scheduledDate = v.scheduledDate || v.scheduled_date || '';
     const scheduledTime = v.scheduledTime || v.scheduled_time || '';
     const technician = v.technician || v.technicianAssigned || v.technician_assigned || '';
     const requiredCals = v.requiredCalibrations || v.required_calibrations || '';
+    const completedCals = v.completedCalibrations || v.completed_calibrations || '';
+    const dtcs = v.dtcs || v.DTCs || '';
     const flowHistory = v.flowHistory || v.flow_history || '';
 
     // Format scheduled display
+    const timeDisplay = scheduledTime ? formatTime(scheduledTime) : 'TBD';
     const scheduleDisplay = scheduledDate
-      ? formatDate(scheduledDate) + (scheduledTime ? ` at ${formatTime(scheduledTime)}` : '')
-      : 'Not scheduled';
+      ? `${formatDate(scheduledDate)} at ${timeDisplay}`
+      : null;
 
     // Build documents section
     const docs = [
@@ -211,50 +214,56 @@ async function showVehicleDetail(roPo) {
     const flowEntries = flowHistory ? flowHistory.split('\n').filter(e => e.trim()) : [];
 
     modalBody.innerHTML = `
-      <div class="modal-grid">
-        <!-- Status & Schedule Row -->
-        <div class="modal-row-2">
+      <!-- Header: Vehicle + Status -->
+      <div style="display:flex;justify-content:space-between;align-items:start;gap:16px;margin-bottom:16px;">
+        <div>
+          <h2 style="font-size:20px;font-weight:600;margin-bottom:4px;">${escapeHtml(v.vehicle || 'Unknown Vehicle')}</h2>
+          <p style="color:var(--text-secondary);font-size:14px;">${escapeHtml(shopName || 'Unknown Shop')}</p>
+        </div>
+        <span class="status-badge ${getStatusClass(v.status)}">${escapeHtml(v.status || 'New')}</span>
+      </div>
+
+      <!-- Scheduled Banner (blue bar) -->
+      ${scheduleDisplay ? `
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:rgba(0,113,227,0.08);border-radius:8px;margin-bottom:20px;">
+          <span style="color:var(--accent);">${Icons.calendar}</span>
+          <strong>${escapeHtml(scheduleDisplay)}</strong>
+          ${technician ? `<span style="margin-left:auto;color:var(--text-secondary);">Tech: ${escapeHtml(technician)}</span>` : ''}
+        </div>
+      ` : ''}
+
+      <!-- Two Column Grid -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+        <!-- Left Column: Vehicle Info -->
+        <div>
           <div class="modal-field">
-            <label class="form-label">Status</label>
-            <p><span class="status-badge ${getStatusClass(v.status)}">${escapeHtml(v.status || 'New')}</span></p>
+            <label class="form-label">VIN</label>
+            <p style="font-family:monospace;font-size:13px;">${escapeHtml(v.vin || '-')}</p>
           </div>
           <div class="modal-field">
-            <label class="form-label">Scheduled</label>
-            <p style="font-weight:500;">${escapeHtml(scheduleDisplay)}</p>
+            <label class="form-label">Required Calibrations</label>
+            <p>${escapeHtml(requiredCals || 'Not determined')}</p>
           </div>
-        </div>
-
-        <!-- Vehicle Info -->
-        <div class="modal-field">
-          <label class="form-label">Vehicle</label>
-          <p style="font-weight:500;">${escapeHtml(v.vehicle || '-')}</p>
-        </div>
-
-        <div class="modal-field">
-          <label class="form-label">VIN</label>
-          <p style="font-family:monospace;font-size:13px;">${escapeHtml(v.vin || '-')}</p>
-        </div>
-
-        <!-- Shop & Tech Row -->
-        <div class="modal-row-2">
+          ${completedCals ? `
+            <div class="modal-field">
+              <label class="form-label">Completed Calibrations</label>
+              <p style="color:var(--success);">${escapeHtml(completedCals)}</p>
+            </div>
+          ` : ''}
+          ${dtcs ? `
+            <div class="modal-field">
+              <label class="form-label">DTCs</label>
+              <p style="color:var(--warning);">${escapeHtml(dtcs)}</p>
+            </div>
+          ` : ''}
           <div class="modal-field">
-            <label class="form-label">Shop</label>
-            <p>${escapeHtml(shopName || '-')}</p>
-          </div>
-          <div class="modal-field">
-            <label class="form-label">Technician</label>
-            <p>${escapeHtml(technician || 'Unassigned')}</p>
+            <label class="form-label">Notes</label>
+            <div class="notes-box">${escapeHtml(v.notes || 'No notes')}</div>
           </div>
         </div>
 
-        <!-- Calibrations -->
-        <div class="modal-field">
-          <label class="form-label">Required Calibrations</label>
-          <p>${escapeHtml(requiredCals || '-')}</p>
-        </div>
-
-        <!-- Documents -->
-        <div class="modal-field">
+        <!-- Right Column: Documents -->
+        <div>
           <label class="form-label">Documents</label>
           <div class="doc-cards-grid">
             ${docs.map(d => {
@@ -263,50 +272,44 @@ async function showVehicleDetail(roPo) {
                 <div class="doc-card ${hasUrl ? 'available' : 'unavailable'}" ${hasUrl ? `onclick="window.open('${d.url}', '_blank')"` : ''}>
                   <div class="doc-card-icon">${d.icon}</div>
                   <div class="doc-card-name">${d.name}</div>
-                  <div class="doc-card-status">${hasUrl ? 'View PDF' : 'N/A'}</div>
+                  <div class="doc-card-status">${hasUrl ? 'View' : 'N/A'}</div>
                 </div>
               `;
             }).join('')}
           </div>
         </div>
+      </div>
 
-        <!-- Notes -->
-        <div class="modal-field">
-          <label class="form-label">Notes</label>
-          <div class="notes-box">${escapeHtml(v.notes || 'No notes')}</div>
-        </div>
-
-        <!-- Activity Log -->
-        ${flowEntries.length > 0 ? `
-          <div class="modal-field">
-            <label class="form-label">Activity Log</label>
-            <div class="activity-log">
-              ${flowEntries.map(entry => {
-                const parts = entry.match(/^(\d{1,2}\/\d{1,2}\s+\d{1,2}:\d{2}[ap]?)\s+(\w+)\s+(.*)$/i);
-                if (parts) {
-                  return `<div class="activity-entry">
-                    <span class="activity-time">${escapeHtml(parts[1])}</span>
-                    <span class="status-badge ${getStatusClass(parts[2])}" style="font-size:10px;padding:2px 6px;">${escapeHtml(parts[2])}</span>
-                    <span class="activity-text">${escapeHtml(parts[3])}</span>
-                  </div>`;
-                }
-                return `<div class="activity-entry"><span class="activity-text">${escapeHtml(entry)}</span></div>`;
-              }).join('')}
-            </div>
+      <!-- Activity Log (Collapsible) -->
+      ${flowEntries.length > 0 ? `
+        <details style="margin-bottom:20px;">
+          <summary style="cursor:pointer;font-weight:500;margin-bottom:8px;">Activity Log (${flowEntries.length} entries)</summary>
+          <div class="activity-log" style="max-height:150px;overflow-y:auto;">
+            ${flowEntries.map(entry => {
+              const parts = entry.match(/^(\d{1,2}\/\d{1,2}\s+\d{1,2}:\d{2}[ap]?)\s+(\w+)\s+(.*)$/i);
+              if (parts) {
+                return `<div class="activity-entry">
+                  <span class="activity-time">${escapeHtml(parts[1])}</span>
+                  <span class="status-badge ${getStatusClass(parts[2])}" style="font-size:10px;padding:2px 6px;">${escapeHtml(parts[2])}</span>
+                  <span class="activity-text">${escapeHtml(parts[3])}</span>
+                </div>`;
+              }
+              return `<div class="activity-entry"><span class="activity-text">${escapeHtml(entry)}</span></div>`;
+            }).join('')}
           </div>
-        ` : ''}
+        </details>
+      ` : ''}
 
-        <!-- Status Change -->
-        <div class="modal-field" style="border-top:1px solid var(--border);padding-top:16px;">
-          <label class="form-label">Change Status</label>
-          <div class="status-buttons">
-            <button class="btn btn-sm btn-secondary" onclick="updateStatus('${roPo}','New')">New</button>
-            <button class="btn btn-sm btn-secondary" onclick="updateStatus('${roPo}','Ready')">Ready</button>
-            <button class="btn btn-sm btn-secondary" onclick="updateStatus('${roPo}','Scheduled')">Scheduled</button>
-            <button class="btn btn-sm btn-secondary" onclick="updateStatus('${roPo}','In Progress')">In Progress</button>
-            <button class="btn btn-sm btn-success" onclick="updateStatus('${roPo}','Completed')">Completed</button>
-            <button class="btn btn-sm btn-danger" onclick="updateStatus('${roPo}','Cancelled')">Cancelled</button>
-          </div>
+      <!-- Status Change Actions -->
+      <div style="border-top:1px solid var(--border);padding-top:16px;">
+        <label class="form-label">Change Status</label>
+        <div class="status-buttons">
+          <button class="btn btn-sm btn-secondary" onclick="updateStatus('${roPoVal}','New')">New</button>
+          <button class="btn btn-sm btn-secondary" onclick="updateStatus('${roPoVal}','Ready')">Ready</button>
+          <button class="btn btn-sm btn-secondary" onclick="updateStatus('${roPoVal}','Scheduled')">Scheduled</button>
+          <button class="btn btn-sm btn-secondary" onclick="updateStatus('${roPoVal}','In Progress')">In Progress</button>
+          <button class="btn btn-sm btn-success" onclick="updateStatus('${roPoVal}','Completed')">Completed</button>
+          <button class="btn btn-sm btn-danger" onclick="updateStatus('${roPoVal}','Cancelled')">Cancelled</button>
         </div>
       </div>
     `;
