@@ -1031,6 +1031,11 @@ export async function completeJob(req, res) {
       });
     }
 
+    // Send completion email to shop (async, don't block response)
+    sendCompletionEmailToShop(roPo, row, completedCalibrations).catch(err => {
+      console.error(`${LOG_TAG} Background completion email failed for RO ${roPo}:`, err.message);
+    });
+
     res.json({
       success: true,
       message: 'Job completed',
@@ -1043,6 +1048,52 @@ export async function completeJob(req, res) {
       success: false,
       error: 'Failed to complete job'
     });
+  }
+}
+
+/**
+ * Send completion email to shop (background task)
+ */
+async function sendCompletionEmailToShop(roPo, row, completedCalibrations) {
+  try {
+    // Get shop email
+    const shopName = row.shopName || row.shop_name;
+    if (!shopName) {
+      console.log(`${LOG_TAG} No shop name for RO ${roPo}, skipping completion email`);
+      return;
+    }
+
+    const shopEmail = await sheetWriter.getShopEmailByName(shopName);
+    if (!shopEmail) {
+      console.log(`${LOG_TAG} No email found for shop "${shopName}", skipping completion email`);
+      return;
+    }
+
+    // Import email service
+    const { sendJobCompletionEmail } = await import('../services/emailResponder.js');
+
+    // Send completion email
+    const emailResult = await sendJobCompletionEmail({
+      shopEmail: shopEmail,
+      shopName: shopName,
+      roPo: roPo,
+      vehicle: row.vehicle,
+      vin: row.vin,
+      calibrationsPerformed: completedCalibrations || row.requiredCalibrations || '',
+      invoiceNumber: row.invoiceNumber || row.invoice_number || '',
+      invoiceAmount: row.invoiceAmount || row.invoice_amount || '',
+      postScanLink: row.postScanPdf || row.postscanPdf || '',
+      invoiceLink: row.invoicePdf || row.invoice_pdf || '',
+      revvPdfLink: row.revvReportPdf || row.revv_report_pdf || ''
+    });
+
+    if (emailResult.success) {
+      console.log(`${LOG_TAG} Completion email sent to ${shopEmail} for RO ${roPo}`);
+    } else {
+      console.error(`${LOG_TAG} Failed to send completion email: ${emailResult.error}`);
+    }
+  } catch (err) {
+    console.error(`${LOG_TAG} Error sending completion email for RO ${roPo}:`, err.message);
   }
 }
 

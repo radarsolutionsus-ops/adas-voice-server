@@ -7,6 +7,15 @@
   <link rel="stylesheet" href="/css/apple-style.css">
   <link rel="stylesheet" href="/css/portal.css">
   <style>
+    /* Toast animations */
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes fadeOut {
+      to { transform: translateX(100%); opacity: 0; }
+    }
+
     /* Last refresh indicator */
     .last-refresh {
       font-size: 11px;
@@ -537,6 +546,11 @@
       border-color: #ff9500;
     }
 
+    .cal-job.completed {
+      background: rgba(52, 199, 89, 0.08);
+      border-color: #34c759;
+    }
+
     .cal-job-ro {
       font-weight: 600;
       color: var(--text-primary, #1d1d1f);
@@ -1063,12 +1077,79 @@
       });
     }
 
+    // Check for newly completed jobs and show notifications
+    function checkForCompletedJobs(vehicles) {
+      const seenCompleted = JSON.parse(localStorage.getItem('seenCompletedJobs') || '[]');
+      const completedJobs = vehicles.filter(v => v.status === 'Completed');
+
+      // Find newly completed jobs not yet seen
+      const newlyCompleted = completedJobs.filter(v => !seenCompleted.includes(v.roPo));
+
+      // Show notification for each newly completed job
+      newlyCompleted.forEach(vehicle => {
+        showCompletionToast(vehicle);
+        seenCompleted.push(vehicle.roPo);
+      });
+
+      // Save updated list (keep only last 100 to prevent bloat)
+      localStorage.setItem('seenCompletedJobs', JSON.stringify(seenCompleted.slice(-100)));
+    }
+
+    // Show completion toast notification
+    function showCompletionToast(vehicle) {
+      const toast = document.createElement('div');
+      toast.className = 'completion-toast';
+      toast.innerHTML = `
+        <div style="display:flex;align-items:flex-start;gap:12px;">
+          <span style="font-size:24px;">✅</span>
+          <div style="flex:1;">
+            <div style="font-weight:600;color:#166534;margin-bottom:4px;">Calibration Complete!</div>
+            <div style="font-size:14px;color:#374151;margin-bottom:8px;">
+              RO #${escapeHtml(vehicle.roPo)} - ${escapeHtml(vehicle.vehicle || 'Vehicle')}
+            </div>
+            <button onclick="window.location='/shop/vehicle.html?ro=${encodeURIComponent(vehicle.roPo)}'"
+                    style="background:#22c55e;color:white;border:none;padding:6px 12px;border-radius:6px;font-size:13px;cursor:pointer;">
+              View Details
+            </button>
+          </div>
+          <button onclick="this.parentElement.parentElement.remove()"
+                  style="background:none;border:none;color:#9ca3af;cursor:pointer;font-size:16px;">✕</button>
+        </div>
+      `;
+
+      // Style the toast
+      Object.assign(toast.style, {
+        position: 'fixed',
+        bottom: '20px',
+        right: '20px',
+        background: 'white',
+        borderRadius: '12px',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+        padding: '16px',
+        maxWidth: '360px',
+        zIndex: '1000',
+        borderLeft: '4px solid #22c55e',
+        animation: 'slideIn 0.3s ease'
+      });
+
+      document.body.appendChild(toast);
+
+      // Auto-dismiss after 15 seconds
+      setTimeout(() => {
+        toast.style.animation = 'fadeOut 0.3s ease forwards';
+        setTimeout(() => toast.remove(), 300);
+      }, 15000);
+    }
+
     async function loadDashboardData() {
       try {
         const response = await ShopAPI.get('/api/shop/vehicles');
         if (!response.success) throw new Error(response.error);
 
         const vehicles = response.vehicles || [];
+
+        // Check for newly completed jobs and show notifications
+        checkForCompletedJobs(vehicles);
 
         // Update stats
         updateStats(vehicles);
@@ -1420,6 +1501,7 @@
     function getCalJobStatusClass(status) {
       if (!status) return 'new';
       const s = status.toLowerCase();
+      if (s === 'completed') return 'completed';  // GREEN for completed
       if (s === 'scheduled' || s === 'rescheduled') return 'scheduled';
       if (s === 'ready') return 'ready';
       if (s === 'in progress') return 'in-progress';
