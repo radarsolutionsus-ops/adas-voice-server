@@ -846,11 +846,12 @@ export async function uploadDocument(req, res) {
 /**
  * POST /api/tech/start-job
  * Start working on a job - sets status to "In Progress" and records start time
+ * Updates scheduled date/time to NOW when job starts
  * Enforces one job at a time rule
  */
 export async function startJob(req, res) {
   try {
-    const { roPo } = req.body;
+    const { roPo, originalScheduledDate } = req.body;
     const user = req.user;
 
     if (!roPo) {
@@ -891,15 +892,36 @@ export async function startJob(req, res) {
       return res.status(404).json({ success: false, error: 'Vehicle not found' });
     }
 
-    // Record start time
-    const timestamp = new Date().toISOString();
-    const startNote = `[${timestamp}] Job started by ${user.techName}`;
+    // Get current date and time for scheduling
+    const now = new Date();
+    const todayStr = now.toLocaleDateString('en-US'); // MM/DD/YYYY format
+    const currentTime = now.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    }); // e.g., "2:15 PM"
 
-    console.log(`${LOG_TAG} Updating Google Sheets - Status: "In Progress", Technician: "${user.techName}", Note: "${startNote}"`);
+    // Record start time
+    const timestamp = now.toISOString();
+    let startNote = `[${timestamp}] Job started by ${user.techName}`;
+
+    // Check if schedule date is being changed
+    const oldScheduledDate = row.scheduledDate || row.scheduled_date || '';
+    if (originalScheduledDate && oldScheduledDate) {
+      const originalDate = new Date(originalScheduledDate).toLocaleDateString('en-US');
+      if (originalDate !== todayStr) {
+        startNote += ` [SCHEDULE CHANGED: Originally scheduled for ${originalDate}]`;
+        console.log(`${LOG_TAG} Schedule changed from ${originalDate} to ${todayStr}`);
+      }
+    }
+
+    console.log(`${LOG_TAG} Updating Google Sheets - Status: "In Progress", Technician: "${user.techName}", Date: ${todayStr}, Time: ${currentTime}`);
 
     const result = await sheetWriter.upsertScheduleRowByRO(roPo, {
       status: 'In Progress',
       technician: user.techName,
+      scheduledDate: todayStr,
+      scheduledTime: currentTime,
       notes: `${row.notes || ''}\n${startNote}`.trim()
     });
 

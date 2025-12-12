@@ -1994,15 +1994,42 @@
     }
 
     // Start a job
-    async function startJobAction(roPo) {
+    async function startJobAction(roPo, scheduledDate) {
       console.log('[START_JOB] ====== Start Job clicked ======');
-      console.log('[START_JOB] RO:', roPo);
+      console.log('[START_JOB] RO:', roPo, 'Scheduled Date:', scheduledDate);
 
       // Check if already have an active job
       if (activeJobData && activeJobData.roPo !== roPo) {
         console.log('[START_JOB] Blocked - already has active job:', activeJobData.roPo);
         showToast('Complete your current job first', 'error');
         return;
+      }
+
+      // Check if job is scheduled for a future date
+      if (scheduledDate) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const jobDate = new Date(scheduledDate);
+        jobDate.setHours(0, 0, 0, 0);
+
+        if (jobDate > today) {
+          const formattedDate = jobDate.toLocaleDateString('en-US', {
+            weekday: 'long',
+            month: 'short',
+            day: 'numeric'
+          });
+          const confirmed = confirm(
+            `This job is scheduled for ${formattedDate}.\n\n` +
+            `Starting now will change the scheduled date to today.\n\n` +
+            `Do you want to start this job now?`
+          );
+
+          if (!confirmed) {
+            console.log('[START_JOB] User cancelled - job was for future date');
+            return;
+          }
+          console.log('[START_JOB] User confirmed starting future job early');
+        }
       }
 
       try {
@@ -2017,7 +2044,7 @@
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ roPo })
+          body: JSON.stringify({ roPo, originalScheduledDate: scheduledDate })
         });
 
         const data = await response.json();
@@ -2739,7 +2766,7 @@
           ` : ''}
           <div class="action-buttons">
             <button class="btn btn-start ${!canStart ? 'disabled-job' : ''}"
-                    onclick="${canStart ? `startJobAction('${currentJob.roPo}')` : ''}"
+                    onclick="${canStart ? `startJobAction('${currentJob.roPo}', '${currentJob.scheduledDate || ''}')` : ''}"
                     ${!canStart ? 'disabled' : ''}>
               <span class="icon">${Icons.wrench}</span>
               ${isActiveJob ? 'Job In Progress' : 'Start Job'}
