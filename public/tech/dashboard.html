@@ -953,6 +953,211 @@
       flex-shrink: 0;
     }
 
+    /* ============================================
+       ACTIVE JOB BANNER STYLES
+       ============================================ */
+
+    .active-job-banner {
+      background: linear-gradient(135deg, #af52de 0%, #8b5cf6 100%);
+      color: white;
+      padding: 16px 24px;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      box-shadow: 0 4px 12px rgba(175, 82, 222, 0.3);
+    }
+
+    .active-job-banner.visible {
+      display: flex;
+    }
+
+    .active-job-info {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .active-job-icon {
+      width: 48px;
+      height: 48px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .active-job-icon .icon {
+      width: 24px;
+      height: 24px;
+    }
+
+    .active-job-details {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .active-job-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      opacity: 0.8;
+      margin-bottom: 4px;
+    }
+
+    .active-job-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+
+    .active-job-subtitle {
+      font-size: 13px;
+      opacity: 0.9;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .active-job-timer {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 12px 20px;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      flex-shrink: 0;
+    }
+
+    .timer-label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      opacity: 0.8;
+      margin-bottom: 4px;
+    }
+
+    .timer-value {
+      font-size: 28px;
+      font-weight: 700;
+      font-family: ui-monospace, 'SF Mono', monospace;
+      letter-spacing: 1px;
+    }
+
+    .active-job-actions {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .btn-complete-banner {
+      padding: 12px 20px;
+      background: white;
+      color: #af52de;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-complete-banner:hover {
+      background: #f0f0f0;
+      transform: scale(1.02);
+    }
+
+    .btn-complete-banner .icon {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* Complete Job Modal */
+    .complete-modal-content {
+      padding: 24px;
+    }
+
+    .complete-calibrations {
+      margin-bottom: 20px;
+    }
+
+    .complete-calibrations label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px;
+      background: var(--bg-grouped, #f2f2f7);
+      border-radius: 8px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .complete-calibrations label:hover {
+      background: #e5e5ea;
+    }
+
+    .complete-calibrations label.selected {
+      background: rgba(52, 199, 89, 0.1);
+      border: 1px solid rgba(52, 199, 89, 0.3);
+    }
+
+    .complete-calibrations input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      accent-color: #34c759;
+    }
+
+    .complete-notes textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--border, rgba(0, 0, 0, 0.1));
+      border-radius: 8px;
+      font-size: 14px;
+      resize: vertical;
+      min-height: 80px;
+      font-family: inherit;
+    }
+
+    .complete-notes textarea:focus {
+      outline: none;
+      border-color: #007aff;
+    }
+
+    /* Disabled Start Job Button */
+    .btn-start.disabled-job {
+      background: var(--bg-grouped, #f2f2f7) !important;
+      color: var(--text-tertiary, #aeaeb2) !important;
+      cursor: not-allowed !important;
+    }
+
+    .start-blocked-message {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      background: rgba(255, 149, 0, 0.1);
+      border-radius: 8px;
+      color: #ff9500;
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+
+    .start-blocked-message .icon {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+    }
+
     /* Responsive */
     @media (max-width: 640px) {
       .dashboard-container {
@@ -979,6 +1184,37 @@
 
       .action-buttons {
         flex-direction: column;
+      }
+
+      .active-job-banner {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 16px;
+      }
+
+      .active-job-info {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+      }
+
+      .active-job-timer {
+        flex-direction: row;
+        justify-content: space-between;
+        padding: 12px 16px;
+      }
+
+      .timer-value {
+        font-size: 24px;
+      }
+
+      .active-job-actions {
+        width: 100%;
+      }
+
+      .btn-complete-banner {
+        flex: 1;
+        justify-content: center;
       }
     }
 
@@ -1303,6 +1539,30 @@
     </button>
   </header>
 
+  <!-- Active Job Banner -->
+  <div class="active-job-banner" id="activeJobBanner">
+    <div class="active-job-info">
+      <div class="active-job-icon">
+        <span class="icon" id="activeJobIcon"></span>
+      </div>
+      <div class="active-job-details">
+        <div class="active-job-label">Active Job</div>
+        <div class="active-job-title" id="activeJobTitle">RO #---</div>
+        <div class="active-job-subtitle" id="activeJobSubtitle">Loading...</div>
+      </div>
+    </div>
+    <div class="active-job-timer">
+      <div class="timer-label">Elapsed</div>
+      <div class="timer-value" id="activeJobTimer">00:00:00</div>
+    </div>
+    <div class="active-job-actions">
+      <button class="btn-complete-banner" onclick="openCompleteJobModal()">
+        <span class="icon" id="completeBannerIcon"></span>
+        Complete Job
+      </button>
+    </div>
+  </div>
+
   <div class="dashboard-container">
     <!-- Dashboard Header -->
     <div class="dashboard-header">
@@ -1426,6 +1686,45 @@
     </div>
   </div>
 
+  <!-- Complete Job Modal -->
+  <div class="modal-overlay" id="completeJobModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Complete Job - <span id="completeJobRO">RO #---</span></h3>
+        <button class="modal-close" onclick="closeCompleteJobModal()">
+          <span class="icon" id="closeCompleteIcon"></span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="complete-modal-content">
+          <div class="modal-section">
+            <h4>Calibrations Completed</h4>
+            <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">Select all calibrations that were performed:</p>
+            <div class="complete-calibrations" id="completeCalibrationsContainer">
+              <!-- Populated dynamically from required calibrations -->
+            </div>
+          </div>
+
+          <div class="modal-section">
+            <h4>Notes (Optional)</h4>
+            <div class="complete-notes">
+              <textarea id="completeJobNotes" placeholder="Add any notes about the job completion..."></textarea>
+            </div>
+          </div>
+
+          <div class="modal-section">
+            <div class="action-buttons">
+              <button class="btn btn-complete" onclick="submitJobCompletion()">
+                <span class="icon" id="submitCompleteIcon"></span>
+                Complete Job
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="/js/icons.js"></script>
   <script src="/js/auth.js"></script>
   <script src="/js/api.js"></script>
@@ -1441,6 +1740,11 @@
     let uploadedRevvFile = null;
     let uploadedInvoiceFile = null;
     let uploadedPostScanFile = null;
+
+    // Active job state
+    let activeJobData = null;
+    let activeJobTimerInterval = null;
+    const ACTIVE_JOB_STORAGE_KEY = 'adas_active_job';
 
     // Calendar state
     let currentWeekStart = getMonday(new Date());
@@ -1577,6 +1881,252 @@
       `;
     }
 
+    // ============================================
+    // ACTIVE JOB FUNCTIONS
+    // ============================================
+
+    // Check for active job on load and from server
+    async function checkActiveJob() {
+      try {
+        const token = getStorageItem('adas_access_token') || getStorageItem('token');
+        const response = await fetch('/api/tech/active-job', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+
+        if (data.success && data.activeJob) {
+          // Get start time from localStorage or use now
+          const stored = JSON.parse(localStorage.getItem(ACTIVE_JOB_STORAGE_KEY) || '{}');
+          const startTime = stored.roPo === data.activeJob.roPo ? stored.startTime : new Date().toISOString();
+
+          // Store/update in localStorage
+          localStorage.setItem(ACTIVE_JOB_STORAGE_KEY, JSON.stringify({
+            ...data.activeJob,
+            startTime: startTime
+          }));
+
+          activeJobData = { ...data.activeJob, startTime };
+          showActiveJobBanner();
+        } else {
+          // No active job on server, clear local storage
+          localStorage.removeItem(ACTIVE_JOB_STORAGE_KEY);
+          activeJobData = null;
+          hideActiveJobBanner();
+        }
+      } catch (err) {
+        console.error('Error checking active job:', err);
+        // Fallback to localStorage
+        const stored = localStorage.getItem(ACTIVE_JOB_STORAGE_KEY);
+        if (stored) {
+          activeJobData = JSON.parse(stored);
+          showActiveJobBanner();
+        }
+      }
+    }
+
+    // Show active job banner with timer
+    function showActiveJobBanner() {
+      if (!activeJobData) return;
+
+      const banner = document.getElementById('activeJobBanner');
+      const title = document.getElementById('activeJobTitle');
+      const subtitle = document.getElementById('activeJobSubtitle');
+
+      title.textContent = `RO #${activeJobData.roPo}`;
+      subtitle.textContent = `${activeJobData.vehicle || 'Vehicle'} • ${activeJobData.shopName || 'Shop'}`;
+
+      banner.classList.add('visible');
+      startTimer();
+    }
+
+    // Hide active job banner
+    function hideActiveJobBanner() {
+      const banner = document.getElementById('activeJobBanner');
+      banner.classList.remove('visible');
+      stopTimer();
+    }
+
+    // Start elapsed time timer
+    function startTimer() {
+      if (activeJobTimerInterval) clearInterval(activeJobTimerInterval);
+
+      updateTimerDisplay();
+      activeJobTimerInterval = setInterval(updateTimerDisplay, 1000);
+    }
+
+    // Stop timer
+    function stopTimer() {
+      if (activeJobTimerInterval) {
+        clearInterval(activeJobTimerInterval);
+        activeJobTimerInterval = null;
+      }
+    }
+
+    // Update timer display
+    function updateTimerDisplay() {
+      if (!activeJobData || !activeJobData.startTime) return;
+
+      const start = new Date(activeJobData.startTime);
+      const now = new Date();
+      const elapsed = Math.floor((now - start) / 1000); // seconds
+
+      const hours = Math.floor(elapsed / 3600);
+      const minutes = Math.floor((elapsed % 3600) / 60);
+      const seconds = elapsed % 60;
+
+      const display = [
+        hours.toString().padStart(2, '0'),
+        minutes.toString().padStart(2, '0'),
+        seconds.toString().padStart(2, '0')
+      ].join(':');
+
+      const timerEl = document.getElementById('activeJobTimer');
+      if (timerEl) timerEl.textContent = display;
+    }
+
+    // Start a job
+    async function startJobAction(roPo) {
+      // Check if already have an active job
+      if (activeJobData && activeJobData.roPo !== roPo) {
+        showToast('Complete your current job first', 'error');
+        return;
+      }
+
+      try {
+        showLoading('Starting job...');
+
+        const token = getStorageItem('adas_access_token') || getStorageItem('token');
+        const response = await fetch('/api/tech/start-job', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ roPo })
+        });
+
+        const data = await response.json();
+        hideLoading();
+
+        if (!data.success) {
+          if (data.activeJob) {
+            showToast(`Complete RO #${data.activeJob.roPo} first`, 'error');
+          } else {
+            showToast(data.error || 'Failed to start job', 'error');
+          }
+          return;
+        }
+
+        // Store active job
+        const jobInfo = {
+          roPo: roPo,
+          vehicle: data.job?.vehicle || currentJob?.vehicle,
+          shopName: data.job?.shopName || currentJob?.shopName,
+          requiredCalibrations: data.job?.requiredCalibrations || currentJob?.requiredCalibrations,
+          startTime: data.startTime
+        };
+
+        localStorage.setItem(ACTIVE_JOB_STORAGE_KEY, JSON.stringify(jobInfo));
+        activeJobData = jobInfo;
+
+        showActiveJobBanner();
+        closeModal();
+        await loadJobs();
+        showToast('Job started!', 'success');
+
+      } catch (err) {
+        hideLoading();
+        showToast('Failed to start job: ' + err.message, 'error');
+      }
+    }
+
+    // Open complete job modal
+    function openCompleteJobModal() {
+      if (!activeJobData) return;
+
+      document.getElementById('completeJobRO').textContent = `RO #${activeJobData.roPo}`;
+
+      // Populate calibrations from required calibrations
+      const container = document.getElementById('completeCalibrationsContainer');
+      const calibrations = (activeJobData.requiredCalibrations || '').split(',').map(c => c.trim()).filter(c => c);
+
+      if (calibrations.length === 0) {
+        container.innerHTML = '<p style="color:var(--text-secondary);font-size:14px;">No specific calibrations recorded</p>';
+      } else {
+        container.innerHTML = calibrations.map((cal, i) => `
+          <label>
+            <input type="checkbox" name="completed_cal" value="${escapeHtml(cal)}" checked>
+            <span>${escapeHtml(cal)}</span>
+          </label>
+        `).join('');
+      }
+
+      // Clear notes
+      document.getElementById('completeJobNotes').value = '';
+
+      document.getElementById('completeJobModal').classList.add('open');
+    }
+
+    // Close complete job modal
+    function closeCompleteJobModal() {
+      document.getElementById('completeJobModal').classList.remove('open');
+    }
+
+    // Submit job completion
+    async function submitJobCompletion() {
+      if (!activeJobData) return;
+
+      // Get selected calibrations
+      const checkboxes = document.querySelectorAll('#completeCalibrationsContainer input[type="checkbox"]:checked');
+      const completedCals = Array.from(checkboxes).map(cb => cb.value);
+      const notes = document.getElementById('completeJobNotes').value.trim();
+
+      try {
+        showLoading('Completing job...');
+
+        const token = getStorageItem('adas_access_token') || getStorageItem('token');
+        const response = await fetch('/api/tech/complete-job', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            roPo: activeJobData.roPo,
+            completedCalibrations: completedCals.join(', '),
+            notes: notes
+          })
+        });
+
+        const data = await response.json();
+        hideLoading();
+
+        if (!data.success) {
+          showToast(data.error || 'Failed to complete job', 'error');
+          return;
+        }
+
+        // Clear active job
+        localStorage.removeItem(ACTIVE_JOB_STORAGE_KEY);
+        activeJobData = null;
+
+        hideActiveJobBanner();
+        closeCompleteJobModal();
+        await loadJobs();
+        showToast('Job completed!', 'success');
+
+      } catch (err) {
+        hideLoading();
+        showToast('Failed to complete job: ' + err.message, 'error');
+      }
+    }
+
+    // Check if a job can be started (no other active job)
+    function canStartJob(roPo) {
+      if (!activeJobData) return true;
+      return activeJobData.roPo === roPo;
+    }
+
     // Helper functions
     function getStorageItem(key) {
       return localStorage.getItem(key) || sessionStorage.getItem(key);
@@ -1665,7 +2215,8 @@
         window.location.replace('/?logout=true');
       });
 
-      // Load jobs
+      // Check for active job and load jobs
+      await checkActiveJob();
       await loadJobs();
     });
 
@@ -1676,6 +2227,12 @@
       document.getElementById('viewOnlyIcon').innerHTML = Icons.eye;
       document.getElementById('prevWeekIcon').innerHTML = Icons.chevronLeft || '&larr;';
       document.getElementById('nextWeekIcon').innerHTML = Icons.chevronRight || '&rarr;';
+      // Active job banner icons
+      document.getElementById('activeJobIcon').innerHTML = Icons.wrench || Icons.tool || '🔧';
+      document.getElementById('completeBannerIcon').innerHTML = Icons.checkCircle || '✓';
+      // Complete job modal icons
+      document.getElementById('closeCompleteIcon').innerHTML = Icons.x;
+      document.getElementById('submitCompleteIcon').innerHTML = Icons.checkCircle || '✓';
     }
 
     async function loadJobs() {
@@ -2104,6 +2661,8 @@
 
     function renderScheduledStatusModal() {
       const cals = currentJob.requiredCalibrations || 'Not determined';
+      const canStart = canStartJob(currentJob.roPo);
+      const isActiveJob = activeJobData && activeJobData.roPo === currentJob.roPo;
 
       return `
         ${renderVehicleInfoSection()}
@@ -2116,10 +2675,18 @@
         ${renderDocumentsSection(['estimate', 'prescan', 'revv'])}
 
         <div class="modal-section">
+          ${!canStart ? `
+            <div class="start-blocked-message">
+              <span class="icon">${Icons.alertCircle || '⚠️'}</span>
+              <span>Complete your current job first (RO #${activeJobData?.roPo})</span>
+            </div>
+          ` : ''}
           <div class="action-buttons">
-            <button class="btn btn-start" onclick="updateStatus('In Progress')">
+            <button class="btn btn-start ${!canStart ? 'disabled-job' : ''}"
+                    onclick="${canStart ? `startJobAction('${currentJob.roPo}')` : ''}"
+                    ${!canStart ? 'disabled' : ''}>
               <span class="icon">${Icons.wrench}</span>
-              Start Job
+              ${isActiveJob ? 'Job In Progress' : 'Start Job'}
             </button>
           </div>
         </div>

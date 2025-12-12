@@ -844,6 +844,203 @@ export async function uploadDocument(req, res) {
 }
 
 /**
+ * POST /api/tech/start-job
+ * Start working on a job - sets status to "In Progress" and records start time
+ * Enforces one job at a time rule
+ */
+export async function startJob(req, res) {
+  try {
+    const { roPo } = req.body;
+    const user = req.user;
+
+    if (!roPo) {
+      return res.status(400).json({ success: false, error: 'RO/PO is required' });
+    }
+
+    console.log(`${LOG_TAG} Start job request for RO ${roPo} by tech: ${user.techName}`);
+
+    // Check if tech already has an active job
+    const allResult = await sheetWriter.getAllScheduleRows();
+    if (!allResult.success) {
+      return res.status(500).json({ success: false, error: 'Failed to check active jobs' });
+    }
+
+    const techNameLower = (user.techName || '').toLowerCase().trim();
+    const activeJob = (allResult.rows || []).find(row => {
+      const rowTech = (row.technician || row.technicianAssigned || '').toLowerCase().trim();
+      const status = (row.status || '').toLowerCase();
+      return rowTech === techNameLower && status === 'in progress';
+    });
+
+    if (activeJob && activeJob.roPo !== roPo) {
+      return res.status(400).json({
+        success: false,
+        error: 'You already have an active job in progress',
+        activeJob: {
+          roPo: activeJob.roPo,
+          vehicle: activeJob.vehicle,
+          shopName: activeJob.shopName || activeJob.shop_name
+        }
+      });
+    }
+
+    // Verify job exists
+    const row = await sheetWriter.getScheduleRowByRO(roPo);
+    if (!row) {
+      return res.status(404).json({ success: false, error: 'Vehicle not found' });
+    }
+
+    // Record start time
+    const timestamp = new Date().toISOString();
+    const startNote = `[${timestamp}] Job started by ${user.techName}`;
+
+    const result = await sheetWriter.upsertScheduleRowByRO(roPo, {
+      status: 'In Progress',
+      notes: `${row.notes || ''}\n${startNote}`.trim()
+    });
+
+    if (!result.success) {
+      return res.status(500).json({
+        success: false,
+        error: result.error || 'Failed to start job'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Job started',
+      roPo: roPo,
+      startTime: timestamp,
+      job: {
+        roPo: row.roPo,
+        vehicle: row.vehicle,
+        shopName: row.shopName || row.shop_name,
+        requiredCalibrations: row.requiredCalibrations
+      }
+    });
+  } catch (err) {
+    console.error(`${LOG_TAG} Error starting job:`, err.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to start job'
+    });
+  }
+}
+
+/**
+ * POST /api/tech/complete-job
+ * Complete a job with calibrations performed and notes
+ */
+export async function completeJob(req, res) {
+  try {
+    const { roPo, completedCalibrations, notes } = req.body;
+    const user = req.user;
+
+    if (!roPo) {
+      return res.status(400).json({ success: false, error: 'RO/PO is required' });
+    }
+
+    console.log(`${LOG_TAG} Complete job request for RO ${roPo} by tech: ${user.techName}`);
+
+    // Verify job exists
+    const row = await sheetWriter.getScheduleRowByRO(roPo);
+    if (!row) {
+      return res.status(404).json({ success: false, error: 'Vehicle not found' });
+    }
+
+    // Record completion time
+    const timestamp = new Date().toISOString();
+    let completionNotes = row.notes || '';
+    completionNotes += `\n[${timestamp}] Job completed by ${user.techName}`;
+
+    if (completedCalibrations) {
+      completionNotes += `\nCalibrations performed: ${completedCalibrations}`;
+    }
+
+    if (notes) {
+      completionNotes += `\nCompletion notes: ${notes}`;
+    }
+
+    const updateData = {
+      status: 'Completed',
+      completionTime: timestamp,
+      notes: completionNotes.trim()
+    };
+
+    if (completedCalibrations) {
+      updateData.completedCalibrations = completedCalibrations;
+    }
+
+    const result = await sheetWriter.upsertScheduleRowByRO(roPo, updateData);
+
+    if (!result.success) {
+      return res.status(500).json({
+        success: false,
+        error: result.error || 'Failed to complete job'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Job completed',
+      roPo: roPo,
+      completionTime: timestamp
+    });
+  } catch (err) {
+    console.error(`${LOG_TAG} Error completing job:`, err.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to complete job'
+    });
+  }
+}
+
+/**
+ * GET /api/tech/active-job
+ * Get the currently active (In Progress) job for this tech
+ */
+export async function getActiveJob(req, res) {
+  try {
+    const user = req.user;
+    console.log(`${LOG_TAG} Getting active job for tech: ${user.techName}`);
+
+    const result = await sheetWriter.getAllScheduleRows();
+    if (!result.success) {
+      return res.status(500).json({ success: false, error: 'Failed to fetch jobs' });
+    }
+
+    const techNameLower = (user.techName || '').toLowerCase().trim();
+    const activeJob = (result.rows || []).find(row => {
+      const rowTech = (row.technician || row.technicianAssigned || '').toLowerCase().trim();
+      const status = (row.status || '').toLowerCase();
+      return rowTech === techNameLower && status === 'in progress';
+    });
+
+    if (!activeJob) {
+      return res.json({ success: true, activeJob: null });
+    }
+
+    res.json({
+      success: true,
+      activeJob: {
+        roPo: activeJob.roPo,
+        vehicle: activeJob.vehicle,
+        shopName: activeJob.shopName || activeJob.shop_name,
+        requiredCalibrations: activeJob.requiredCalibrations,
+        scheduledDate: activeJob.scheduledDate,
+        scheduledTime: activeJob.scheduledTime
+      }
+    });
+  } catch (err) {
+    console.error(`${LOG_TAG} Error getting active job:`, err.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get active job'
+    });
+  }
+}
+
+/**
  * POST /api/tech/request-assignment
  * Request to be assigned to a job
  */
@@ -911,5 +1108,8 @@ export default {
   getDocuments,
   getStats,
   uploadDocument,
-  requestAssignment
+  requestAssignment,
+  startJob,
+  completeJob,
+  getActiveJob
 };

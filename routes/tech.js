@@ -67,6 +67,15 @@ router.post('/vehicles/:roPo/upload', upload.single('file'), techController.uplo
 // Request assignment to a job
 router.post('/request-assignment', techController.requestAssignment);
 
+// Start job (sets status to In Progress with timer)
+router.post('/start-job', techController.startJob);
+
+// Complete job (with calibrations and notes)
+router.post('/complete-job', techController.completeJob);
+
+// Get active job for current tech
+router.get('/active-job', techController.getActiveJob);
+
 // ============================================================
 // CALENDAR ENDPOINTS (for Tech Portal Calendar feature)
 // ============================================================
