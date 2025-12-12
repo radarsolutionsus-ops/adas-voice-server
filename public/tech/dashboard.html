@@ -1815,10 +1815,20 @@
     async function uploadDocument(file, type) {
       if (!currentJob) return;
 
+      // Map frontend type names to backend docType names
+      const typeMap = {
+        'invoice': 'invoice',
+        'postscan': 'postScan',
+        'revv': 'revvReport',
+        'revvReport': 'revvReport'
+      };
+      const docType = typeMap[type] || type;
+
       try {
         const formData = new FormData();
+        // IMPORTANT: Text fields MUST come BEFORE file for multer to parse them correctly
+        formData.append('docType', docType);
         formData.append('file', file);
-        formData.append('type', type);
 
         const token = getStorageItem('adas_access_token') || getStorageItem('token');
         const response = await fetch(`/api/tech/vehicles/${currentJob.roPo}/upload`, {
@@ -1922,12 +1932,24 @@
         btn.innerHTML = `<span class="icon">${Icons.loader}</span> Submitting...`;
 
         const formData = new FormData();
-        formData.append('file', uploadedRevvFile);
-        formData.append('type', 'revv');
+        // IMPORTANT: Text fields MUST come BEFORE file for multer to parse them correctly
+        formData.append('docType', 'revvReport');
         formData.append('calibrations', calibrations.join(', '));
+        formData.append('file', uploadedRevvFile);
+
+        // Debug logging
+        console.log('[TECH] Uploading RevvADAS:', {
+          roPo: currentJob.roPo,
+          docType: 'revvReport',
+          fileName: uploadedRevvFile.name,
+          calibrations: calibrations.join(', ')
+        });
 
         const token = getStorageItem('adas_access_token') || getStorageItem('token');
-        const response = await fetch(`/api/tech/vehicles/${currentJob.roPo}/upload`, {
+        const url = `/api/tech/vehicles/${currentJob.roPo}/upload`;
+        console.log('[TECH] Upload URL:', url);
+
+        const response = await fetch(url, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`
@@ -1935,7 +1957,9 @@
           body: formData
         });
 
+        console.log('[TECH] Upload response status:', response.status);
         const data = await response.json();
+        console.log('[TECH] Upload response data:', data);
         if (!data.success) throw new Error(data.error);
 
         closeModal();

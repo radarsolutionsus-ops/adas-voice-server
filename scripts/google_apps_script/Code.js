@@ -1399,6 +1399,8 @@ function getAllScheduleRows(shopName) {
       requiredCalibrations: row[COL.REQUIRED_CALS] || '',
       completedCalibrations: row[COL.COMPLETED_CALS] || '',
       dtcs: row[COL.DTCS] || '',
+      estimatePdf: row[COL.ESTIMATE_PDF] || '',
+      prescanPdf: row[COL.PRESCAN_PDF] || '',
       revvReportPdf: row[COL.REVV_PDF] || '',
       postScanPdf: row[COL.POST_SCAN_PDF] || '',
       invoicePdf: row[COL.INVOICE_PDF] || '',

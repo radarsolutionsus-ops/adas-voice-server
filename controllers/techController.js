@@ -110,11 +110,11 @@ export async function getAllVehicles(req, res) {
       requiredCalibrations: v.requiredCalibrations || '',
       notes: v.notes || '',
       dtcs: v.dtcs || '',
-      estimatePdf: v.estimatePdf || '',
-      preScanPdf: v.preScanPdf || '',
-      revvReportPdf: v.revvReportPdf || '',
-      postScanPdf: v.postScanPdf || '',
-      invoicePdf: v.invoicePdf || '',
+      estimatePdf: v.estimatePdf || v.estimate_pdf || '',
+      prescanPdf: v.prescanPdf || v.preScanPdf || v.prescan_pdf || '',
+      revvReportPdf: v.revvReportPdf || v.revv_report_pdf || '',
+      postScanPdf: v.postScanPdf || v.postscan_pdf || '',
+      invoicePdf: v.invoicePdf || v.invoice_pdf || '',
       lastUpdated: v.timestampCreated || ''
     }));
 
@@ -178,11 +178,11 @@ export async function getMyVehicles(req, res) {
       requiredCalibrations: v.requiredCalibrations || '',
       notes: v.notes || '',
       dtcs: v.dtcs || '',
-      estimatePdf: v.estimatePdf || '',
-      preScanPdf: v.preScanPdf || '',
-      revvReportPdf: v.revvReportPdf || '',
-      postScanPdf: v.postScanPdf || '',
-      invoicePdf: v.invoicePdf || '',
+      estimatePdf: v.estimatePdf || v.estimate_pdf || '',
+      prescanPdf: v.prescanPdf || v.preScanPdf || v.prescan_pdf || '',
+      revvReportPdf: v.revvReportPdf || v.revv_report_pdf || '',
+      postScanPdf: v.postScanPdf || v.postscan_pdf || '',
+      invoicePdf: v.invoicePdf || v.invoice_pdf || '',
       lastUpdated: v.timestampCreated || ''
     }));
 
@@ -253,11 +253,11 @@ export async function getTodaySchedule(req, res) {
       requiredCalibrations: v.requiredCalibrations || '',
       notes: v.notes || '',
       dtcs: v.dtcs || '',
-      estimatePdf: v.estimatePdf || '',
-      preScanPdf: v.preScanPdf || '',
-      revvReportPdf: v.revvReportPdf || '',
-      postScanPdf: v.postScanPdf || '',
-      invoicePdf: v.invoicePdf || ''
+      estimatePdf: v.estimatePdf || v.estimate_pdf || '',
+      prescanPdf: v.prescanPdf || v.preScanPdf || v.prescan_pdf || '',
+      revvReportPdf: v.revvReportPdf || v.revv_report_pdf || '',
+      postScanPdf: v.postScanPdf || v.postscan_pdf || '',
+      invoicePdf: v.invoicePdf || v.invoice_pdf || ''
     }));
 
     res.json({
@@ -318,11 +318,11 @@ export async function getVehicleDetail(req, res) {
         completedCalibrations: row.completedCalibrations || '',
         dtcs: row.dtcs || '',
         notes: row.notes || '',
-        estimatePdf: row.estimatePdf || '',
-        preScanPdf: row.preScanPdf || '',
-        revvReportPdf: row.revvReportPdf || '',
-        postScanPdf: row.postScanPdf || '',
-        invoicePdf: row.invoicePdf || '',
+        estimatePdf: row.estimatePdf || row.estimate_pdf || '',
+        prescanPdf: row.prescanPdf || row.preScanPdf || row.prescan_pdf || '',
+        revvReportPdf: row.revvReportPdf || row.revv_report_pdf || '',
+        postScanPdf: row.postScanPdf || row.postscan_pdf || '',
+        invoicePdf: row.invoicePdf || row.invoice_pdf || '',
         arrivalTime: row.arrivalTime || '',
         completionTime: row.completionTime || '',
         timestampCreated: row.timestampCreated || ''
@@ -582,11 +582,11 @@ export async function getDocuments(req, res) {
     res.json({
       success: true,
       documents: {
-        estimate: row.estimatePdf || null,
-        preScan: row.postScanPdf || null,
-        revvReport: row.revvReportPdf || null,
-        postScan: row.postScanPdf || null,
-        invoice: row.invoicePdf || null
+        estimate: row.estimatePdf || row.estimate_pdf || null,
+        preScan: row.prescanPdf || row.preScanPdf || row.prescan_pdf || null,
+        revvReport: row.revvReportPdf || row.revv_report_pdf || null,
+        postScan: row.postScanPdf || row.postscan_pdf || null,
+        invoice: row.invoicePdf || row.invoice_pdf || null
       }
     });
   } catch (err) {
@@ -672,15 +672,29 @@ export async function getStats(req, res) {
 export async function uploadDocument(req, res) {
   try {
     const { roPo } = req.params;
-    const { docType } = req.body;
     const user = req.user;
+
+    // Debug logging for form data - log everything
+    console.log(`${LOG_TAG} Upload request for RO: ${roPo}`);
+    console.log(`${LOG_TAG} req.body keys:`, Object.keys(req.body || {}));
+    console.log(`${LOG_TAG} req.body:`, JSON.stringify(req.body));
+    console.log(`${LOG_TAG} req.file:`, req.file ? {
+      fieldname: req.file.fieldname,
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size
+    } : 'no file');
+
+    // Get docType from body (multer parses multipart form fields into req.body)
+    const docType = req.body?.docType || req.body?.type;
 
     // Validate docType
     const validDocTypes = ['postScan', 'invoice', 'revvReport'];
     if (!validDocTypes.includes(docType)) {
+      console.log(`${LOG_TAG} Invalid docType received: "${docType}"`);
       return res.status(400).json({
         success: false,
-        error: `Invalid document type. Must be one of: ${validDocTypes.join(', ')}`
+        error: `Invalid document type. Must be one of: ${validDocTypes.join(', ')}. Received: "${docType}"`
       });
     }
 
