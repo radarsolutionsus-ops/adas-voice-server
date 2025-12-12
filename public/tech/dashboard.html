@@ -2153,10 +2153,19 @@
       });
     }
 
+    // Handle Start Job button click - wrapper to extract data attributes
+    function handleStartJobClick(btn) {
+      const roPo = btn.getAttribute('data-ropo');
+      const scheduledDate = btn.getAttribute('data-scheduled');
+      console.log('[START_JOB] Button clicked, extracted data:', { roPo, scheduledDate });
+      startJobAction(roPo, scheduledDate);
+    }
+
     // Start a job
     async function startJobAction(roPo, scheduledDate) {
       console.log('[START_JOB] ====== Start Job clicked ======');
       console.log('[START_JOB] RO:', roPo, 'Scheduled Date:', scheduledDate);
+      console.log('[START_JOB] Token available:', !!(getStorageItem('adas_access_token') || getStorageItem('token')));
 
       // Check if already have an active job
       if (activeJobData && activeJobData.roPo !== roPo) {
@@ -2928,7 +2937,9 @@
           ` : ''}
           <div class="action-buttons">
             <button class="btn btn-start ${!canStart ? 'disabled-job' : ''}"
-                    onclick="${canStart ? `startJobAction('${currentJob.roPo}', '${currentJob.scheduledDate || ''}')` : ''}"
+                    data-ropo="${escapeHtml(currentJob.roPo)}"
+                    data-scheduled="${escapeHtml(currentJob.scheduledDate || '')}"
+                    onclick="${canStart ? `handleStartJobClick(this)` : ''}"
                     ${!canStart ? 'disabled' : ''}>
               <span class="icon">${Icons.wrench}</span>
               ${isActiveJob ? 'Job In Progress' : 'Start Job'}
