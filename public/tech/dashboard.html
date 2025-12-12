@@ -865,6 +865,94 @@
       to { transform: rotate(360deg); }
     }
 
+    /* Loading Overlay */
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 300;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .loading-overlay.active {
+      display: flex;
+    }
+
+    .loading-overlay .spinner-large {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--border, rgba(0, 0, 0, 0.1));
+      border-top-color: #007aff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    .loading-overlay .loading-text {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text-secondary, #86868b);
+    }
+
+    /* Toast Notification */
+    .toast-container {
+      position: fixed;
+      top: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 400;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    .toast {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 20px;
+      background: #1d1d1f;
+      color: white;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 500;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+      opacity: 0;
+      transform: translateY(-20px);
+      transition: all 0.3s ease;
+      pointer-events: auto;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .toast.success {
+      background: #34c759;
+    }
+
+    .toast.error {
+      background: #ff3b30;
+    }
+
+    .toast.info {
+      background: #007aff;
+    }
+
+    .toast .icon {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+    }
+
     /* Responsive */
     @media (max-width: 640px) {
       .dashboard-container {
@@ -896,6 +984,15 @@
   </style>
 </head>
 <body>
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner-large"></div>
+    <span class="loading-text" id="loadingText">Processing...</span>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
   <!-- Simple Header -->
   <header class="simple-header">
     <div class="header-logo">
@@ -1028,6 +1125,50 @@
       const div = document.createElement('div');
       div.textContent = text;
       return div.innerHTML;
+    }
+
+    // Loading overlay functions
+    function showLoading(text = 'Processing...') {
+      const overlay = document.getElementById('loadingOverlay');
+      const textEl = document.getElementById('loadingText');
+      if (textEl) textEl.textContent = text;
+      if (overlay) overlay.classList.add('active');
+    }
+
+    function hideLoading() {
+      const overlay = document.getElementById('loadingOverlay');
+      if (overlay) overlay.classList.remove('active');
+    }
+
+    // Toast notification functions
+    function showToast(message, type = 'info', duration = 3500) {
+      const container = document.getElementById('toastContainer');
+      if (!container) return;
+
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+
+      let iconSvg = Icons.info || '';
+      if (type === 'success') iconSvg = Icons.checkCircle || '';
+      else if (type === 'error') iconSvg = Icons.alertCircle || Icons.x || '';
+
+      toast.innerHTML = `
+        <span class="icon">${iconSvg}</span>
+        <span>${escapeHtml(message)}</span>
+      `;
+
+      container.appendChild(toast);
+
+      // Trigger animation
+      requestAnimationFrame(() => {
+        toast.classList.add('show');
+      });
+
+      // Auto dismiss
+      setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+      }, duration);
     }
 
     // Initialize
@@ -1706,7 +1847,7 @@
 
       function handleRevvFile(file) {
         if (!file.name.toLowerCase().endsWith('.pdf')) {
-          alert('Please upload a PDF file');
+          showToast('Please upload a PDF file', 'error');
           return;
         }
         uploadedRevvFile = file;
@@ -1781,7 +1922,7 @@
 
       async function handleInvoiceFile(file) {
         if (!file.name.toLowerCase().endsWith('.pdf')) {
-          alert('Please upload a PDF file');
+          showToast('Please upload a PDF file', 'error');
           return;
         }
 
@@ -1797,7 +1938,7 @@
 
       async function handlePostScanFile(file) {
         if (!file.name.toLowerCase().endsWith('.pdf')) {
-          alert('Please upload a PDF file');
+          showToast('Please upload a PDF file', 'error');
           return;
         }
 
@@ -1852,7 +1993,7 @@
         }
 
       } catch (err) {
-        alert('Failed to upload: ' + err.message);
+        showToast('Failed to upload: ' + err.message, 'error');
       }
     }
 
@@ -1904,12 +2045,12 @@
       const calibrations = getSelectedCalibrations();
 
       if (!uploadedRevvFile) {
-        alert('Please upload a RevvADAS PDF file');
+        showToast('Please upload a RevvADAS PDF file', 'error');
         return;
       }
 
       if (calibrations.length === 0) {
-        alert('Please select at least one calibration or "No Calibration Required"');
+        showToast('Please select at least one calibration or "No Calibration Required"', 'error');
         return;
       }
 
@@ -1920,7 +2061,7 @@
         if (checkbox && checkbox.checked) {
           const selectedOption = document.querySelector(`input[name="${calType}-type"]:checked`);
           if (!selectedOption) {
-            alert(`Please select Static, Dynamic, or Both for ${calType.replace('-', ' ')}`);
+            showToast(`Please select Static, Dynamic, or Both for ${calType.replace(/-/g, ' ')}`, 'error');
             return;
           }
         }
@@ -1930,6 +2071,9 @@
         const btn = document.getElementById('submitRevvBtn');
         btn.disabled = true;
         btn.innerHTML = `<span class="icon">${Icons.loader}</span> Submitting...`;
+
+        // Show loading overlay
+        showLoading('Uploading RevvADAS report...');
 
         const formData = new FormData();
         // IMPORTANT: Text fields MUST come BEFORE file for multer to parse them correctly
@@ -1962,12 +2106,14 @@
         console.log('[TECH] Upload response data:', data);
         if (!data.success) throw new Error(data.error);
 
+        hideLoading();
         closeModal();
         await loadJobs();
-        alert('RevvADAS report submitted successfully!');
+        showToast('RevvADAS report submitted successfully!', 'success');
 
       } catch (err) {
-        alert('Failed to submit: ' + err.message);
+        hideLoading();
+        showToast('Failed to submit: ' + err.message, 'error');
         const btn = document.getElementById('submitRevvBtn');
         btn.disabled = false;
         btn.innerHTML = `<span class="icon">${Icons.upload}</span> Submit RevvADAS Report`;
@@ -2002,7 +2148,7 @@
         closeModal();
         await loadJobs();
       } catch (err) {
-        alert('Failed to update status: ' + err.message);
+        showToast('Failed to update status: ' + err.message, 'error');
       }
     }
 
