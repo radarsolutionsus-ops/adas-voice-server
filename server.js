@@ -42,6 +42,9 @@ import oem from "./utils/oem/index.js";
 // Import portal routes (auth, legacy portal, role-based shop/tech/admin, notifications)
 import { authRoutes, portalRoutes, shopRoutes, techRoutes, adminRoutes, notificationRoutes } from "./routes/index.js";
 
+// Import sendPushToTech for tech notifications when jobs are scheduled
+import { sendPushToTech } from "./controllers/calendarController.js";
+
 // ESM equivalent of __dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -544,6 +547,16 @@ async function handleOpsToolCall(toolName, args) {
             return { success: false, error: scheduleResult.error || "Failed to set schedule" };
           }
 
+          // Send push notification to tech
+          if (suggestion.technician) {
+            const vehicle = existing?.vehicle || 'Vehicle';
+            sendPushToTech(suggestion.technician, {
+              title: 'New Job Scheduled',
+              body: `${vehicle} scheduled for ${args.scheduledDate} at ${suggestion.suggestedTime}`,
+              data: { roPo: args.roPo, date: args.scheduledDate, time: suggestion.suggestedTime }
+            }).catch(err => console.log(`[OPS_TOOL] Push notification failed: ${err.message}`));
+          }
+
           return {
             success: true,
             scheduledDate: args.scheduledDate,
@@ -575,6 +588,16 @@ async function handleOpsToolCall(toolName, args) {
 
         if (!scheduleResult.success) {
           return { success: false, error: scheduleResult.error || "Failed to set schedule" };
+        }
+
+        // Send push notification to tech
+        if (assignedTech) {
+          const vehicle = existing?.vehicle || 'Vehicle';
+          sendPushToTech(assignedTech, {
+            title: 'New Job Scheduled',
+            body: `${vehicle} scheduled for ${args.scheduledDate}${args.scheduledTime ? ' at ' + args.scheduledTime : ''}`,
+            data: { roPo: args.roPo, date: args.scheduledDate, time: args.scheduledTime || '' }
+          }).catch(err => console.log(`[OPS_TOOL] Push notification failed: ${err.message}`));
         }
 
         // Build response message
