@@ -509,7 +509,7 @@ export async function sendReadyToScheduleEmail(roData) {
         <a href="${portalUrl}" class="cta-button">Schedule Appointment</a>
       </div>
 
-      <p style="font-size: 14px; color: #666;">Or call us at <strong>(786) 930-4555</strong> to schedule.</p>
+      <p style="font-size: 14px; color: #666;">Or call us at <strong>(786) 838-4497</strong> to schedule.</p>
       ` : `
       <p style="font-size: 15px;">Based on the RevvADAS analysis, no ADAS calibrations are required for this repair.</p>
       <p style="font-size: 15px;">The full report is attached for your records.</p>
@@ -520,7 +520,7 @@ export async function sendReadyToScheduleEmail(roData) {
     <div class="footer">
       <p><strong>ADAS F1RST</strong> | Miami, FL</p>
       <p>Professional ADAS Calibration Services</p>
-      <p style="margin-top: 15px;"><a href="${portalUrl}">Shop Portal</a> | (786) 930-4555</p>
+      <p style="margin-top: 15px;"><a href="${portalUrl}">Shop Portal</a> | (786) 838-4497</p>
     </div>
   </div>
 </body>
@@ -541,7 +541,7 @@ ${calibrationListText}
 
 NEXT STEP:
 Schedule your appointment at: ${portalUrl}
-Or call us at (786) 930-4555
+Or call us at (786) 838-4497
 
 The full RevvADAS report is attached.` : `Based on the RevvADAS analysis, no ADAS calibrations are required for this repair.
 
