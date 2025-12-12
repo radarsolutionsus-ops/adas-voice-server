@@ -661,48 +661,17 @@ function createNewRow(sheet, data, roPo) {
   // Apply Column T formatting after insert
   applyColumnTFormatting(sheet);
 
-  // ========== AUTO-READY TRIGGER FOR NEW ROWS ==========
-  // If RevvADAS PDF is provided when creating new row, trigger auto-ready
+  // ========== AUTO-READY TRIGGER FOR NEW ROWS (NO EMAIL) ==========
+  // If RevvADAS PDF is provided when creating new row, auto-set to Ready
   const newRevvPdf = data.revv_report_pdf || data.revvReportPdf || '';
 
   if (newRevvPdf) {
-    Logger.log('[AUTO-READY] New row created with RevvADAS PDF for RO ' + roPo + ', triggering auto-ready...');
-
-    // Check for discrepancies in scrub results
-    const hasDiscrepancy = flowHistory && (
-      flowHistory.toUpperCase().includes('MISSING') ||
-      flowHistory.toUpperCase().includes('ATTENTION') ||
-      flowHistory.toUpperCase().includes('DISCREPANCY') ||
-      flowHistory.toUpperCase().includes('MISMATCH')
-    );
-
-    if (hasDiscrepancy) {
-      // Set to Needs Attention
-      sheet.getRange(2, COL.STATUS + 1).setValue('Needs Attention');
-      const timestampNow = Utilities.formatDate(new Date(), 'America/New_York', 'MM/dd/yy h:mm a');
-      const flagNote = 'Auto-flagged: Discrepancy found on ' + timestampNow;
-      const existingNotes = sheet.getRange(2, COL.NOTES + 1).getValue() || '';
-      sheet.getRange(2, COL.NOTES + 1).setValue(
-        existingNotes ? existingNotes + ' | ' + flagNote : flagNote
-      );
-      Logger.log('[AUTO-READY] RO ' + roPo + ' set to Needs Attention due to discrepancy');
-    } else {
-      // No discrepancy - send intake email and set to Ready
-      try {
-        const emailResult = sendIntakeEmailToShop(2); // Row 2 since we inserted at top
-        Logger.log('[AUTO-READY] RO ' + roPo + ': email=' + (emailResult.success ? emailResult.email : emailResult.error));
-      } catch (e) {
-        Logger.log('[AUTO-READY] Email error for RO ' + roPo + ': ' + e.message);
-        // Still set to Ready even if email fails
-        sheet.getRange(2, COL.STATUS + 1).setValue('Ready');
-        const timestampNow = Utilities.formatDate(new Date(), 'America/New_York', 'MM/dd/yy h:mm a');
-        const readyNote = 'Auto-set to Ready on ' + timestampNow + ' (email failed: ' + e.message + ')';
-        const existingNotes = sheet.getRange(2, COL.NOTES + 1).getValue() || '';
-        sheet.getRange(2, COL.NOTES + 1).setValue(
-          existingNotes ? existingNotes + ' | ' + readyNote : readyNote
-        );
-      }
-    }
+    Logger.log('[AUTO-READY] New row created with RevvADAS PDF for RO ' + roPo + ', setting status to Ready');
+    sheet.getRange(2, COL.STATUS + 1).setValue('Ready');
+    const timestampNow = Utilities.formatDate(new Date(), 'America/New_York', 'MM/dd/yy h:mm a');
+    const note = 'Ready for scheduling - ' + timestampNow;
+    const existing = sheet.getRange(2, COL.NOTES + 1).getValue() || '';
+    sheet.getRange(2, COL.NOTES + 1).setValue(existing ? existing + ' | ' + note : note);
   }
   // ========== END AUTO-READY TRIGGER ==========
 
@@ -893,50 +862,19 @@ function updateExistingRow(sheet, rowNum, data) {
   // Apply Column T formatting after update
   applyColumnTFormatting(sheet);
 
-  // ========== AUTO-READY TRIGGER ==========
+  // ========== AUTO-READY TRIGGER (NO EMAIL) ==========
   // Check if RevvADAS PDF was just added (wasn't there before, now it is)
   const oldRevvPdf = curr[COL.REVV_PDF] || '';
   const newRevvPdf = data.revv_report_pdf || data.revvReportPdf || '';
 
   if (newRevvPdf && !oldRevvPdf) {
-    // RevvADAS PDF was just uploaded - trigger auto-ready process
-    Logger.log('[AUTO-READY] RevvADAS PDF uploaded for RO ' + roPo + ', triggering auto-ready...');
-
-    // Check for discrepancies in scrub results
-    const hasDiscrepancy = flowHistory && (
-      flowHistory.toUpperCase().includes('MISSING') ||
-      flowHistory.toUpperCase().includes('ATTENTION') ||
-      flowHistory.toUpperCase().includes('DISCREPANCY') ||
-      flowHistory.toUpperCase().includes('MISMATCH')
-    );
-
-    if (hasDiscrepancy) {
-      // Set to Needs Attention
-      sheet.getRange(rowNum, COL.STATUS + 1).setValue('Needs Attention');
-      const timestamp = Utilities.formatDate(new Date(), 'America/New_York', 'MM/dd/yy h:mm a');
-      const flagNote = 'Auto-flagged: Discrepancy found on ' + timestamp;
-      const existingNotes = sheet.getRange(rowNum, COL.NOTES + 1).getValue() || '';
-      sheet.getRange(rowNum, COL.NOTES + 1).setValue(
-        existingNotes ? existingNotes + ' | ' + flagNote : flagNote
-      );
-      Logger.log('[AUTO-READY] RO ' + roPo + ' set to Needs Attention due to discrepancy');
-    } else {
-      // No discrepancy - send intake email and set to Ready
-      try {
-        const emailResult = sendIntakeEmailToShop(rowNum);
-        Logger.log('[AUTO-READY] RO ' + roPo + ': email=' + (emailResult.success ? emailResult.email : emailResult.error));
-      } catch (e) {
-        Logger.log('[AUTO-READY] Email error for RO ' + roPo + ': ' + e.message);
-        // Still set to Ready even if email fails
-        sheet.getRange(rowNum, COL.STATUS + 1).setValue('Ready');
-        const timestamp = Utilities.formatDate(new Date(), 'America/New_York', 'MM/dd/yy h:mm a');
-        const readyNote = 'Auto-set to Ready on ' + timestamp + ' (email failed: ' + e.message + ')';
-        const existingNotes = sheet.getRange(rowNum, COL.NOTES + 1).getValue() || '';
-        sheet.getRange(rowNum, COL.NOTES + 1).setValue(
-          existingNotes ? existingNotes + ' | ' + readyNote : readyNote
-        );
-      }
-    }
+    // RevvADAS PDF was just uploaded - auto-set to Ready
+    Logger.log('[AUTO-READY] RevvADAS PDF uploaded for RO ' + roPo + ', setting status to Ready');
+    sheet.getRange(rowNum, COL.STATUS + 1).setValue('Ready');
+    const timestamp = Utilities.formatDate(new Date(), 'America/New_York', 'MM/dd/yy h:mm a');
+    const note = 'Ready for scheduling - ' + timestamp;
+    const existing = sheet.getRange(rowNum, COL.NOTES + 1).getValue() || '';
+    sheet.getRange(rowNum, COL.NOTES + 1).setValue(existing ? existing + ' | ' + note : note);
   }
   // ========== END AUTO-READY TRIGGER ==========
 
