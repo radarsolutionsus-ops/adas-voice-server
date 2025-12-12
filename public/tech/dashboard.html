@@ -381,7 +381,7 @@
       background: white;
       border-radius: 16px;
       width: 100%;
-      max-width: 560px;
+      max-width: 600px;
       max-height: 90vh;
       overflow: hidden;
       display: flex;
@@ -436,7 +436,7 @@
       text-transform: uppercase;
       letter-spacing: 0.5px;
       color: var(--text-secondary, #86868b);
-      margin-bottom: 8px;
+      margin-bottom: 12px;
     }
 
     .info-row {
@@ -466,6 +466,41 @@
       font-size: 13px;
     }
 
+    .status-badge-inline {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .status-badge-inline.new {
+      background: rgba(255, 59, 48, 0.1);
+      color: #ff3b30;
+    }
+
+    .status-badge-inline.ready {
+      background: rgba(255, 149, 0, 0.1);
+      color: #ff9500;
+    }
+
+    .status-badge-inline.scheduled {
+      background: rgba(0, 122, 255, 0.1);
+      color: #007aff;
+    }
+
+    .status-badge-inline.in-progress {
+      background: rgba(175, 82, 222, 0.1);
+      color: #af52de;
+    }
+
+    .status-badge-inline.completed {
+      background: rgba(52, 199, 89, 0.1);
+      color: #34c759;
+    }
+
     .calibrations-box {
       background: var(--bg-grouped, #f2f2f7);
       padding: 12px 16px;
@@ -474,21 +509,21 @@
       color: var(--text-primary, #1d1d1f);
     }
 
+    /* Document Grid */
     .doc-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-      gap: 8px;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
     }
 
     .doc-item {
       display: flex;
-      flex-direction: column;
       align-items: center;
-      gap: 4px;
-      padding: 12px 8px;
+      gap: 12px;
+      padding: 14px 16px;
       background: var(--bg-grouped, #f2f2f7);
-      border-radius: 8px;
-      font-size: 12px;
+      border-radius: 10px;
+      font-size: 14px;
       color: var(--text-secondary, #86868b);
       text-decoration: none;
       transition: all 0.15s ease;
@@ -497,21 +532,228 @@
     .doc-item.available {
       color: var(--text-primary, #1d1d1f);
       cursor: pointer;
+      border: 1px solid transparent;
     }
 
     .doc-item.available:hover {
-      background: var(--bg, #e5e5ea);
+      background: #e5e5ea;
+      border-color: var(--border, rgba(0, 0, 0, 0.1));
     }
 
     .doc-item .icon {
-      width: 24px;
-      height: 24px;
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
     }
 
     .doc-item.available .icon {
       color: #007aff;
     }
 
+    .doc-item .doc-name {
+      flex: 1;
+    }
+
+    .doc-item .doc-status {
+      font-size: 12px;
+      color: var(--text-tertiary, #aeaeb2);
+    }
+
+    .doc-item.available .doc-status {
+      color: #34c759;
+    }
+
+    /* Status-specific sections */
+    .waiting-message {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px;
+      background: rgba(255, 149, 0, 0.1);
+      border-radius: 10px;
+      color: #ff9500;
+      font-size: 14px;
+    }
+
+    .waiting-message .icon {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+
+    /* File Upload Zone */
+    .upload-zone {
+      border: 2px dashed var(--border, rgba(0, 0, 0, 0.15));
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      background: var(--bg-grouped, #f2f2f7);
+    }
+
+    .upload-zone:hover {
+      border-color: #007aff;
+      background: rgba(0, 122, 255, 0.05);
+    }
+
+    .upload-zone.dragover {
+      border-color: #007aff;
+      background: rgba(0, 122, 255, 0.1);
+    }
+
+    .upload-zone .icon {
+      width: 32px;
+      height: 32px;
+      color: #007aff;
+      margin-bottom: 8px;
+    }
+
+    .upload-zone p {
+      font-size: 14px;
+      color: var(--text-secondary, #86868b);
+      margin: 0;
+    }
+
+    .upload-zone .filename {
+      font-weight: 500;
+      color: var(--text-primary, #1d1d1f);
+      margin-top: 8px;
+    }
+
+    .upload-zone input[type="file"] {
+      display: none;
+    }
+
+    /* Calibration Checkboxes */
+    .calibration-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .calibration-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 16px;
+      background: var(--bg-grouped, #f2f2f7);
+      border-radius: 10px;
+      transition: all 0.15s ease;
+    }
+
+    .calibration-item:hover {
+      background: #e5e5ea;
+    }
+
+    .calibration-item.selected {
+      background: rgba(0, 122, 255, 0.1);
+      border: 1px solid rgba(0, 122, 255, 0.3);
+    }
+
+    .calibration-item input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      margin: 0;
+      flex-shrink: 0;
+      accent-color: #007aff;
+    }
+
+    .calibration-item .cal-content {
+      flex: 1;
+    }
+
+    .calibration-item .cal-name {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-primary, #1d1d1f);
+      margin-bottom: 4px;
+    }
+
+    .calibration-item .cal-options {
+      display: flex;
+      gap: 16px;
+      margin-top: 8px;
+    }
+
+    .calibration-item .cal-option {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--text-secondary, #86868b);
+    }
+
+    .calibration-item .cal-option input[type="radio"] {
+      width: 16px;
+      height: 16px;
+      margin: 0;
+      accent-color: #007aff;
+    }
+
+    .calibration-item .cal-fixed {
+      font-size: 12px;
+      color: var(--text-tertiary, #aeaeb2);
+    }
+
+    .no-cal-option {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px;
+      background: rgba(255, 149, 0, 0.1);
+      border-radius: 10px;
+      margin-top: 12px;
+    }
+
+    .no-cal-option input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      margin: 0;
+      accent-color: #ff9500;
+    }
+
+    .no-cal-option .no-cal-content {
+      flex: 1;
+    }
+
+    .no-cal-option .no-cal-label {
+      font-size: 14px;
+      font-weight: 500;
+      color: #ff9500;
+    }
+
+    .no-cal-option .no-cal-hint {
+      font-size: 12px;
+      color: var(--text-secondary, #86868b);
+      margin-top: 4px;
+    }
+
+    .other-calibration {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: var(--bg-grouped, #f2f2f7);
+      border-radius: 10px;
+    }
+
+    .other-calibration input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      margin: 0;
+      flex-shrink: 0;
+    }
+
+    .other-calibration input[type="text"] {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid var(--border, rgba(0, 0, 0, 0.1));
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    /* Action Buttons */
     .action-buttons {
       display: flex;
       gap: 12px;
@@ -519,9 +761,9 @@
 
     .action-buttons .btn {
       flex: 1;
-      padding: 12px 16px;
+      padding: 14px 20px;
       font-size: 15px;
-      font-weight: 500;
+      font-weight: 600;
       border: none;
       border-radius: 10px;
       cursor: pointer;
@@ -535,6 +777,15 @@
     .action-buttons .btn .icon {
       width: 18px;
       height: 18px;
+    }
+
+    .btn-primary {
+      background: #007aff;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #0066d6;
     }
 
     .btn-start {
@@ -556,9 +807,9 @@
     }
 
     .btn-disabled {
-      background: var(--bg-grouped, #f2f2f7);
-      color: var(--text-tertiary, #aeaeb2);
-      cursor: not-allowed;
+      background: var(--bg-grouped, #f2f2f7) !important;
+      color: var(--text-tertiary, #aeaeb2) !important;
+      cursor: not-allowed !important;
     }
 
     .view-only-banner {
@@ -577,6 +828,21 @@
       width: 18px;
       height: 18px;
       flex-shrink: 0;
+    }
+
+    /* Completion Info */
+    .completion-info {
+      background: rgba(52, 199, 89, 0.1);
+      border-radius: 10px;
+      padding: 16px;
+    }
+
+    .completion-info .info-row {
+      border-color: rgba(52, 199, 89, 0.2);
+    }
+
+    .completion-info .info-value {
+      color: #34c759;
     }
 
     /* Loading */
@@ -617,6 +883,10 @@
         flex-direction: column;
         align-items: flex-end;
         gap: 6px;
+      }
+
+      .doc-grid {
+        grid-template-columns: 1fr;
       }
 
       .action-buttons {
@@ -726,66 +996,8 @@
           <span class="icon" id="closeModalIcon"></span>
         </button>
       </div>
-      <div class="modal-body">
-        <!-- View Only Banner -->
-        <div class="view-only-banner" id="viewOnlyBanner" style="display:none;">
-          <span class="icon" id="bannerIcon"></span>
-          <span id="bannerText">This job is assigned to another technician.</span>
-        </div>
-
-        <!-- Vehicle Info -->
-        <div class="modal-section">
-          <h4>Vehicle Information</h4>
-          <div class="info-row">
-            <span class="info-label">Shop</span>
-            <span class="info-value" id="modalShop">-</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">Vehicle</span>
-            <span class="info-value" id="modalVehicle">-</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">VIN</span>
-            <span class="info-value mono" id="modalVin">-</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">Scheduled</span>
-            <span class="info-value" id="modalSchedule">-</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">Status</span>
-            <span class="info-value" id="modalStatus">-</span>
-          </div>
-        </div>
-
-        <!-- Calibrations -->
-        <div class="modal-section">
-          <h4>Required Calibrations</h4>
-          <div class="calibrations-box" id="modalCalibrations">-</div>
-        </div>
-
-        <!-- Documents -->
-        <div class="modal-section">
-          <h4>Documents</h4>
-          <div class="doc-grid" id="modalDocuments">
-            <!-- Populated by JS -->
-          </div>
-        </div>
-
-        <!-- Actions (hidden for view-only) -->
-        <div class="modal-section" id="actionsSection">
-          <h4>Actions</h4>
-          <div class="action-buttons">
-            <button class="btn btn-start" id="btnStart" onclick="updateStatus('In Progress')">
-              <span class="icon" id="startIcon"></span>
-              Start Job
-            </button>
-            <button class="btn btn-complete" id="btnComplete" onclick="updateStatus('Completed')">
-              <span class="icon" id="completeIcon"></span>
-              Complete
-            </button>
-          </div>
-        </div>
+      <div class="modal-body" id="modalBody">
+        <!-- Content populated dynamically by JS based on status -->
       </div>
     </div>
   </div>
@@ -801,6 +1013,10 @@
     let currentJob = null;
     let currentTechName = '';
     let isAllJobsExpanded = false;
+    let selectedCalibrations = {};
+    let uploadedRevvFile = null;
+    let uploadedInvoiceFile = null;
+    let uploadedPostScanFile = null;
 
     // Helper functions
     function getStorageItem(key) {
@@ -855,9 +1071,6 @@
       document.getElementById('closeModalIcon').innerHTML = Icons.x;
       document.getElementById('allJobsToggle').innerHTML = Icons.chevronRight;
       document.getElementById('viewOnlyIcon').innerHTML = Icons.eye;
-      document.getElementById('bannerIcon').innerHTML = Icons.eye;
-      document.getElementById('startIcon').innerHTML = Icons.wrench;
-      document.getElementById('completeIcon').innerHTML = Icons.checkCircle;
     }
 
     async function loadJobs() {
@@ -1024,84 +1237,725 @@
       currentJob = allJobs.find(j => j.roPo === roPo);
       if (!currentJob) return;
 
+      // Reset upload states
+      selectedCalibrations = {};
+      uploadedRevvFile = null;
+      uploadedInvoiceFile = null;
+      uploadedPostScanFile = null;
+
       document.getElementById('modalTitle').textContent = `RO #${currentJob.roPo}`;
-      document.getElementById('modalShop').textContent = currentJob.shopName || '-';
-      document.getElementById('modalVehicle').textContent = currentJob.vehicle || '-';
-      document.getElementById('modalVin').textContent = currentJob.vin || '-';
-      document.getElementById('modalStatus').textContent = currentJob.status || 'New';
 
-      // Schedule
-      let scheduleText = '-';
-      if (currentJob.scheduledDate) {
-        const date = new Date(currentJob.scheduledDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        scheduleText = currentJob.scheduledTime ? `${date} at ${currentJob.scheduledTime}` : date;
-      }
-      document.getElementById('modalSchedule').textContent = scheduleText;
+      // Render modal content based on status
+      const modalBody = document.getElementById('modalBody');
+      const status = (currentJob.status || 'New').toLowerCase();
+      const hasRevv = currentJob.revvReportUrl || currentJob.revvPdf || currentJob.revv_pdf || currentJob.revvReportPdf;
 
-      // Calibrations
-      document.getElementById('modalCalibrations').textContent = currentJob.requiredCalibrations || 'Not determined yet';
-
-      // Documents
-      const docs = [
-        { name: 'Estimate', url: currentJob.estimatePdf || currentJob.estimate_pdf || currentJob.estimatePdfUrl },
-        { name: 'Pre-Scan', url: currentJob.prescanPdf || currentJob.preScanPdf || currentJob.preScanPdfUrl },
-        { name: 'Revv Report', url: currentJob.revvPdf || currentJob.revvReportPdf || currentJob.revvReportUrl },
-        { name: 'Post-Scan', url: currentJob.postscanPdf || currentJob.postScanPdf || currentJob.postScanPdfUrl },
-        { name: 'Invoice', url: currentJob.invoicePdf || currentJob.invoice_pdf || currentJob.invoicePdfUrl }
-      ];
-
-      document.getElementById('modalDocuments').innerHTML = docs.map(doc => {
-        const hasUrl = doc.url && doc.url.startsWith('http');
-        return `
-          <${hasUrl ? 'a href="' + doc.url + '" target="_blank"' : 'div'} class="doc-item ${hasUrl ? 'available' : ''}">
-            <span class="icon">${Icons.file}</span>
-            <span>${doc.name}</span>
-          </${hasUrl ? 'a' : 'div'}>
-        `;
-      }).join('');
-
-      // Show/hide actions based on view-only
-      const actionsSection = document.getElementById('actionsSection');
-      const viewOnlyBanner = document.getElementById('viewOnlyBanner');
+      // Determine effective status for UI
+      let effectiveStatus = status;
+      if (status === 'new' && !hasRevv) effectiveStatus = 'new';
+      else if (status === 'ready' || (status === 'new' && hasRevv)) effectiveStatus = 'ready';
 
       if (viewOnly) {
-        actionsSection.style.display = 'none';
-        viewOnlyBanner.style.display = 'flex';
-        const tech = currentJob.technician || currentJob.technicianAssigned || 'another technician';
-        document.getElementById('bannerText').textContent = `Assigned to ${tech} (view only)`;
+        modalBody.innerHTML = renderViewOnlyModal();
+      } else if (effectiveStatus === 'new') {
+        modalBody.innerHTML = renderNewStatusModal();
+        initCalibrationHandlers();
+        initRevvUploadHandler();
+      } else if (effectiveStatus === 'ready') {
+        modalBody.innerHTML = renderReadyStatusModal();
+      } else if (effectiveStatus === 'scheduled' || effectiveStatus === 'rescheduled') {
+        modalBody.innerHTML = renderScheduledStatusModal();
+      } else if (effectiveStatus === 'in progress') {
+        modalBody.innerHTML = renderInProgressStatusModal();
+        initInProgressUploadHandlers();
+      } else if (effectiveStatus === 'completed') {
+        modalBody.innerHTML = renderCompletedStatusModal();
       } else {
-        actionsSection.style.display = 'block';
-        viewOnlyBanner.style.display = 'none';
-
-        // Update button states based on current status
-        const status = (currentJob.status || '').toLowerCase();
-        const btnStart = document.getElementById('btnStart');
-        const btnComplete = document.getElementById('btnComplete');
-
-        if (status === 'in progress') {
-          btnStart.classList.add('btn-disabled');
-          btnStart.disabled = true;
-          btnComplete.classList.remove('btn-disabled');
-          btnComplete.disabled = false;
-        } else if (status === 'completed') {
-          btnStart.classList.add('btn-disabled');
-          btnStart.disabled = true;
-          btnComplete.classList.add('btn-disabled');
-          btnComplete.disabled = true;
-        } else {
-          btnStart.classList.remove('btn-disabled');
-          btnStart.disabled = false;
-          btnComplete.classList.remove('btn-disabled');
-          btnComplete.disabled = false;
-        }
+        modalBody.innerHTML = renderDefaultModal();
       }
 
       document.getElementById('jobModal').classList.add('open');
     }
 
+    function renderVehicleInfoSection() {
+      const status = currentJob.status || 'New';
+      let statusClass = 'new';
+      if (status.toLowerCase() === 'ready') statusClass = 'ready';
+      else if (status.toLowerCase() === 'scheduled' || status.toLowerCase() === 'rescheduled') statusClass = 'scheduled';
+      else if (status.toLowerCase() === 'in progress') statusClass = 'in-progress';
+      else if (status.toLowerCase() === 'completed') statusClass = 'completed';
+
+      let scheduleText = 'Not scheduled';
+      if (currentJob.scheduledDate) {
+        const date = new Date(currentJob.scheduledDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        scheduleText = currentJob.scheduledTime ? `${date} at ${currentJob.scheduledTime}` : date;
+      }
+
+      return `
+        <div class="modal-section">
+          <h4>Vehicle Information</h4>
+          <div class="info-row">
+            <span class="info-label">Shop</span>
+            <span class="info-value">${escapeHtml(currentJob.shopName || '-')}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Vehicle</span>
+            <span class="info-value">${escapeHtml(currentJob.vehicle || '-')}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">VIN</span>
+            <span class="info-value mono">${escapeHtml(currentJob.vin || '-')}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Status</span>
+            <span class="status-badge-inline ${statusClass}">${escapeHtml(status)}</span>
+          </div>
+          ${currentJob.scheduledDate ? `
+          <div class="info-row">
+            <span class="info-label">Scheduled</span>
+            <span class="info-value">${escapeHtml(scheduleText)}</span>
+          </div>
+          ` : ''}
+        </div>
+      `;
+    }
+
+    function renderDocumentsSection(showDocs = ['estimate', 'prescan']) {
+      const docs = {
+        estimate: { name: 'Estimate', url: currentJob.estimatePdf || currentJob.estimate_pdf || currentJob.estimatePdfUrl },
+        prescan: { name: 'Pre-Scan', url: currentJob.prescanPdf || currentJob.preScanPdf || currentJob.preScanPdfUrl, noDtcConfirm: currentJob.noDtcConfirm },
+        revv: { name: 'RevvADAS Report', url: currentJob.revvPdf || currentJob.revvReportPdf || currentJob.revvReportUrl },
+        postscan: { name: 'Post-Scan', url: currentJob.postscanPdf || currentJob.postScanPdf || currentJob.postScanPdfUrl },
+        invoice: { name: 'Invoice', url: currentJob.invoicePdf || currentJob.invoice_pdf || currentJob.invoicePdfUrl }
+      };
+
+      const docItems = showDocs.map(key => {
+        const doc = docs[key];
+        if (!doc) return '';
+
+        const hasUrl = doc.url && doc.url.startsWith('http');
+        let statusText = 'Not uploaded';
+        if (hasUrl) statusText = 'View';
+        else if (key === 'prescan' && doc.noDtcConfirm) statusText = 'No DTCs confirmed';
+
+        if (hasUrl) {
+          return `
+            <a href="${doc.url}" target="_blank" class="doc-item available">
+              <span class="icon">${Icons.file}</span>
+              <span class="doc-name">${doc.name}</span>
+              <span class="doc-status">${statusText}</span>
+            </a>
+          `;
+        } else {
+          return `
+            <div class="doc-item">
+              <span class="icon">${Icons.file}</span>
+              <span class="doc-name">${doc.name}</span>
+              <span class="doc-status">${statusText}</span>
+            </div>
+          `;
+        }
+      }).join('');
+
+      return `
+        <div class="modal-section">
+          <h4>Documents</h4>
+          <div class="doc-grid">
+            ${docItems}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderNewStatusModal() {
+      return `
+        ${renderVehicleInfoSection()}
+        ${renderDocumentsSection(['estimate', 'prescan'])}
+
+        <div class="modal-section">
+          <h4>Upload RevvADAS Report</h4>
+          <div class="upload-zone" id="revvUploadZone">
+            <input type="file" id="revvFileInput" accept=".pdf">
+            <span class="icon">${Icons.upload}</span>
+            <p>Drag & drop RevvADAS PDF here or click to browse</p>
+            <p class="filename" id="revvFileName" style="display:none;"></p>
+          </div>
+        </div>
+
+        <div class="modal-section">
+          <h4>Calibrations Required</h4>
+          <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">Select all calibrations that apply based on the RevvADAS report:</p>
+
+          <div class="calibration-grid">
+            <div class="calibration-item" data-cal="forward-camera">
+              <input type="checkbox" id="cal-forward-camera">
+              <div class="cal-content">
+                <div class="cal-name">Forward Camera</div>
+                <div class="cal-options">
+                  <label class="cal-option"><input type="radio" name="forward-camera-type" value="Static"> Static</label>
+                  <label class="cal-option"><input type="radio" name="forward-camera-type" value="Dynamic"> Dynamic</label>
+                  <label class="cal-option"><input type="radio" name="forward-camera-type" value="Both"> Both</label>
+                </div>
+              </div>
+            </div>
+
+            <div class="calibration-item" data-cal="front-radar">
+              <input type="checkbox" id="cal-front-radar">
+              <div class="cal-content">
+                <div class="cal-name">Front Radar</div>
+                <div class="cal-options">
+                  <label class="cal-option"><input type="radio" name="front-radar-type" value="Static"> Static</label>
+                  <label class="cal-option"><input type="radio" name="front-radar-type" value="Dynamic"> Dynamic</label>
+                  <label class="cal-option"><input type="radio" name="front-radar-type" value="Both"> Both</label>
+                </div>
+              </div>
+            </div>
+
+            <div class="calibration-item" data-cal="rear-radar">
+              <input type="checkbox" id="cal-rear-radar">
+              <div class="cal-content">
+                <div class="cal-name">Rear Radar</div>
+                <div class="cal-options">
+                  <label class="cal-option"><input type="radio" name="rear-radar-type" value="Static"> Static</label>
+                  <label class="cal-option"><input type="radio" name="rear-radar-type" value="Dynamic"> Dynamic</label>
+                  <label class="cal-option"><input type="radio" name="rear-radar-type" value="Both"> Both</label>
+                </div>
+              </div>
+            </div>
+
+            <div class="calibration-item" data-cal="blind-spot-left">
+              <input type="checkbox" id="cal-blind-spot-left">
+              <div class="cal-content">
+                <div class="cal-name">Blind Spot Left</div>
+                <div class="cal-fixed">(Static calibration)</div>
+              </div>
+            </div>
+
+            <div class="calibration-item" data-cal="blind-spot-right">
+              <input type="checkbox" id="cal-blind-spot-right">
+              <div class="cal-content">
+                <div class="cal-name">Blind Spot Right</div>
+                <div class="cal-fixed">(Static calibration)</div>
+              </div>
+            </div>
+
+            <div class="calibration-item" data-cal="360-camera">
+              <input type="checkbox" id="cal-360-camera">
+              <div class="cal-content">
+                <div class="cal-name">360 Camera</div>
+                <div class="cal-fixed">(Static calibration)</div>
+              </div>
+            </div>
+
+            <div class="other-calibration">
+              <input type="checkbox" id="cal-other">
+              <span style="font-size:14px;color:var(--text-secondary);">Other:</span>
+              <input type="text" id="cal-other-text" placeholder="Specify calibration...">
+            </div>
+          </div>
+
+          <div class="no-cal-option">
+            <input type="checkbox" id="cal-none">
+            <div class="no-cal-content">
+              <div class="no-cal-label">No Calibration Required</div>
+              <div class="no-cal-hint">Does this vehicle need action tests or system resets? (Common for Nissan rear radar) If yes, select the calibration above.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-section">
+          <div class="action-buttons">
+            <button class="btn btn-primary" id="submitRevvBtn" onclick="submitRevvReport()">
+              <span class="icon">${Icons.upload}</span>
+              Submit RevvADAS Report
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderReadyStatusModal() {
+      const cals = currentJob.requiredCalibrations || 'Not determined';
+
+      return `
+        ${renderVehicleInfoSection()}
+
+        <div class="modal-section">
+          <h4>Required Calibrations</h4>
+          <div class="calibrations-box">${escapeHtml(cals)}</div>
+        </div>
+
+        ${renderDocumentsSection(['estimate', 'prescan', 'revv'])}
+
+        <div class="modal-section">
+          <div class="waiting-message">
+            <span class="icon">${Icons.clock}</span>
+            <span>Waiting for shop to schedule this job</span>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderScheduledStatusModal() {
+      const cals = currentJob.requiredCalibrations || 'Not determined';
+
+      return `
+        ${renderVehicleInfoSection()}
+
+        <div class="modal-section">
+          <h4>Required Calibrations</h4>
+          <div class="calibrations-box">${escapeHtml(cals)}</div>
+        </div>
+
+        ${renderDocumentsSection(['estimate', 'prescan', 'revv'])}
+
+        <div class="modal-section">
+          <div class="action-buttons">
+            <button class="btn btn-start" onclick="updateStatus('In Progress')">
+              <span class="icon">${Icons.wrench}</span>
+              Start Job
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderInProgressStatusModal() {
+      const cals = currentJob.requiredCalibrations || 'Not determined';
+      const hasInvoice = currentJob.invoicePdf || currentJob.invoice_pdf || currentJob.invoicePdfUrl;
+      const hasPostScan = currentJob.postscanPdf || currentJob.postScanPdf || currentJob.postScanPdfUrl;
+      const canComplete = hasInvoice && hasPostScan;
+
+      return `
+        ${renderVehicleInfoSection()}
+
+        <div class="modal-section">
+          <h4>Required Calibrations</h4>
+          <div class="calibrations-box">${escapeHtml(cals)}</div>
+        </div>
+
+        ${renderDocumentsSection(['estimate', 'prescan', 'revv'])}
+
+        <div class="modal-section">
+          <h4>Upload Invoice</h4>
+          ${hasInvoice ? `
+            <a href="${currentJob.invoicePdf || currentJob.invoice_pdf || currentJob.invoicePdfUrl}" target="_blank" class="doc-item available" style="display:inline-flex;width:auto;">
+              <span class="icon">${Icons.file}</span>
+              <span class="doc-name">Invoice</span>
+              <span class="doc-status">Uploaded</span>
+            </a>
+          ` : `
+            <div class="upload-zone" id="invoiceUploadZone">
+              <input type="file" id="invoiceFileInput" accept=".pdf">
+              <span class="icon">${Icons.upload}</span>
+              <p>Upload Invoice PDF</p>
+              <p class="filename" id="invoiceFileName" style="display:none;"></p>
+            </div>
+          `}
+        </div>
+
+        <div class="modal-section">
+          <h4>Upload Post-Scan</h4>
+          ${hasPostScan ? `
+            <a href="${currentJob.postscanPdf || currentJob.postScanPdf || currentJob.postScanPdfUrl}" target="_blank" class="doc-item available" style="display:inline-flex;width:auto;">
+              <span class="icon">${Icons.file}</span>
+              <span class="doc-name">Post-Scan</span>
+              <span class="doc-status">Uploaded</span>
+            </a>
+          ` : `
+            <div class="upload-zone" id="postScanUploadZone">
+              <input type="file" id="postScanFileInput" accept=".pdf">
+              <span class="icon">${Icons.upload}</span>
+              <p>Upload Post-Scan PDF</p>
+              <p class="filename" id="postScanFileName" style="display:none;"></p>
+            </div>
+          `}
+        </div>
+
+        <div class="modal-section">
+          <div class="action-buttons">
+            <button class="btn btn-complete ${canComplete ? '' : 'btn-disabled'}" ${canComplete ? 'onclick="updateStatus(\'Completed\')"' : 'disabled'}>
+              <span class="icon">${Icons.checkCircle}</span>
+              ${canComplete ? 'Complete Job' : 'Upload Invoice & Post-Scan to Complete'}
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderCompletedStatusModal() {
+      const cals = currentJob.requiredCalibrations || '-';
+
+      return `
+        ${renderVehicleInfoSection()}
+
+        <div class="modal-section">
+          <h4>Calibrations Performed</h4>
+          <div class="calibrations-box">${escapeHtml(cals)}</div>
+        </div>
+
+        ${renderDocumentsSection(['estimate', 'prescan', 'revv', 'invoice', 'postscan'])}
+
+        <div class="modal-section">
+          <div class="completion-info">
+            <div class="info-row">
+              <span class="info-label">Completed</span>
+              <span class="info-value">${Icons.checkCircle} Job Complete</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderViewOnlyModal() {
+      const tech = currentJob.technician || currentJob.technicianAssigned || 'another technician';
+      const cals = currentJob.requiredCalibrations || 'Not determined';
+
+      return `
+        <div class="view-only-banner">
+          <span class="icon">${Icons.eye}</span>
+          <span>Assigned to ${escapeHtml(tech)} (view only)</span>
+        </div>
+
+        ${renderVehicleInfoSection()}
+
+        <div class="modal-section">
+          <h4>Required Calibrations</h4>
+          <div class="calibrations-box">${escapeHtml(cals)}</div>
+        </div>
+
+        ${renderDocumentsSection(['estimate', 'prescan', 'revv', 'invoice', 'postscan'])}
+      `;
+    }
+
+    function renderDefaultModal() {
+      return `
+        ${renderVehicleInfoSection()}
+        ${renderDocumentsSection(['estimate', 'prescan', 'revv', 'invoice', 'postscan'])}
+      `;
+    }
+
+    function initCalibrationHandlers() {
+      // Handle checkbox selection styling
+      document.querySelectorAll('.calibration-item input[type="checkbox"]').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+          const item = this.closest('.calibration-item');
+          if (this.checked) {
+            item.classList.add('selected');
+          } else {
+            item.classList.remove('selected');
+          }
+        });
+      });
+
+      // Handle "No Calibration" exclusivity
+      const noCalCheckbox = document.getElementById('cal-none');
+      if (noCalCheckbox) {
+        noCalCheckbox.addEventListener('change', function() {
+          if (this.checked) {
+            document.querySelectorAll('.calibration-item input[type="checkbox"]').forEach(cb => {
+              cb.checked = false;
+              cb.closest('.calibration-item').classList.remove('selected');
+            });
+            document.getElementById('cal-other').checked = false;
+          }
+        });
+
+        // Uncheck "No Calibration" if any calibration is selected
+        document.querySelectorAll('.calibration-item input[type="checkbox"], #cal-other').forEach(checkbox => {
+          checkbox.addEventListener('change', function() {
+            if (this.checked) {
+              noCalCheckbox.checked = false;
+            }
+          });
+        });
+      }
+    }
+
+    function initRevvUploadHandler() {
+      const zone = document.getElementById('revvUploadZone');
+      const input = document.getElementById('revvFileInput');
+      const fileName = document.getElementById('revvFileName');
+
+      if (!zone || !input) return;
+
+      zone.addEventListener('click', () => input.click());
+
+      zone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        zone.classList.add('dragover');
+      });
+
+      zone.addEventListener('dragleave', () => {
+        zone.classList.remove('dragover');
+      });
+
+      zone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        zone.classList.remove('dragover');
+        if (e.dataTransfer.files.length) {
+          handleRevvFile(e.dataTransfer.files[0]);
+        }
+      });
+
+      input.addEventListener('change', () => {
+        if (input.files.length) {
+          handleRevvFile(input.files[0]);
+        }
+      });
+
+      function handleRevvFile(file) {
+        if (!file.name.toLowerCase().endsWith('.pdf')) {
+          alert('Please upload a PDF file');
+          return;
+        }
+        uploadedRevvFile = file;
+        fileName.textContent = file.name;
+        fileName.style.display = 'block';
+        zone.querySelector('p:not(.filename)').textContent = 'File selected:';
+      }
+    }
+
+    function initInProgressUploadHandlers() {
+      // Invoice upload
+      const invoiceZone = document.getElementById('invoiceUploadZone');
+      const invoiceInput = document.getElementById('invoiceFileInput');
+
+      if (invoiceZone && invoiceInput) {
+        invoiceZone.addEventListener('click', () => invoiceInput.click());
+
+        invoiceZone.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          invoiceZone.classList.add('dragover');
+        });
+
+        invoiceZone.addEventListener('dragleave', () => {
+          invoiceZone.classList.remove('dragover');
+        });
+
+        invoiceZone.addEventListener('drop', (e) => {
+          e.preventDefault();
+          invoiceZone.classList.remove('dragover');
+          if (e.dataTransfer.files.length) {
+            handleInvoiceFile(e.dataTransfer.files[0]);
+          }
+        });
+
+        invoiceInput.addEventListener('change', () => {
+          if (invoiceInput.files.length) {
+            handleInvoiceFile(invoiceInput.files[0]);
+          }
+        });
+      }
+
+      // Post-scan upload
+      const postScanZone = document.getElementById('postScanUploadZone');
+      const postScanInput = document.getElementById('postScanFileInput');
+
+      if (postScanZone && postScanInput) {
+        postScanZone.addEventListener('click', () => postScanInput.click());
+
+        postScanZone.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          postScanZone.classList.add('dragover');
+        });
+
+        postScanZone.addEventListener('dragleave', () => {
+          postScanZone.classList.remove('dragover');
+        });
+
+        postScanZone.addEventListener('drop', (e) => {
+          e.preventDefault();
+          postScanZone.classList.remove('dragover');
+          if (e.dataTransfer.files.length) {
+            handlePostScanFile(e.dataTransfer.files[0]);
+          }
+        });
+
+        postScanInput.addEventListener('change', () => {
+          if (postScanInput.files.length) {
+            handlePostScanFile(postScanInput.files[0]);
+          }
+        });
+      }
+
+      async function handleInvoiceFile(file) {
+        if (!file.name.toLowerCase().endsWith('.pdf')) {
+          alert('Please upload a PDF file');
+          return;
+        }
+
+        const fileName = document.getElementById('invoiceFileName');
+        if (fileName) {
+          fileName.textContent = file.name;
+          fileName.style.display = 'block';
+        }
+
+        // Upload immediately
+        await uploadDocument(file, 'invoice');
+      }
+
+      async function handlePostScanFile(file) {
+        if (!file.name.toLowerCase().endsWith('.pdf')) {
+          alert('Please upload a PDF file');
+          return;
+        }
+
+        const fileName = document.getElementById('postScanFileName');
+        if (fileName) {
+          fileName.textContent = file.name;
+          fileName.style.display = 'block';
+        }
+
+        // Upload immediately
+        await uploadDocument(file, 'postscan');
+      }
+    }
+
+    async function uploadDocument(file, type) {
+      if (!currentJob) return;
+
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('type', type);
+
+        const token = getStorageItem('adas_access_token') || getStorageItem('token');
+        const response = await fetch(`/api/tech/vehicles/${currentJob.roPo}/upload`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formData
+        });
+
+        const data = await response.json();
+        if (!data.success) throw new Error(data.error);
+
+        // Refresh the job data and re-render modal
+        await loadJobs();
+        currentJob = allJobs.find(j => j.roPo === currentJob.roPo);
+        if (currentJob) {
+          const modalBody = document.getElementById('modalBody');
+          modalBody.innerHTML = renderInProgressStatusModal();
+          initInProgressUploadHandlers();
+        }
+
+      } catch (err) {
+        alert('Failed to upload: ' + err.message);
+      }
+    }
+
+    function getSelectedCalibrations() {
+      const calibrations = [];
+
+      // Check each calibration type
+      const calTypes = [
+        { id: 'forward-camera', name: 'Forward Camera', hasOptions: true },
+        { id: 'front-radar', name: 'Front Radar', hasOptions: true },
+        { id: 'rear-radar', name: 'Rear Radar', hasOptions: true },
+        { id: 'blind-spot-left', name: 'Blind Spot Left', hasOptions: false, type: 'Static' },
+        { id: 'blind-spot-right', name: 'Blind Spot Right', hasOptions: false, type: 'Static' },
+        { id: '360-camera', name: '360 Camera', hasOptions: false, type: 'Static' }
+      ];
+
+      calTypes.forEach(cal => {
+        const checkbox = document.getElementById(`cal-${cal.id}`);
+        if (checkbox && checkbox.checked) {
+          if (cal.hasOptions) {
+            const selectedOption = document.querySelector(`input[name="${cal.id}-type"]:checked`);
+            const type = selectedOption ? selectedOption.value : '';
+            calibrations.push(`${cal.name} (${type})`);
+          } else {
+            calibrations.push(`${cal.name} (${cal.type})`);
+          }
+        }
+      });
+
+      // Check "Other"
+      const otherCheckbox = document.getElementById('cal-other');
+      const otherText = document.getElementById('cal-other-text');
+      if (otherCheckbox && otherCheckbox.checked && otherText && otherText.value.trim()) {
+        calibrations.push(otherText.value.trim());
+      }
+
+      // Check "No Calibration"
+      const noCalCheckbox = document.getElementById('cal-none');
+      if (noCalCheckbox && noCalCheckbox.checked) {
+        return ['No Calibration Required'];
+      }
+
+      return calibrations;
+    }
+
+    async function submitRevvReport() {
+      if (!currentJob) return;
+
+      const calibrations = getSelectedCalibrations();
+
+      if (!uploadedRevvFile) {
+        alert('Please upload a RevvADAS PDF file');
+        return;
+      }
+
+      if (calibrations.length === 0) {
+        alert('Please select at least one calibration or "No Calibration Required"');
+        return;
+      }
+
+      // Validate calibration options
+      const calTypes = ['forward-camera', 'front-radar', 'rear-radar'];
+      for (const calType of calTypes) {
+        const checkbox = document.getElementById(`cal-${calType}`);
+        if (checkbox && checkbox.checked) {
+          const selectedOption = document.querySelector(`input[name="${calType}-type"]:checked`);
+          if (!selectedOption) {
+            alert(`Please select Static, Dynamic, or Both for ${calType.replace('-', ' ')}`);
+            return;
+          }
+        }
+      }
+
+      try {
+        const btn = document.getElementById('submitRevvBtn');
+        btn.disabled = true;
+        btn.innerHTML = `<span class="icon">${Icons.loader}</span> Submitting...`;
+
+        const formData = new FormData();
+        formData.append('file', uploadedRevvFile);
+        formData.append('type', 'revv');
+        formData.append('calibrations', calibrations.join(', '));
+
+        const token = getStorageItem('adas_access_token') || getStorageItem('token');
+        const response = await fetch(`/api/tech/vehicles/${currentJob.roPo}/upload`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formData
+        });
+
+        const data = await response.json();
+        if (!data.success) throw new Error(data.error);
+
+        closeModal();
+        await loadJobs();
+        alert('RevvADAS report submitted successfully!');
+
+      } catch (err) {
+        alert('Failed to submit: ' + err.message);
+        const btn = document.getElementById('submitRevvBtn');
+        btn.disabled = false;
+        btn.innerHTML = `<span class="icon">${Icons.upload}</span> Submit RevvADAS Report`;
+      }
+    }
+
     function closeModal() {
       document.getElementById('jobModal').classList.remove('open');
       currentJob = null;
+      uploadedRevvFile = null;
+      uploadedInvoiceFile = null;
+      uploadedPostScanFile = null;
     }
 
     async function updateStatus(newStatus) {

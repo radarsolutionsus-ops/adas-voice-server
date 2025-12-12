@@ -769,6 +769,14 @@ function updateExistingRow(sheet, rowNum, data) {
     oemPosition = newOemPosition;
   }
 
+  // AUTO-ASSIGN TECH: If no tech assigned yet, look up based on shop region
+  let technician = data.technician || curr[COL.TECHNICIAN] || '';
+  if (!technician && shopName) {
+    Logger.log('[UPDATE_ROW] No tech assigned, auto-assigning for shop: "' + shopName + '"');
+    technician = getAssignedTechForShop(shopName);
+    Logger.log('[UPDATE_ROW] Auto-assigned tech: "' + technician + '"');
+  }
+
   const updatedRow = [
     curr[COL.TIMESTAMP],                                          // A: Keep original timestamp
     shopName,                                                     // B: Shop Name
@@ -778,7 +786,7 @@ function updateExistingRow(sheet, rowNum, data) {
     status,                                                       // F: Status
     scheduledDate,                                                // G: Scheduled Date
     scheduledTime,                                                // H: Scheduled Time
-    data.technician || curr[COL.TECHNICIAN],                      // I: Technician
+    technician,                                                   // I: Technician (auto-assigned if empty)
     data.required_calibrations || data.requiredCalibrations || curr[COL.REQUIRED_CALS], // J
     data.completed_calibrations || data.completedCalibrations || curr[COL.COMPLETED_CALS], // K
     data.dtcs || curr[COL.DTCS],                                  // L: DTCs
