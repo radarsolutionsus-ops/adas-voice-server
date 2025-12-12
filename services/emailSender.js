@@ -397,6 +397,193 @@ ADAS F1RST Team
 }
 
 /**
+ * Send "Ready to Schedule" email to shop when RevvADAS report is submitted
+ * Focus: Vehicle is ready, go to portal to book appointment
+ *
+ * @param {Object} roData - RO information
+ * @param {string} roData.roPo - RO/PO number
+ * @param {string} roData.shopName - Shop name (for lookup)
+ * @param {string} roData.vehicle - Vehicle description
+ * @param {string} roData.vin - VIN
+ * @param {Array} roData.calibrations - Required calibrations from RevvADAS report
+ * @param {Buffer} roData.revvPdfBuffer - RevvADAS PDF attachment
+ */
+export async function sendReadyToScheduleEmail(roData) {
+  const {
+    roPo,
+    shopName,
+    vehicle,
+    vin,
+    calibrations = [],
+    revvPdfBuffer,
+    ccEmail
+  } = roData;
+
+  console.log(`${LOG_TAG} Sending Ready to Schedule email to shop: ${shopName} for RO ${roPo}`);
+
+  // Look up shop email using smart matching
+  const shopInfo = await getShopEmailByName(shopName);
+
+  if (!shopInfo || !shopInfo.email) {
+    console.log(`${LOG_TAG} No email found for shop "${shopName}" - skipping auto-email`);
+    return {
+      success: false,
+      sent: false,
+      error: `No email configured for shop: ${shopName}`
+    };
+  }
+
+  const shopEmail = shopInfo.email;
+  const hasCalibrations = calibrations.length > 0;
+
+  // Build calibration list
+  const calibrationListHtml = calibrations.map(cal => {
+    return `<li style="margin-bottom: 8px; font-size: 15px;">${cal}</li>`;
+  }).join('');
+
+  const calibrationListText = calibrations.map(cal => `  • ${cal}`).join('\n');
+
+  const subject = hasCalibrations
+    ? `Ready to Schedule: ${vehicle} - RO# ${roPo}`
+    : `No Calibration Required: ${vehicle} - RO# ${roPo}`;
+
+  // Portal URL - shop portal for scheduling
+  const portalUrl = 'https://adasfirst.com/shop';
+
+  // HTML email body - Clean, action-focused
+  const htmlBody = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1a1a1a; margin: 0; padding: 0; background: #f5f5f7; }
+    .container { max-width: 600px; margin: 0 auto; background: #fff; }
+    .header { background: #1d1d1f; color: white; padding: 30px; text-align: center; }
+    .header h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.5px; }
+    .content { padding: 30px; }
+    .greeting { font-size: 16px; margin-bottom: 20px; }
+    .highlight-box { background: ${hasCalibrations ? '#e8f5e9' : '#fff3e0'}; border-radius: 12px; padding: 20px; margin: 25px 0; }
+    .highlight-box h2 { margin: 0 0 5px; font-size: 14px; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
+    .highlight-box .status { font-size: 20px; font-weight: 600; color: ${hasCalibrations ? '#2e7d32' : '#e65100'}; }
+    .vehicle-card { background: #f5f5f7; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .vehicle-card p { margin: 8px 0; font-size: 15px; }
+    .vehicle-card strong { color: #1d1d1f; }
+    .calibrations { margin: 25px 0; }
+    .calibrations h3 { font-size: 16px; font-weight: 600; margin-bottom: 12px; color: #1d1d1f; }
+    .calibrations ul { margin: 0; padding-left: 20px; }
+    .cta-button { display: inline-block; background: #0071e3; color: white !important; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px; margin: 20px 0; }
+    .cta-button:hover { background: #0077ED; }
+    .footer { background: #f5f5f7; padding: 25px; text-align: center; font-size: 13px; color: #86868b; }
+    .footer a { color: #0071e3; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>ADAS F1RST</h1>
+    </div>
+    <div class="content">
+      <p class="greeting">Hi ${shopInfo.shopName || shopName},</p>
+
+      <div class="highlight-box">
+        <h2>Status</h2>
+        <div class="status">${hasCalibrations ? '✓ Ready to Schedule' : 'No Calibration Required'}</div>
+      </div>
+
+      <div class="vehicle-card">
+        <p><strong>Vehicle:</strong> ${vehicle || 'See attached report'}</p>
+        <p><strong>VIN:</strong> ${vin || 'See attached report'}</p>
+        <p><strong>RO#:</strong> ${roPo}</p>
+      </div>
+
+      ${hasCalibrations ? `
+      <div class="calibrations">
+        <h3>Calibrations Required:</h3>
+        <ul>${calibrationListHtml}</ul>
+      </div>
+
+      <p style="font-size: 15px;">The full RevvADAS report is attached with complete details.</p>
+
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${portalUrl}" class="cta-button">Schedule Appointment</a>
+      </div>
+
+      <p style="font-size: 14px; color: #666;">Or call us at <strong>(786) 930-4555</strong> to schedule.</p>
+      ` : `
+      <p style="font-size: 15px;">Based on the RevvADAS analysis, no ADAS calibrations are required for this repair.</p>
+      <p style="font-size: 15px;">The full report is attached for your records.</p>
+      `}
+
+      <p style="margin-top: 30px; font-size: 14px; color: #666;">Questions? Just reply to this email.</p>
+    </div>
+    <div class="footer">
+      <p><strong>ADAS F1RST</strong> | Miami, FL</p>
+      <p>Professional ADAS Calibration Services</p>
+      <p style="margin-top: 15px;"><a href="${portalUrl}">Shop Portal</a> | (786) 930-4555</p>
+    </div>
+  </div>
+</body>
+</html>`.trim();
+
+  // Plain text version
+  const textBody = `
+Hi ${shopInfo.shopName || shopName},
+
+${hasCalibrations ? 'READY TO SCHEDULE' : 'NO CALIBRATION REQUIRED'}
+
+Vehicle: ${vehicle || 'See attached report'}
+VIN: ${vin || 'See attached report'}
+RO#: ${roPo}
+
+${hasCalibrations ? `CALIBRATIONS REQUIRED:
+${calibrationListText}
+
+NEXT STEP:
+Schedule your appointment at: ${portalUrl}
+Or call us at (786) 930-4555
+
+The full RevvADAS report is attached.` : `Based on the RevvADAS analysis, no ADAS calibrations are required for this repair.
+
+The full report is attached for your records.`}
+
+Questions? Reply to this email.
+
+— ADAS F1RST Team
+`.trim();
+
+  // Prepare attachments
+  const attachments = [];
+  if (revvPdfBuffer) {
+    attachments.push({
+      filename: `RevvADAS_Report_${roPo}.pdf`,
+      content: revvPdfBuffer,
+      mimeType: 'application/pdf'
+    });
+  }
+
+  const result = await sendEmail({
+    to: shopEmail,
+    cc: ccEmail || shopInfo.billingCc,
+    subject,
+    htmlBody,
+    textBody,
+    attachments
+  });
+
+  if (result.success) {
+    console.log(`${LOG_TAG} Ready to Schedule email sent to ${shopEmail} for RO ${roPo}`);
+  }
+
+  return {
+    ...result,
+    sent: result.success,
+    shopEmail,
+    matched: shopInfo.matched
+  };
+}
+
+/**
  * Send tech review email - when LLM and RevvADAS disagree
  *
  * @param {Object} roData - RO information
@@ -774,6 +961,7 @@ export async function processAndSendEmail(llmResult, revvCalibrations = [], opti
 
 export default {
   sendShopConfirmationEmail,
+  sendReadyToScheduleEmail,
   sendTechReviewEmail,
   sendNoCalibrationEmail,
   processAndSendEmail,

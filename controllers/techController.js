@@ -757,33 +757,59 @@ export async function uploadDocument(req, res) {
       });
     }
 
-    // Send shop confirmation email when RevvADAS report is uploaded
+    // Process RevvADAS report: parse PDF, update sheet with calibrations, send email
     let emailSent = false;
+    let parsedCalibrations = [];
     if (docType === 'revvReport') {
       try {
-        const { sendShopConfirmationEmail } = await import('../services/emailSender.js');
+        const { sendReadyToScheduleEmail } = await import('../services/emailSender.js');
         const { logRevvSubmitted } = await import('../services/learningLogger.js');
+        const pdfParser = await import('../services/pdfParser.js');
 
-        // Parse calibrations from string to array
-        const calibrationsStr = row.requiredCalibrations || '';
-        const calibrations = calibrationsStr
-          ? calibrationsStr.split(',').map(c => c.trim()).filter(c => c)
-          : [];
+        // Parse the RevvADAS PDF to extract calibrations
+        console.log(`${LOG_TAG} Parsing RevvADAS PDF for calibrations...`);
+        const parseResult = await pdfParser.default.parsePDF(req.file.buffer, req.file.originalname);
 
-        // Send confirmation email to shop
-        const emailResult = await sendShopConfirmationEmail({
+        if (parseResult.success && parseResult.data) {
+          const revvData = parseResult.data;
+
+          // Extract calibrations from parsed data
+          if (revvData.requiredCalibrations && revvData.requiredCalibrations.length > 0) {
+            parsedCalibrations = revvData.requiredCalibrations.map(cal =>
+              typeof cal === 'string' ? cal : `${cal.system} (${cal.calibrationType || 'Static'})`
+            );
+
+            // Update the sheet with parsed calibrations
+            const calibrationsText = parsedCalibrations.join(', ');
+            console.log(`${LOG_TAG} Parsed calibrations from RevvADAS: ${calibrationsText}`);
+
+            await sheetWriter.upsertScheduleRowByRO(roPo, {
+              requiredCalibrations: calibrationsText,
+              status: 'Ready' // Mark as ready for scheduling
+            });
+          } else {
+            console.log(`${LOG_TAG} No calibrations found in RevvADAS PDF`);
+            // Update status to No Cal if no calibrations required
+            await sheetWriter.upsertScheduleRowByRO(roPo, {
+              status: 'No Cal'
+            });
+          }
+        }
+
+        // Send "Ready to Schedule" email to shop
+        const emailResult = await sendReadyToScheduleEmail({
           roPo,
           shopName: row.shopName || row.shop_name,
           vehicle: row.vehicle,
           vin: row.vin,
-          calibrations,
+          calibrations: parsedCalibrations,
           revvPdfBuffer: req.file.buffer
         });
 
         emailSent = emailResult.success;
 
         if (emailResult.success) {
-          console.log(`${LOG_TAG} Shop confirmation email sent for RO ${roPo}`);
+          console.log(`${LOG_TAG} Ready to Schedule email sent for RO ${roPo}`);
         } else {
           console.log(`${LOG_TAG} Could not send shop email for RO ${roPo}: ${emailResult.error}`);
         }
@@ -794,11 +820,11 @@ export async function uploadDocument(req, res) {
           make: row.vehicle?.split(' ')[1],
           model: row.vehicle?.split(' ').slice(2).join(' '),
           full: row.vehicle
-        }, calibrations, user.techName);
+        }, parsedCalibrations, user.techName);
 
       } catch (emailErr) {
         console.error(`${LOG_TAG} Error in post-upload processing:`, emailErr.message);
-        // Don't fail the upload if email fails
+        // Don't fail the upload if email/parse fails
       }
     }
 
