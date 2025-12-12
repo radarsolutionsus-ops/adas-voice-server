@@ -26,7 +26,7 @@
  * R: Invoice Date
  * S: Notes (Short Preview)
  * T: Flow History (timestamped status changes - hidden)
- * U: OEM Position Statement links
+ * U: Extra Docs (additional documents uploaded by tech)
  * V: Estimate PDF link
  * W: PreScan PDF
  * X: Job Start timestamp
@@ -1984,34 +1984,15 @@ function getOemPortalFromVehicle(vehicle) {
 }
 
 /**
- * Populate Column U (OEM Position) for a row based on vehicle make
- * Called from sidebar or can be run on a range
- * Uses RichText to create clickable hyperlinks
- * @param {number} rowNum - Row number to update
- * @returns {Object} - { success: boolean, message: string }
+ * DISABLED: OEM link auto-population has been removed
+ * Column U (Extra Docs) is now reserved for tech-uploaded documents only
+ * OEM Position Statement links should not be auto-populated
+ * @param {number} rowNum - Row number (unused)
+ * @returns {Object} - { success: false, message: string }
  */
 function populateOemLinkForRow(rowNum) {
-  const sheet = SpreadsheetApp.getActive().getSheetByName(SCHEDULE_SHEET);
-  if (!sheet) return { success: false, message: 'Sheet not found' };
-
-  const rowData = sheet.getRange(rowNum, 1, 1, TOTAL_COLUMNS).getValues()[0];
-  const vehicle = rowData[COL.VEHICLE] || '';
-  const currentExtraDocs = rowData[COL.EXTRA_DOCS] || '';
-
-  // Skip if already has OEM link in extra docs
-  if (currentExtraDocs && currentExtraDocs.length > 0) {
-    return { success: true, message: 'Extra docs already populated' };
-  }
-
-  const oemInfo = getOemPortalFromVehicle(vehicle);
-  if (!oemInfo) {
-    return { success: false, message: 'Could not determine OEM from vehicle: ' + vehicle };
-  }
-
-  // Set the OEM link as clickable RichText hyperlink
-  setOemLinkAsRichText(sheet, rowNum, oemInfo.name, oemInfo.url);
-
-  return { success: true, message: 'Added OEM link: ' + oemInfo.url };
+  // Feature disabled - Column U is for tech uploads only
+  return { success: false, message: 'OEM link auto-population is disabled. Column U is for tech-uploaded documents only.' };
 }
 
 /**
@@ -2032,52 +2013,15 @@ function setOemLinkAsRichText(sheet, rowNum, makeName, url) {
 }
 
 /**
- * Populate OEM links for all rows missing them
- * Can be run from menu
+ * DISABLED: OEM link auto-population has been removed
+ * Column U (Extra Docs) is now reserved for tech-uploaded documents only
+ * This function is kept for backwards compatibility but does nothing
  */
 function populateAllMissingOemLinks() {
-  const sheet = SpreadsheetApp.getActive().getSheetByName(SCHEDULE_SHEET);
-  if (!sheet) {
-    SpreadsheetApp.getUi().alert('Sheet not found');
-    return;
-  }
-
-  const lastRow = sheet.getLastRow();
-  if (lastRow < 2) {
-    SpreadsheetApp.getUi().alert('No data rows found');
-    return;
-  }
-
-  const data = sheet.getRange(2, 1, lastRow - 1, TOTAL_COLUMNS).getValues();
-  let updated = 0;
-  let skipped = 0;
-  let failed = 0;
-
-  for (let i = 0; i < data.length; i++) {
-    const vehicle = data[i][COL.VEHICLE] || '';
-    const currentExtraDocs = data[i][COL.EXTRA_DOCS] || '';
-
-    // Skip if already has content in extra docs
-    if (currentExtraDocs && currentExtraDocs.length > 0) {
-      skipped++;
-      continue;
-    }
-
-    const oemInfo = getOemPortalFromVehicle(vehicle);
-    if (oemInfo) {
-      // Use RichText for clickable hyperlink
-      setOemLinkAsRichText(sheet, i + 2, oemInfo.name, oemInfo.url);
-      updated++;
-    } else {
-      failed++;
-    }
-  }
-
   SpreadsheetApp.getUi().alert(
-    'OEM Links Update Complete\n\n' +
-    'Updated: ' + updated + '\n' +
-    'Already populated: ' + skipped + '\n' +
-    'Could not determine OEM: ' + failed
+    'Feature Disabled\n\n' +
+    'OEM link auto-population has been removed.\n' +
+    'Column U (Extra Docs) is now reserved for tech-uploaded documents only.'
   );
 }
 

@@ -245,41 +245,9 @@ function isInvalidShopName(name) {
   return INVALID_SHOP_NAMES.some(invalid => lower === invalid || lower.includes(invalid));
 }
 
-/**
- * Extract OEM Position Statement links from PDF text content
- * Looks for oem1stop.com links and other OEM portal URLs
- * @param {string} text - PDF text content
- * @returns {string} - Semicolon-separated list of unique OEM URLs
- */
-function extractOemLinksFromText(text) {
-  if (!text) return '';
-
-  const links = new Set();
-
-  // Match oem1stop.com links (most common)
-  const oem1stopMatches = text.match(/https?:\/\/(?:www\.)?oem1stop\.com\/[^\s\n"')>\]]+/gi);
-  if (oem1stopMatches) {
-    oem1stopMatches.forEach(link => links.add(link.replace(/[.,;:]+$/, ''))); // Remove trailing punctuation
-  }
-
-  // Match other OEM portal links (techinfo, position statements)
-  const portalMatches = text.match(/https?:\/\/[^\s\n"')>\]]*(?:techinfo|position|statement|oem)[^\s\n"')>\]]+/gi);
-  if (portalMatches) {
-    portalMatches.forEach(link => links.add(link.replace(/[.,;:]+$/, '')));
-  }
-
-  // Match generic calibration/ADAS related URLs
-  const adasMatches = text.match(/https?:\/\/[^\s\n"')>\]]*(?:calibration|adas)[^\s\n"')>\]]+/gi);
-  if (adasMatches) {
-    adasMatches.forEach(link => links.add(link.replace(/[.,;:]+$/, '')));
-  }
-
-  const result = [...links].join('; ');
-  if (result) {
-    console.log(`${LOG_TAG} Extracted OEM links from PDF: ${result}`);
-  }
-  return result;
-}
+// NOTE: OEM link extraction has been removed
+// Column U (Extra Docs) is now reserved for tech-uploaded documents only
+// OEM Position Statement links are no longer auto-populated
 
 /**
  * Extract shop name from PDF text content
@@ -980,14 +948,7 @@ export async function parsePDF(pdfBuffer, filename, roPo = null) {
       structuredData.shopName = extractedShopName;
     }
 
-    // For REVV_REPORT: Extract OEM Position Statement links from text
-    if (pdfType === PDF_TYPES.REVV_REPORT) {
-      const oemLinks = extractOemLinksFromText(textContent);
-      if (oemLinks) {
-        structuredData.oemLinks = oemLinks;
-        console.log(`${LOG_TAG} Added OEM links to Revv data: ${oemLinks}`);
-      }
-    }
+    // NOTE: OEM link extraction removed - Column U reserved for tech uploads only
 
     return {
       success: true,
@@ -1217,11 +1178,7 @@ export async function parseAndMergePDFs(pdfs, roPo = null) {
             mergedData.completedCalibrationsText = completedSummary;
           }
         }
-        // Merge OEM links extracted from Revv PDF
-        if (data.oemLinks && !mergedData.oemPosition) {
-          mergedData.oemPosition = data.oemLinks;
-          console.log(`${LOG_TAG} Merged OEM links from Revv: ${data.oemLinks}`);
-        }
+        // NOTE: OEM links no longer extracted - Column U reserved for tech uploads
         break;
 
       case PDF_TYPES.ESTIMATE:

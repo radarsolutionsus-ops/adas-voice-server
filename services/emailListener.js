@@ -1522,15 +1522,9 @@ async function processEmail(message) {
       }
     }
 
-    // Add OEM Position Statement links (Column U) based on vehicle brand
-    // Store just the URL so sidebar can make it clickable
-    if (mergedData.vehicleMake && !mergedData.oemPosition) {
-      const oemPortalUrl = getOEM1StopLink(mergedData.vehicleMake);
-      if (oemPortalUrl) {
-        mergedData.oemPosition = oemPortalUrl;  // Just the URL, not "Make Position Statements: URL"
-        console.log(`${LOG_TAG} OEM1Stop link added for ${mergedData.vehicleMake}: ${oemPortalUrl}`);
-      }
-    }
+    // NOTE: OEM Position Statement links are no longer auto-populated
+    // Column U (Extra Docs) is now reserved for tech-uploaded documents only
+    // OEM links were removed per user request - this column starts empty
 
     // Add info from email body - ONLY set if not already set to avoid overwriting
     // Also guard against suspicious shop names from Revv PDF metadata
@@ -1924,7 +1918,6 @@ async function processEmail(message) {
     console.log(`${LOG_TAG} status: ${status}`);
     console.log(`${LOG_TAG} revvReportPdf: ${mergedData.revvReportPdf || 'NOT SET'}`);
     console.log(`${LOG_TAG} requiredCalibrationsText: ${mergedData.requiredCalibrationsText || 'NONE'}`);
-    console.log(`${LOG_TAG} oemPosition: ${mergedData.oemPosition || 'NONE'}`);
 
     const scheduleResult = await sheetWriter.upsertScheduleRowByRO(roPo, {
       ...mergedData,

@@ -734,8 +734,9 @@ export async function upsertScheduleRowByRO(roPo, dataObject) {
     notes: dataObject.notes || '',
     // Column T: Flow History (timestamped document submissions)
     flow_history: dataObject.flowHistory || dataObject.flow_history || '',
-    // Column U: Extra Docs (additional documents)
-    extra_docs: dataObject.extraDocs || dataObject.extra_docs || dataObject.oemPosition || dataObject.oem_position || '',
+    // Column U: Extra Docs (additional documents uploaded by tech)
+    // NOTE: Only populated by tech uploads, NOT by OEM links
+    extra_docs: dataObject.extraDocs || dataObject.extra_docs || '',
     // Column V: Estimate PDF link
     estimate_pdf: dataObject.estimatePdf || dataObject.estimate_pdf || '',
     // Column W: PreScan PDF
