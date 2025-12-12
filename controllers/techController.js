@@ -757,10 +757,56 @@ export async function uploadDocument(req, res) {
       });
     }
 
+    // Send shop confirmation email when RevvADAS report is uploaded
+    let emailSent = false;
+    if (docType === 'revvReport') {
+      try {
+        const { sendShopConfirmationEmail } = await import('../services/emailSender.js');
+        const { logRevvSubmitted } = await import('../services/learningLogger.js');
+
+        // Parse calibrations from string to array
+        const calibrationsStr = row.requiredCalibrations || '';
+        const calibrations = calibrationsStr
+          ? calibrationsStr.split(',').map(c => c.trim()).filter(c => c)
+          : [];
+
+        // Send confirmation email to shop
+        const emailResult = await sendShopConfirmationEmail({
+          roPo,
+          shopName: row.shopName || row.shop_name,
+          vehicle: row.vehicle,
+          vin: row.vin,
+          calibrations,
+          revvPdfBuffer: req.file.buffer
+        });
+
+        emailSent = emailResult.success;
+
+        if (emailResult.success) {
+          console.log(`${LOG_TAG} Shop confirmation email sent for RO ${roPo}`);
+        } else {
+          console.log(`${LOG_TAG} Could not send shop email for RO ${roPo}: ${emailResult.error}`);
+        }
+
+        // Log to learning system
+        await logRevvSubmitted(roPo, {
+          year: row.vehicle?.split(' ')[0],
+          make: row.vehicle?.split(' ')[1],
+          model: row.vehicle?.split(' ').slice(2).join(' '),
+          full: row.vehicle
+        }, calibrations, user.techName);
+
+      } catch (emailErr) {
+        console.error(`${LOG_TAG} Error in post-upload processing:`, emailErr.message);
+        // Don't fail the upload if email fails
+      }
+    }
+
     res.json({
       success: true,
       message: `${docType} uploaded successfully`,
-      url: fileUrl
+      url: fileUrl,
+      emailSent: docType === 'revvReport' ? emailSent : undefined
     });
   } catch (err) {
     console.error(`${LOG_TAG} Error uploading document:`, err.message);

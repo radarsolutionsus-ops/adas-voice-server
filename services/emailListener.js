@@ -34,6 +34,7 @@ import { sendNoCalibrationEmail } from './emailSender.js';
 import { getESTTimestamp, getESTISOTimestamp, formatToEST } from '../utils/timezone.js';
 import scanProcessor from './scanProcessor.js';
 import dtcExtractor from './dtcExtractor.js';
+import { logEstimateReceived, logRevvSubmitted, logEmailSent } from './learningLogger.js';
 
 const LOG_TAG = '[EMAIL_PIPELINE]';
 
@@ -1909,6 +1910,32 @@ async function processEmail(message) {
       console.error(`${LOG_TAG} Failed to update schedule:`, scheduleResult.error);
     }
 
+    // === LEARNING LOGGER ===
+    // Log estimate/document receipt for pattern learning
+    try {
+      const vehicleInfo = {
+        year: mergedData.vehicleYear,
+        make: mergedData.vehicleMake,
+        model: mergedData.vehicleModel,
+        full: mergedData.vehicle
+      };
+
+      if (hasRevvReportPdf) {
+        // Log RevvADAS report submission
+        const calibrationsArray = mergedData.requiredCalibrationsText
+          ? mergedData.requiredCalibrationsText.split(',').map(c => c.trim()).filter(c => c)
+          : [];
+        await logRevvSubmitted(roPo, vehicleInfo, calibrationsArray, null);
+      } else if (hasEstimatePdf) {
+        // Log estimate receipt for shop pattern learning
+        const estimateFormat = detectEstimateFormat(mergedData); // CCC, Mitchell, etc.
+        await logEstimateReceived(roPo, vehicleInfo, null, mergedData.shopName, estimateFormat);
+      }
+    } catch (logErr) {
+      console.error(`${LOG_TAG} Learning logger error (non-fatal):`, logErr.message);
+    }
+    // === END LEARNING LOGGER ===
+
     // Step 4: Create billing row if invoice data present
     if (mergedData.invoiceNumber && mergedData.invoiceAmount) {
       const billingResult = await sheetWriter.appendBillingRow({
@@ -2149,6 +2176,42 @@ async function processEmail(message) {
     console.error(`${LOG_TAG} Failed to process email:`, err.message);
     return { success: false, error: err.message, messageId: message.id };
   }
+}
+
+/**
+ * Detect estimate format type for learning logger
+ * Attempts to identify the estimate system used (CCC, Mitchell, Audatex, etc.)
+ * @param {Object} mergedData - Merged PDF data
+ * @returns {string} - Estimate format type
+ */
+function detectEstimateFormat(mergedData) {
+  const notes = (mergedData.notes || '').toLowerCase();
+  const rawText = (mergedData.rawEstimateText || '').toLowerCase();
+  const combined = notes + ' ' + rawText;
+
+  // Check for known estimate system signatures
+  if (combined.includes('ccc one') || combined.includes('cccone') || combined.includes('ccc information')) {
+    return 'CCC';
+  }
+  if (combined.includes('mitchell') || combined.includes('ultramate')) {
+    return 'Mitchell';
+  }
+  if (combined.includes('audatex') || combined.includes('solera')) {
+    return 'Audatex';
+  }
+  if (combined.includes('alldata') || combined.includes('all data')) {
+    return 'ALLDATA';
+  }
+  if (combined.includes('identifix')) {
+    return 'Identifix';
+  }
+
+  // Check for handwritten indicators
+  if (combined.includes('handwritten') || combined.includes('hand written')) {
+    return 'Handwritten';
+  }
+
+  return 'Unknown';
 }
 
 /**
