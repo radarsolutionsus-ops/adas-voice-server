@@ -1845,6 +1845,10 @@
   <script src="/js/auth.js"></script>
   <script src="/js/api.js"></script>
   <script>
+    // Version for debugging deployments
+    const TECH_PORTAL_VERSION = '2.1.0-grace60';
+    console.log('[TECH_PORTAL] Version:', TECH_PORTAL_VERSION, '(60s grace period for Sheets cache)');
+
     // State
     let allJobs = [];
     let myJobs = [];
@@ -2001,30 +2005,44 @@
     // ACTIVE JOB FUNCTIONS
     // ============================================
 
+    // Grace period for Google Sheets cache staleness (60 seconds)
+    const SHEETS_CACHE_GRACE_PERIOD = 60;
+
     // Check for active job on load and from server
     async function checkActiveJob() {
       try {
+        console.log('[ACTIVE_JOB] === checkActiveJob called ===');
+
         // First check localStorage for recently started job
         const stored = localStorage.getItem(ACTIVE_JOB_STORAGE_KEY);
         let localJob = null;
         if (stored) {
           try {
             localJob = JSON.parse(stored);
-          } catch (e) { /* ignore parse error */ }
+            console.log('[ACTIVE_JOB] Found localStorage job:', localJob.roPo, 'startTime:', localJob.startTime);
+          } catch (e) {
+            console.log('[ACTIVE_JOB] Failed to parse localStorage:', e.message);
+          }
+        } else {
+          console.log('[ACTIVE_JOB] No job in localStorage');
         }
 
-        // If we have a local job that started within last 30 seconds, trust it
-        // (Google Sheets cache may not have updated yet)
+        // If we have a local job that started within grace period, trust it
+        // (Google Sheets cache may not have updated yet - can take 30-60 seconds)
         if (localJob && localJob.startTime) {
           const startedAt = new Date(localJob.startTime).getTime();
           const now = Date.now();
           const secondsSinceStart = (now - startedAt) / 1000;
 
-          if (secondsSinceStart < 30) {
-            console.log('[ACTIVE_JOB] Trusting localStorage - job started', Math.round(secondsSinceStart), 'seconds ago');
+          console.log('[ACTIVE_JOB] Local job age:', Math.round(secondsSinceStart), 'seconds, grace period:', SHEETS_CACHE_GRACE_PERIOD);
+
+          if (secondsSinceStart < SHEETS_CACHE_GRACE_PERIOD) {
+            console.log('[ACTIVE_JOB] TRUSTING localStorage - within grace period (' + Math.round(secondsSinceStart) + 's < ' + SHEETS_CACHE_GRACE_PERIOD + 's)');
             activeJobData = localJob;
             showActiveJobBanner();
             return; // Don't query server yet, sheets may be stale
+          } else {
+            console.log('[ACTIVE_JOB] Grace period expired, will query server');
           }
         }
 
@@ -2034,9 +2052,12 @@
         });
         const data = await response.json();
 
+        console.log('[ACTIVE_JOB] Server response:', data.success ? 'success' : 'failed', data.activeJob ? 'has job' : 'no job');
+
         if (data.success && data.activeJob) {
           // Get start time from localStorage or use now
           const startTime = localJob?.roPo === data.activeJob.roPo ? localJob.startTime : new Date().toISOString();
+          console.log('[ACTIVE_JOB] Server confirmed active job:', data.activeJob.roPo, 'using startTime:', startTime);
 
           // Store/update in localStorage
           localStorage.setItem(ACTIVE_JOB_STORAGE_KEY, JSON.stringify({
@@ -2048,21 +2069,25 @@
           showActiveJobBanner();
         } else {
           // No active job on server
-          // Only clear if local job is older than 30 seconds (to avoid race condition)
+          // Only clear if local job is older than grace period (to avoid race condition with Sheets cache)
           if (localJob && localJob.startTime) {
             const startedAt = new Date(localJob.startTime).getTime();
             const secondsSinceStart = (Date.now() - startedAt) / 1000;
 
-            if (secondsSinceStart < 30) {
-              console.log('[ACTIVE_JOB] Server says no job, but local job is only', Math.round(secondsSinceStart), 's old - keeping');
+            console.log('[ACTIVE_JOB] Server says NO job. Local job age:', Math.round(secondsSinceStart), 's, grace period:', SHEETS_CACHE_GRACE_PERIOD);
+
+            if (secondsSinceStart < SHEETS_CACHE_GRACE_PERIOD) {
+              console.log('[ACTIVE_JOB] KEEPING local job - within grace period (server may have stale data)');
               activeJobData = localJob;
               showActiveJobBanner();
               return;
+            } else {
+              console.log('[ACTIVE_JOB] Local job expired grace period, trusting server');
             }
           }
 
           // Clear if no local job or local job is stale
-          console.log('[ACTIVE_JOB] No active job found, clearing');
+          console.log('[ACTIVE_JOB] Clearing active job state');
           localStorage.removeItem(ACTIVE_JOB_STORAGE_KEY);
           activeJobData = null;
           hideActiveJobBanner();
