@@ -895,10 +895,11 @@ export async function startJob(req, res) {
     const timestamp = new Date().toISOString();
     const startNote = `[${timestamp}] Job started by ${user.techName}`;
 
-    console.log(`${LOG_TAG} Updating Google Sheets - Status: "In Progress", Note: "${startNote}"`);
+    console.log(`${LOG_TAG} Updating Google Sheets - Status: "In Progress", Technician: "${user.techName}", Note: "${startNote}"`);
 
     const result = await sheetWriter.upsertScheduleRowByRO(roPo, {
       status: 'In Progress',
+      technician: user.techName,
       notes: `${row.notes || ''}\n${startNote}`.trim()
     });
 

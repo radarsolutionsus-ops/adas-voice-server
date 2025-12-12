@@ -468,12 +468,12 @@
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      // Start from next business day
+      // Start from tomorrow (1-day advance minimum) + week offset
       const startDate = new Date(today);
       startDate.setDate(startDate.getDate() + 1 + (weekOffset * 7));
 
-      // Skip weekends for start
-      while (startDate.getDay() === 0 || startDate.getDay() === 6) {
+      // Skip only Sunday for start (allow Saturday)
+      while (startDate.getDay() === 0) {
         startDate.setDate(startDate.getDate() + 1);
       }
 
@@ -484,8 +484,10 @@
       let count = 0;
       const currentDate = new Date(startDate);
 
-      while (count < 5) {
-        if (currentDate.getDay() !== 0 && currentDate.getDay() !== 6) {
+      // Show 6 days (Mon-Sat)
+      while (count < 6) {
+        // Skip only Sunday (allow Saturday)
+        if (currentDate.getDay() !== 0) {
           const dateStr = currentDate.toISOString().split('T')[0];
           const isSelected = selectedDate === dateStr;
 
