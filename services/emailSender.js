@@ -118,13 +118,16 @@ async function sendEmail({ to, cc, subject, htmlBody, textBody, attachments = []
     const boundary = `boundary_${Date.now()}`;
     const mixedBoundary = `mixed_${Date.now()}`;
 
+    // Validate cc - only use if it's a valid email-like string
+    const validCc = cc && typeof cc === 'string' && cc.trim().length > 0 && cc.includes('@') ? cc.trim() : null;
+
     let mimeMessage;
 
     if (attachments.length > 0) {
       mimeMessage = [
         `From: "ADAS F1RST" <${GMAIL_USER}>`,
         `To: ${to}`,
-        cc ? `Cc: ${cc}` : null,
+        validCc ? `Cc: ${validCc}` : null,
         `Subject: ${subject}`,
         'MIME-Version: 1.0',
         `Content-Type: multipart/mixed; boundary="${mixedBoundary}"`,
@@ -165,7 +168,7 @@ async function sendEmail({ to, cc, subject, htmlBody, textBody, attachments = []
       mimeMessage = [
         `From: "ADAS F1RST" <${GMAIL_USER}>`,
         `To: ${to}`,
-        cc ? `Cc: ${cc}` : null,
+        validCc ? `Cc: ${validCc}` : null,
         `Subject: ${subject}`,
         'MIME-Version: 1.0',
         `Content-Type: multipart/alternative; boundary="${boundary}"`,
