@@ -2004,6 +2004,30 @@
     // Check for active job on load and from server
     async function checkActiveJob() {
       try {
+        // First check localStorage for recently started job
+        const stored = localStorage.getItem(ACTIVE_JOB_STORAGE_KEY);
+        let localJob = null;
+        if (stored) {
+          try {
+            localJob = JSON.parse(stored);
+          } catch (e) { /* ignore parse error */ }
+        }
+
+        // If we have a local job that started within last 30 seconds, trust it
+        // (Google Sheets cache may not have updated yet)
+        if (localJob && localJob.startTime) {
+          const startedAt = new Date(localJob.startTime).getTime();
+          const now = Date.now();
+          const secondsSinceStart = (now - startedAt) / 1000;
+
+          if (secondsSinceStart < 30) {
+            console.log('[ACTIVE_JOB] Trusting localStorage - job started', Math.round(secondsSinceStart), 'seconds ago');
+            activeJobData = localJob;
+            showActiveJobBanner();
+            return; // Don't query server yet, sheets may be stale
+          }
+        }
+
         const token = getStorageItem('adas_access_token') || getStorageItem('token');
         const response = await fetch('/api/tech/active-job', {
           headers: { 'Authorization': `Bearer ${token}` }
@@ -2012,8 +2036,7 @@
 
         if (data.success && data.activeJob) {
           // Get start time from localStorage or use now
-          const stored = JSON.parse(localStorage.getItem(ACTIVE_JOB_STORAGE_KEY) || '{}');
-          const startTime = stored.roPo === data.activeJob.roPo ? stored.startTime : new Date().toISOString();
+          const startTime = localJob?.roPo === data.activeJob.roPo ? localJob.startTime : new Date().toISOString();
 
           // Store/update in localStorage
           localStorage.setItem(ACTIVE_JOB_STORAGE_KEY, JSON.stringify({
@@ -2024,7 +2047,22 @@
           activeJobData = { ...data.activeJob, startTime };
           showActiveJobBanner();
         } else {
-          // No active job on server, clear local storage
+          // No active job on server
+          // Only clear if local job is older than 30 seconds (to avoid race condition)
+          if (localJob && localJob.startTime) {
+            const startedAt = new Date(localJob.startTime).getTime();
+            const secondsSinceStart = (Date.now() - startedAt) / 1000;
+
+            if (secondsSinceStart < 30) {
+              console.log('[ACTIVE_JOB] Server says no job, but local job is only', Math.round(secondsSinceStart), 's old - keeping');
+              activeJobData = localJob;
+              showActiveJobBanner();
+              return;
+            }
+          }
+
+          // Clear if no local job or local job is stale
+          console.log('[ACTIVE_JOB] No active job found, clearing');
           localStorage.removeItem(ACTIVE_JOB_STORAGE_KEY);
           activeJobData = null;
           hideActiveJobBanner();
