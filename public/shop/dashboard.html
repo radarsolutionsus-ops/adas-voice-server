@@ -214,6 +214,407 @@
         margin-top: 8px;
       }
     }
+
+    /* ============================================
+       ACTIVE JOBS SECTION - Jobs In Progress
+       ============================================ */
+    .active-jobs-section {
+      margin-bottom: 24px;
+    }
+
+    .active-jobs-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .active-jobs-header h3 {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-primary, #1d1d1f);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .active-jobs-count {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      background: linear-gradient(135deg, #af52de 0%, #8b5cf6 100%);
+      color: white;
+      border-radius: 12px;
+    }
+
+    .active-jobs-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 16px;
+    }
+
+    .active-job-card {
+      background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+      border: 1px solid rgba(139, 92, 246, 0.2);
+      border-radius: 12px;
+      padding: 16px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .active-job-card:hover {
+      box-shadow: 0 4px 16px rgba(139, 92, 246, 0.2);
+      transform: translateY(-2px);
+    }
+
+    .active-job-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+
+    .active-job-ro {
+      font-size: 16px;
+      font-weight: 700;
+      color: #6d28d9;
+    }
+
+    .active-job-timer {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      background: rgba(139, 92, 246, 0.2);
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #7c3aed;
+    }
+
+    .active-job-timer .pulse {
+      width: 8px;
+      height: 8px;
+      background: #7c3aed;
+      border-radius: 50%;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(1.2); }
+    }
+
+    .active-job-vehicle {
+      font-size: 15px;
+      color: #1d1d1f;
+      margin-bottom: 8px;
+    }
+
+    .active-job-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      font-size: 13px;
+      color: #6b7280;
+    }
+
+    .active-job-meta span {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .active-job-meta .icon {
+      width: 14px;
+      height: 14px;
+      color: #8b5cf6;
+    }
+
+    .no-active-jobs {
+      text-align: center;
+      padding: 24px;
+      color: var(--text-secondary, #86868b);
+      background: var(--bg-grouped, #f2f2f7);
+      border-radius: 12px;
+    }
+
+    /* ============================================
+       WEEKLY CALENDAR STYLES
+       ============================================ */
+    .calendar-section {
+      margin-bottom: 24px;
+    }
+
+    .calendar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .calendar-header h3 {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-primary, #1d1d1f);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .calendar-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .calendar-nav {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .calendar-nav button {
+      padding: 8px 12px;
+      border: 1px solid var(--border, rgba(0, 0, 0, 0.1));
+      border-radius: 8px;
+      background: #fff;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary, #86868b);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .calendar-nav button:hover {
+      background: var(--bg-grouped, #f2f2f7);
+      color: var(--text-primary, #1d1d1f);
+    }
+
+    .calendar-nav button.today-btn {
+      background: #007aff;
+      color: white;
+      border-color: #007aff;
+    }
+
+    .calendar-nav button.today-btn:hover {
+      background: #0066d6;
+    }
+
+    .calendar-nav .week-range {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary, #1d1d1f);
+      min-width: 140px;
+      text-align: center;
+    }
+
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 8px;
+      background: var(--bg-grouped, #f2f2f7);
+      border-radius: 12px;
+      padding: 8px;
+    }
+
+    .calendar-day {
+      background: white;
+      border-radius: 10px;
+      min-height: 160px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .calendar-day.today {
+      border: 2px solid #007aff;
+      box-shadow: 0 2px 8px rgba(0, 122, 255, 0.15);
+    }
+
+    .calendar-day.past {
+      opacity: 0.6;
+    }
+
+    .day-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.06));
+    }
+
+    .day-name {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary, #86868b);
+    }
+
+    .calendar-day.today .day-name {
+      color: #007aff;
+    }
+
+    .day-date {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-primary, #1d1d1f);
+    }
+
+    .calendar-day.today .day-date {
+      color: #007aff;
+    }
+
+    .day-count {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      background: var(--bg-grouped, #f2f2f7);
+      color: var(--text-secondary, #86868b);
+      border-radius: 10px;
+    }
+
+    .day-jobs {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      overflow-y: auto;
+    }
+
+    .day-empty {
+      color: var(--text-tertiary, #aeaeb2);
+      font-size: 12px;
+      text-align: center;
+      padding: 16px 8px;
+    }
+
+    .cal-job {
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      border-left: 3px solid;
+    }
+
+    .cal-job:hover {
+      transform: scale(1.02);
+    }
+
+    .cal-job.scheduled {
+      background: rgba(0, 122, 255, 0.08);
+      border-color: #007aff;
+    }
+
+    .cal-job.ready {
+      background: rgba(52, 199, 89, 0.08);
+      border-color: #34c759;
+    }
+
+    .cal-job.in-progress {
+      background: rgba(139, 92, 246, 0.1);
+      border-color: #8b5cf6;
+    }
+
+    .cal-job.new {
+      background: rgba(255, 149, 0, 0.08);
+      border-color: #ff9500;
+    }
+
+    .cal-job-ro {
+      font-weight: 600;
+      color: var(--text-primary, #1d1d1f);
+      margin-bottom: 2px;
+    }
+
+    .cal-job-vehicle {
+      color: var(--text-secondary, #86868b);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .cal-job-time {
+      font-size: 11px;
+      color: var(--text-tertiary, #aeaeb2);
+      margin-top: 4px;
+    }
+
+    /* Calendar/List View Toggle */
+    .view-mode-toggle {
+      display: flex;
+      gap: 4px;
+      background: var(--bg-grouped, #f2f2f7);
+      padding: 4px;
+      border-radius: 8px;
+    }
+
+    .view-mode-btn {
+      padding: 6px 12px;
+      border: none;
+      background: transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      color: var(--text-secondary, #86868b);
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .view-mode-btn:hover {
+      color: var(--text-primary, #1d1d1f);
+    }
+
+    .view-mode-btn.active {
+      background: #ffffff;
+      color: var(--text-primary, #1d1d1f);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+    }
+
+    .view-mode-btn .icon {
+      width: 16px;
+      height: 16px;
+    }
+
+    @media (max-width: 1024px) {
+      .calendar-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    @media (max-width: 640px) {
+      .calendar-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .calendar-day {
+        min-height: 120px;
+        padding: 8px;
+      }
+
+      .active-jobs-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .calendar-nav {
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+
+      .calendar-controls {
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -311,6 +712,57 @@
             <span class="ready-alert-title" id="readyTitle">1 vehicle ready to schedule</span>
           </div>
           <a href="/shop/dashboard.html?status=Ready" class="ready-alert-action">Schedule</a>
+        </div>
+
+        <!-- Active Jobs Section - Shows jobs being worked on -->
+        <div class="active-jobs-section" id="activeJobsSection">
+          <div class="active-jobs-header">
+            <h3>
+              <span class="icon" id="activeJobsIcon"></span>
+              Jobs In Progress
+            </h3>
+            <span class="active-jobs-count" id="activeJobsCount">0</span>
+          </div>
+          <div class="active-jobs-grid" id="activeJobsGrid">
+            <div class="no-active-jobs">No jobs currently in progress</div>
+          </div>
+        </div>
+
+        <!-- Weekly Calendar Section -->
+        <div class="calendar-section" id="calendarSection">
+          <div class="calendar-header">
+            <h3>
+              <span class="icon" id="calendarIcon"></span>
+              This Week's Schedule
+            </h3>
+            <div class="calendar-controls">
+              <div class="view-mode-toggle">
+                <button class="view-mode-btn active" data-mode="calendar" title="Calendar view">
+                  <span class="icon" id="calViewIcon"></span>
+                  Calendar
+                </button>
+                <button class="view-mode-btn" data-mode="list" title="List view">
+                  <span class="icon" id="listViewIcon"></span>
+                  List
+                </button>
+              </div>
+              <div class="calendar-nav">
+                <button onclick="navigateWeek(-1)" title="Previous Week">
+                  <span class="icon" id="prevWeekIcon"></span>
+                </button>
+                <button class="today-btn" onclick="navigateWeek(0)" title="Go to Today">Today</button>
+                <span class="week-range" id="weekRange">Loading...</span>
+                <button onclick="navigateWeek(1)" title="Next Week">
+                  <span class="icon" id="nextWeekIcon"></span>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div id="calendarContent">
+            <div class="calendar-grid" id="calendarGrid">
+              <div class="loading" style="grid-column: 1 / -1;"><div class="spinner"></div></div>
+            </div>
+          </div>
         </div>
 
         <!-- Stats Grid (hidden when filtering) -->
@@ -453,17 +905,22 @@
       // Apply filter view (hide cards if filtering)
       applyFilterView();
 
+      // Setup calendar view mode toggle
+      setupCalendarViewToggle();
+
       // Load dashboard data
       await loadDashboardData();
     });
 
     function applyFilterView() {
       if (statusFilter) {
-        // Hide stats, scheduled jobs, quick actions, and ready banner when filtering
+        // Hide stats, scheduled jobs, quick actions, ready banner, active jobs, and calendar when filtering
         document.getElementById('statsGrid').style.display = 'none';
         document.getElementById('scheduledCard').style.display = 'none';
         document.getElementById('quickActionsCard').style.display = 'none';
         document.getElementById('readyAlert').style.display = 'none';
+        document.getElementById('activeJobsSection').style.display = 'none';
+        document.getElementById('calendarSection').style.display = 'none';
 
         // Update vehicles card to span full width without grid
         document.getElementById('dashboardGrid').className = '';
@@ -476,6 +933,8 @@
       } else {
         // Show all cards on dashboard
         document.getElementById('viewAllBtn').style.display = 'none';
+        document.getElementById('activeJobsSection').style.display = 'block';
+        document.getElementById('calendarSection').style.display = 'block';
       }
     }
 
@@ -523,6 +982,14 @@
       // View toggle icons
       document.getElementById('tableViewIcon').innerHTML = Icons.list;
       document.getElementById('cardViewIcon').innerHTML = Icons.dashboard;
+
+      // Active jobs and calendar icons
+      document.getElementById('activeJobsIcon').innerHTML = Icons.wrench;
+      document.getElementById('calendarIcon').innerHTML = Icons.calendar;
+      document.getElementById('calViewIcon').innerHTML = Icons.calendar;
+      document.getElementById('listViewIcon').innerHTML = Icons.list;
+      document.getElementById('prevWeekIcon').innerHTML = Icons.chevronLeft || '←';
+      document.getElementById('nextWeekIcon').innerHTML = Icons.chevronRight || '→';
     }
 
     function setupSidebar() {
@@ -565,7 +1032,13 @@
         // Update ready to schedule banner and sidebar
         updateReadyToSchedule(vehicles);
 
-        // Update scheduled jobs
+        // Update active jobs section (In Progress)
+        updateActiveJobs(vehicles);
+
+        // Update weekly calendar
+        renderCalendar(vehicles);
+
+        // Update scheduled jobs card
         updateScheduledJobs(vehicles);
 
         // Update recent vehicles table
@@ -662,6 +1135,252 @@
     let allVehicles = [];
     let currentView = 'table';
     let currentMonth = 'all';
+    let calendarViewMode = 'calendar'; // 'calendar' or 'list'
+
+    // ============================================
+    // CALENDAR & ACTIVE JOBS FUNCTIONS
+    // ============================================
+
+    // Get Monday of the week for a given date
+    function getMonday(date) {
+      const d = new Date(date);
+      const day = d.getDay();
+      const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+      d.setDate(diff);
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }
+
+    // Initialize currentWeekStart after getMonday is defined
+    let currentWeekStart = getMonday(new Date());
+
+    // Navigate week (offset: -1 = prev, 0 = today, 1 = next)
+    window.navigateWeek = function(offset) {
+      if (offset === 0) {
+        currentWeekStart = getMonday(new Date());
+      } else {
+        currentWeekStart.setDate(currentWeekStart.getDate() + (offset * 7));
+      }
+      renderCalendar(allVehicles);
+    };
+
+    // Format week range display (e.g., "Dec 9 - 14")
+    function formatWeekRange(startDate) {
+      const end = new Date(startDate);
+      end.setDate(end.getDate() + 5); // Saturday
+      const startMonth = startDate.toLocaleDateString('en-US', { month: 'short' });
+      const endMonth = end.toLocaleDateString('en-US', { month: 'short' });
+      const startDay = startDate.getDate();
+      const endDay = end.getDate();
+
+      if (startMonth === endMonth) {
+        return `${startMonth} ${startDay} - ${endDay}`;
+      }
+      return `${startMonth} ${startDay} - ${endMonth} ${endDay}`;
+    }
+
+    // Format time for display
+    function formatTime(timeStr) {
+      if (!timeStr) return '';
+      try {
+        // Handle various formats
+        if (timeStr.includes('T')) {
+          const d = new Date(timeStr);
+          return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+        }
+        // Handle "HH:MM" format
+        const [hours, minutes] = timeStr.split(':');
+        const h = parseInt(hours);
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        const h12 = h % 12 || 12;
+        return `${h12}:${minutes} ${ampm}`;
+      } catch { return timeStr; }
+    }
+
+    // Calculate elapsed time since job started
+    function calculateElapsedTime(startTime) {
+      if (!startTime) return '--:--';
+      const start = new Date(startTime);
+      const now = new Date();
+      const diff = Math.floor((now - start) / 1000); // seconds
+
+      const hours = Math.floor(diff / 3600);
+      const minutes = Math.floor((diff % 3600) / 60);
+      const secs = diff % 60;
+
+      if (hours > 0) {
+        return `${hours}h ${minutes}m`;
+      }
+      return `${minutes}m ${secs}s`;
+    }
+
+    // Update Active Jobs section
+    function updateActiveJobs(vehicles) {
+      const activeJobs = vehicles.filter(v => v.status === 'In Progress');
+      const section = document.getElementById('activeJobsSection');
+      const grid = document.getElementById('activeJobsGrid');
+      const countEl = document.getElementById('activeJobsCount');
+
+      countEl.textContent = activeJobs.length;
+
+      if (activeJobs.length === 0) {
+        grid.innerHTML = '<div class="no-active-jobs">No jobs currently in progress</div>';
+        return;
+      }
+
+      grid.innerHTML = activeJobs.map(job => {
+        const elapsed = calculateElapsedTime(job.jobStartedAt || job.updatedAt);
+        return `
+          <div class="active-job-card" onclick="window.location='/shop/vehicle.html?ro=${encodeURIComponent(job.roPo)}'">
+            <div class="active-job-header">
+              <span class="active-job-ro">RO #${escapeHtml(job.roPo)}</span>
+              <div class="active-job-timer">
+                <span class="pulse"></span>
+                <span class="elapsed-time" data-started="${job.jobStartedAt || job.updatedAt || ''}">${elapsed}</span>
+              </div>
+            </div>
+            <div class="active-job-vehicle">${escapeHtml(job.vehicle || 'Unknown Vehicle')}</div>
+            <div class="active-job-meta">
+              ${job.techName ? `<span><span class="icon">${Icons.user || ''}</span>${escapeHtml(job.techName)}</span>` : ''}
+              ${job.scheduledTime ? `<span><span class="icon">${Icons.clock || ''}</span>${formatTime(job.scheduledTime)}</span>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Render weekly calendar
+    function renderCalendar(vehicles) {
+      const weekRangeEl = document.getElementById('weekRange');
+      const calendarGrid = document.getElementById('calendarGrid');
+      const calendarContent = document.getElementById('calendarContent');
+
+      // Update week range display
+      weekRangeEl.textContent = formatWeekRange(currentWeekStart);
+
+      // Get scheduled vehicles
+      const scheduledVehicles = vehicles.filter(v =>
+        v.scheduledDate && !v.scheduledDate.includes('1899') &&
+        (v.status === 'Scheduled' || v.status === 'Rescheduled' || v.status === 'In Progress' || v.status === 'Ready')
+      );
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayStr = today.toISOString().split('T')[0];
+
+      // Build 6 days (Mon-Sat)
+      const days = [];
+      const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+      for (let i = 0; i < 6; i++) {
+        const dayDate = new Date(currentWeekStart);
+        dayDate.setDate(currentWeekStart.getDate() + i);
+        const dateStr = dayDate.toISOString().split('T')[0];
+
+        const dayJobs = scheduledVehicles.filter(v => {
+          const jobDate = (v.scheduledDate || '').split('T')[0];
+          return jobDate === dateStr;
+        });
+
+        days.push({
+          name: dayNames[i],
+          date: dayDate.getDate(),
+          dateStr: dateStr,
+          isToday: dateStr === todayStr,
+          isPast: dayDate < today,
+          jobs: dayJobs
+        });
+      }
+
+      if (calendarViewMode === 'calendar') {
+        // Calendar grid view
+        calendarGrid.innerHTML = days.map(day => `
+          <div class="calendar-day ${day.isToday ? 'today' : ''} ${day.isPast ? 'past' : ''}">
+            <div class="day-header">
+              <div>
+                <div class="day-name">${day.name}</div>
+                <div class="day-date">${day.date}</div>
+              </div>
+              ${day.jobs.length > 0 ? `<span class="day-count">${day.jobs.length}</span>` : ''}
+            </div>
+            <div class="day-jobs">
+              ${day.jobs.length === 0 ? '<div class="day-empty">No jobs</div>' : ''}
+              ${day.jobs.map(job => {
+                const statusClass = getCalJobStatusClass(job.status);
+                return `
+                  <div class="cal-job ${statusClass}" onclick="window.location='/shop/vehicle.html?ro=${encodeURIComponent(job.roPo)}'">
+                    <div class="cal-job-ro">${escapeHtml(job.roPo)}</div>
+                    <div class="cal-job-vehicle">${escapeHtml(truncateText(job.vehicle, 20))}</div>
+                    ${job.scheduledTime ? `<div class="cal-job-time">${formatTime(job.scheduledTime)}</div>` : ''}
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `).join('');
+        calendarGrid.style.display = 'grid';
+      } else {
+        // List view
+        const allDayJobs = days.flatMap(day =>
+          day.jobs.map(job => ({ ...job, dayName: day.name, dayDate: day.date, dateStr: day.dateStr, isToday: day.isToday }))
+        );
+
+        calendarGrid.innerHTML = allDayJobs.length === 0
+          ? '<div class="day-empty" style="grid-column: 1 / -1; padding: 40px;">No scheduled jobs this week</div>'
+          : `<div style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 8px;">
+              ${allDayJobs.map(job => {
+                const statusClass = getCalJobStatusClass(job.status);
+                return `
+                  <div class="schedule-item" onclick="window.location='/shop/vehicle.html?ro=${encodeURIComponent(job.roPo)}'">
+                    <div class="schedule-time">${job.dayName} ${job.dayDate}${job.isToday ? ' (Today)' : ''}</div>
+                    <div class="schedule-info">
+                      <div class="schedule-ro">RO #${escapeHtml(job.roPo)}</div>
+                      <div class="schedule-vehicle">${escapeHtml(job.vehicle || 'Unknown')}</div>
+                    </div>
+                    <span class="status-badge ${statusClass}">${job.status}</span>
+                  </div>
+                `;
+              }).join('')}
+            </div>`;
+        calendarGrid.style.display = 'grid';
+      }
+    }
+
+    function getCalJobStatusClass(status) {
+      if (!status) return 'new';
+      const s = status.toLowerCase();
+      if (s === 'scheduled' || s === 'rescheduled') return 'scheduled';
+      if (s === 'ready') return 'ready';
+      if (s === 'in progress') return 'in-progress';
+      return 'new';
+    }
+
+    function truncateText(str, len) {
+      if (!str) return '';
+      return str.length > len ? str.substring(0, len) + '...' : str;
+    }
+
+    // Setup calendar view mode toggle
+    function setupCalendarViewToggle() {
+      document.querySelectorAll('.view-mode-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          calendarViewMode = btn.dataset.mode;
+          document.querySelectorAll('.view-mode-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          renderCalendar(allVehicles);
+        });
+      });
+    }
+
+    // Update active job timers every second
+    setInterval(() => {
+      document.querySelectorAll('.elapsed-time').forEach(el => {
+        const started = el.dataset.started;
+        if (started) {
+          el.textContent = calculateElapsedTime(started);
+        }
+      });
+    }, 1000);
 
     function updateRecentVehicles(vehicles) {
       allVehicles = vehicles;
