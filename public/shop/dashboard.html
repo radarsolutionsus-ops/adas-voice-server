@@ -1307,6 +1307,11 @@
         v.scheduledDate && !v.scheduledDate.includes('1899')
       );
 
+      console.log('[CALENDAR] Rendering calendar with', vehicles.length, 'total vehicles,', scheduledVehicles.length, 'have scheduled dates');
+      if (scheduledVehicles.length > 0) {
+        console.log('[CALENDAR] Scheduled vehicles:', scheduledVehicles.map(v => ({ ro: v.roPo, date: v.scheduledDate, status: v.status })));
+      }
+
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const todayStr = today.toISOString().split('T')[0];
@@ -1315,14 +1320,37 @@
       const days = [];
       const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+      // Helper to normalize date to YYYY-MM-DD for comparison
+      function normalizeDateToYMD(dateInput) {
+        if (!dateInput) return '';
+        // Handle MM/DD/YYYY format from Sheets
+        if (typeof dateInput === 'string' && dateInput.includes('/')) {
+          const parts = dateInput.split('/');
+          if (parts.length >= 3) {
+            const month = parts[0].padStart(2, '0');
+            const day = parts[1].padStart(2, '0');
+            const year = parts[2].length === 2 ? '20' + parts[2] : parts[2];
+            return `${year}-${month}-${day}`;
+          }
+        }
+        // Handle ISO format or Date objects
+        const d = new Date(dateInput);
+        if (isNaN(d.getTime())) return '';
+        return d.toISOString().split('T')[0];
+      }
+
       for (let i = 0; i < 6; i++) {
         const dayDate = new Date(currentWeekStart);
         dayDate.setDate(currentWeekStart.getDate() + i);
         const dateStr = dayDate.toISOString().split('T')[0];
 
         const dayJobs = scheduledVehicles.filter(v => {
-          const jobDate = (v.scheduledDate || '').split('T')[0];
-          return jobDate === dateStr;
+          const jobDateStr = normalizeDateToYMD(v.scheduledDate);
+          const matches = jobDateStr === dateStr;
+          if (matches) {
+            console.log('[CALENDAR] Job', v.roPo, 'scheduled for', v.scheduledDate, '-> normalized:', jobDateStr, 'matches', dateStr);
+          }
+          return matches;
         });
 
         days.push({

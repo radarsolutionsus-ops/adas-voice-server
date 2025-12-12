@@ -2405,8 +2405,14 @@
 
     // Check if a job can be started (no other active job)
     function canStartJob(roPo) {
-      if (!activeJobData) return true;
-      return activeJobData.roPo === roPo;
+      console.log('[CAN_START] Checking for RO:', roPo, 'activeJobData:', activeJobData ? activeJobData.roPo : 'none');
+      if (!activeJobData) {
+        console.log('[CAN_START] No active job, can start');
+        return true;
+      }
+      const canStart = activeJobData.roPo === roPo;
+      console.log('[CAN_START] Result:', canStart, '(active job is', activeJobData.roPo, ')');
+      return canStart;
     }
 
     // Helper functions
@@ -3000,14 +3006,26 @@
           ` : ''}
           <div class="action-buttons">
             <button class="btn btn-start ${!canStart ? 'disabled-job' : ''}"
+                    id="startJobBtn"
                     data-ropo="${escapeHtml(currentJob.roPo)}"
                     data-scheduled="${escapeHtml(currentJob.scheduledDate || '')}"
-                    onclick="${canStart ? `handleStartJobClick(this)` : ''}"
                     ${!canStart ? 'disabled' : ''}>
               <span class="icon">${Icons.wrench}</span>
               ${isActiveJob ? 'Job In Progress' : 'Start Job'}
             </button>
           </div>
+          <script>
+            // Attach click handler directly after button renders
+            (function() {
+              const btn = document.getElementById('startJobBtn');
+              if (btn && !btn.disabled) {
+                btn.onclick = function() {
+                  console.log('[START_JOB] Button clicked via direct handler');
+                  handleStartJobClick(this);
+                };
+              }
+            })();
+          </script>
         </div>
       `;
     }
