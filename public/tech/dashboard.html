@@ -2331,7 +2331,10 @@
           vehicle: data.job?.vehicle || currentJob?.vehicle,
           shopName: data.job?.shopName || currentJob?.shopName,
           requiredCalibrations: data.job?.requiredCalibrations || currentJob?.requiredCalibrations,
-          startTime: data.startTime
+          startTime: data.startTime,
+          // Document URLs for completion validation
+          postScanPdf: data.job?.postScanPdf || currentJob?.postScanPdf || '',
+          invoicePdf: data.job?.invoicePdf || currentJob?.invoicePdf || ''
         };
 
         localStorage.setItem(ACTIVE_JOB_STORAGE_KEY, JSON.stringify(jobInfo));
@@ -2356,7 +2359,8 @@
       const missing = [];
 
       // Check Post-Scan (warning only, not required)
-      const hasPostScan = job.postscanPdf || job.postScanPdf || job.postScanPdfUrl;
+      // Handle ALL possible field name variations
+      const hasPostScan = job.postscanPdf || job.postScanPdf || job.post_scan_pdf || job.postScanPdfUrl;
       const postScanMissing = !hasPostScan || (typeof hasPostScan === 'string' && !hasPostScan.startsWith('http'));
 
       // Check Invoice (REQUIRED)
@@ -3310,7 +3314,7 @@
     function renderInProgressStatusModal() {
       const cals = currentJob.requiredCalibrations || 'Not determined';
       const hasInvoice = currentJob.invoicePdf || currentJob.invoice_pdf || currentJob.invoicePdfUrl;
-      const hasPostScan = currentJob.postscanPdf || currentJob.postScanPdf || currentJob.postScanPdfUrl;
+      const hasPostScan = currentJob.postscanPdf || currentJob.postScanPdf || currentJob.post_scan_pdf || currentJob.postScanPdfUrl;
       const canComplete = hasInvoice && hasPostScan;
 
       return `

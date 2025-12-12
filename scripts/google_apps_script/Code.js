@@ -1502,7 +1502,7 @@ function getAllScheduleRows(shopName) {
       estimatePdf: row[COL.ESTIMATE_PDF] || '',
       prescanPdf: row[COL.PRESCAN_PDF] || '',
       revvReportPdf: row[COL.REVV_PDF] || '',
-      postScanPdf: row[COL.POST_SCAN_PDF] || '',
+      postScanPdf: row[COL.POSTSCAN_PDF] || '',
       invoicePdf: row[COL.INVOICE_PDF] || '',
       notes: row[COL.NOTES] || ''
     });

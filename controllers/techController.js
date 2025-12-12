@@ -1010,7 +1010,10 @@ export async function startJob(req, res) {
         roPo: row.roPo,
         vehicle: row.vehicle,
         shopName: row.shopName || row.shop_name,
-        requiredCalibrations: row.requiredCalibrations
+        requiredCalibrations: row.requiredCalibrations,
+        // Document URLs for completion validation
+        postScanPdf: row.postScanPdf || row.postscan_pdf || '',
+        invoicePdf: row.invoicePdf || row.invoice_pdf || ''
       }
     });
   } catch (err) {
@@ -1188,7 +1191,10 @@ export async function getActiveJob(req, res) {
         shopName: activeJob.shopName || activeJob.shop_name,
         requiredCalibrations: activeJob.requiredCalibrations,
         scheduledDate: activeJob.scheduledDate,
-        scheduledTime: activeJob.scheduledTime
+        scheduledTime: activeJob.scheduledTime,
+        // Document URLs for completion validation
+        postScanPdf: activeJob.postScanPdf || activeJob.postscan_pdf || '',
+        invoicePdf: activeJob.invoicePdf || activeJob.invoice_pdf || ''
       }
     });
   } catch (err) {
