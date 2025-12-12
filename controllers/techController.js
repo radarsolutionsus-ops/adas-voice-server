@@ -892,37 +892,55 @@ export async function startJob(req, res) {
       return res.status(404).json({ success: false, error: 'Vehicle not found' });
     }
 
-    // Get current date and time for scheduling
+    // Get current date and time in Miami timezone (America/New_York = EST/EDT)
     const now = new Date();
-    const todayStr = now.toLocaleDateString('en-US'); // MM/DD/YYYY format
+    const miamiTimezone = 'America/New_York';
+
+    // Format date as MM/DD/YYYY in Miami time
+    const todayStr = now.toLocaleDateString('en-US', { timeZone: miamiTimezone });
+
+    // Format time as h:mm AM/PM in Miami time
     const currentTime = now.toLocaleTimeString('en-US', {
+      timeZone: miamiTimezone,
       hour: 'numeric',
       minute: '2-digit',
       hour12: true
-    }); // e.g., "2:15 PM"
+    }); // e.g., "3:15 PM"
 
-    // Record start time
+    // Job start timestamp - human readable in Miami time
+    const jobStartFormatted = now.toLocaleString('en-US', {
+      timeZone: miamiTimezone,
+      month: '2-digit',
+      day: '2-digit',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    }); // e.g., "12/12/2025, 3:15 PM"
+
+    // Also keep ISO timestamp for notes
     const timestamp = now.toISOString();
-    let startNote = `[${timestamp}] Job started by ${user.techName}`;
+    let startNote = `[${jobStartFormatted}] Job started by ${user.techName}`;
 
     // Check if schedule date is being changed
     const oldScheduledDate = row.scheduledDate || row.scheduled_date || '';
     if (originalScheduledDate && oldScheduledDate) {
-      const originalDate = new Date(originalScheduledDate).toLocaleDateString('en-US');
+      const originalDate = new Date(originalScheduledDate).toLocaleDateString('en-US', { timeZone: miamiTimezone });
       if (originalDate !== todayStr) {
         startNote += ` [SCHEDULE CHANGED: Originally scheduled for ${originalDate}]`;
         console.log(`${LOG_TAG} Schedule changed from ${originalDate} to ${todayStr}`);
       }
     }
 
-    console.log(`${LOG_TAG} Updating Google Sheets - Status: "In Progress", Technician: "${user.techName}", Date: ${todayStr}, Time: ${currentTime}, JobStart: ${timestamp}`);
+    console.log(`${LOG_TAG} Miami time - Date: ${todayStr}, Time: ${currentTime}, JobStart: ${jobStartFormatted}`);
+    console.log(`${LOG_TAG} Updating Google Sheets - Status: "In Progress", Technician: "${user.techName}"`);
 
     const result = await sheetWriter.upsertScheduleRowByRO(roPo, {
       status: 'In Progress',
       technician: user.techName,
       scheduledDate: todayStr,
       scheduledTime: currentTime,
-      job_start: timestamp,  // Column X - Job Start timestamp
+      job_start: jobStartFormatted,  // Column X - Job Start timestamp (human readable)
       notes: `${row.notes || ''}\n${startNote}`.trim()
     });
 

@@ -754,13 +754,16 @@ function updateExistingRow(sheet, rowNum, data) {
   const vehicle = existingVehicle || newVehicle;
 
   // === STATUS PROTECTION: Prevent downgrade from higher-priority statuses ===
-  // Status hierarchy: Completed > Scheduled > Rescheduled > Ready > New
+  // Status hierarchy: Completed > Cancelled > In Progress > Scheduled > Rescheduled > Ready > No Cal > New
   // Only allow status to go UP, never DOWN
   const STATUS_PRIORITY = {
-    'Completed': 5,
-    'Scheduled': 4,
-    'Rescheduled': 3,
-    'Ready': 2,
+    'Completed': 8,
+    'Cancelled': 7,
+    'In Progress': 6,  // Tech actively working - higher than scheduled
+    'Scheduled': 5,
+    'Rescheduled': 4,
+    'Ready': 3,
+    'No Cal': 2,
     'New': 1,
     '': 0
   };
