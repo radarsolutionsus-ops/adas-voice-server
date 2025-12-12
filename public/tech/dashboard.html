@@ -2452,12 +2452,41 @@
       document.getElementById('completeJobModal').classList.add('open');
     }
 
+    // Handle file selection for Post-Scan
+    function handlePostScanFile(file) {
+      if (!file.name.toLowerCase().endsWith('.pdf')) {
+        showToast('Please upload a PDF file', 'error');
+        return;
+      }
+      completePostScanFile = file;
+      const fileNameEl = document.getElementById('completePostScanFileName');
+      if (fileNameEl) {
+        fileNameEl.textContent = file.name;
+        fileNameEl.style.display = 'block';
+      }
+      updateCompleteButtonState();
+    }
+
+    // Handle file selection for Invoice
+    function handleInvoiceFile(file) {
+      if (!file.name.toLowerCase().endsWith('.pdf')) {
+        showToast('Please upload a PDF file', 'error');
+        return;
+      }
+      completeInvoiceFile = file;
+      const fileNameEl = document.getElementById('completeInvoiceFileName');
+      if (fileNameEl) {
+        fileNameEl.textContent = file.name;
+        fileNameEl.style.display = 'block';
+      }
+      updateCompleteButtonState();
+    }
+
     // Initialize upload handlers for complete modal
     function initCompleteModalUploadHandlers() {
       // Post-Scan upload
       const postScanZone = document.getElementById('completePostScanZone');
       const postScanInput = document.getElementById('completePostScanInput');
-      const postScanFileName = document.getElementById('completePostScanFileName');
 
       if (postScanZone && postScanInput) {
         // Remove existing handlers by cloning
@@ -2465,19 +2494,37 @@
         postScanZone.parentNode.replaceChild(newPostScanZone, postScanZone);
         const newPostScanInput = newPostScanZone.querySelector('#completePostScanInput');
 
-        newPostScanZone.addEventListener('click', () => newPostScanInput.click());
+        // Click to upload
+        newPostScanZone.addEventListener('click', (e) => {
+          if (e.target !== newPostScanInput) newPostScanInput.click();
+        });
+
+        // File input change
         newPostScanInput.addEventListener('change', () => {
           if (newPostScanInput.files.length) {
-            const file = newPostScanInput.files[0];
-            if (!file.name.toLowerCase().endsWith('.pdf')) {
-              showToast('Please upload a PDF file', 'error');
-              return;
-            }
-            completePostScanFile = file;
-            const fileNameEl = newPostScanZone.querySelector('#completePostScanFileName');
-            fileNameEl.textContent = file.name;
-            fileNameEl.style.display = 'block';
-            updateCompleteButtonState();
+            handlePostScanFile(newPostScanInput.files[0]);
+          }
+        });
+
+        // Drag and drop
+        newPostScanZone.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          newPostScanZone.classList.add('dragover');
+        });
+
+        newPostScanZone.addEventListener('dragleave', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          newPostScanZone.classList.remove('dragover');
+        });
+
+        newPostScanZone.addEventListener('drop', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          newPostScanZone.classList.remove('dragover');
+          if (e.dataTransfer.files.length) {
+            handlePostScanFile(e.dataTransfer.files[0]);
           }
         });
       }
@@ -2492,19 +2539,37 @@
         invoiceZone.parentNode.replaceChild(newInvoiceZone, invoiceZone);
         const newInvoiceInput = newInvoiceZone.querySelector('#completeInvoiceInput');
 
-        newInvoiceZone.addEventListener('click', () => newInvoiceInput.click());
+        // Click to upload
+        newInvoiceZone.addEventListener('click', (e) => {
+          if (e.target !== newInvoiceInput) newInvoiceInput.click();
+        });
+
+        // File input change
         newInvoiceInput.addEventListener('change', () => {
           if (newInvoiceInput.files.length) {
-            const file = newInvoiceInput.files[0];
-            if (!file.name.toLowerCase().endsWith('.pdf')) {
-              showToast('Please upload a PDF file', 'error');
-              return;
-            }
-            completeInvoiceFile = file;
-            const fileNameEl = newInvoiceZone.querySelector('#completeInvoiceFileName');
-            fileNameEl.textContent = file.name;
-            fileNameEl.style.display = 'block';
-            updateCompleteButtonState();
+            handleInvoiceFile(newInvoiceInput.files[0]);
+          }
+        });
+
+        // Drag and drop
+        newInvoiceZone.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          newInvoiceZone.classList.add('dragover');
+        });
+
+        newInvoiceZone.addEventListener('dragleave', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          newInvoiceZone.classList.remove('dragover');
+        });
+
+        newInvoiceZone.addEventListener('drop', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          newInvoiceZone.classList.remove('dragover');
+          if (e.dataTransfer.files.length) {
+            handleInvoiceFile(e.dataTransfer.files[0]);
           }
         });
       }
