@@ -448,7 +448,7 @@ export async function sendReadyToScheduleEmail(roData) {
     : `No Calibration Required: ${vehicle} - RO# ${roPo}`;
 
   // Portal URL - shop portal for scheduling
-  const portalUrl = 'https://adasfirst.com/shop';
+  const portalUrl = 'https://portal.adasf1rst.com';
 
   // HTML email body - Clean, action-focused
   const htmlBody = `
