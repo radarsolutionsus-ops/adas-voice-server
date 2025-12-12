@@ -31,6 +31,13 @@ export function filterVehiclesByUser(rows, user) {
   // Shops only see their own vehicles
   if (role === ROLES.SHOP && sheetName) {
     const shopNameLower = sheetName.toLowerCase().trim();
+
+    // Debug: Log first few shop names from data
+    if (rows.length > 0) {
+      const sampleShops = rows.slice(0, 5).map(r => r.shopName || r.shop_name || '(empty)');
+      console.log(`${LOG_TAG} Looking for shop "${shopNameLower}", sample shops in data: ${JSON.stringify(sampleShops)}`);
+    }
+
     return rows.filter(row => {
       const rowShop = (row.shopName || row.shop_name || '').toLowerCase().trim();
       return rowShop === shopNameLower;

@@ -7,6 +7,16 @@
   <link rel="stylesheet" href="/css/apple-style.css">
   <link rel="stylesheet" href="/css/portal.css">
   <style>
+    /* Last refresh indicator */
+    .last-refresh {
+      font-size: 11px;
+      color: var(--text-tertiary, #aeaeb2);
+      margin-left: 12px;
+      padding: 2px 8px;
+      background: var(--bg-grouped, #f2f2f7);
+      border-radius: 10px;
+    }
+
     /* Month Tabs - Apple Style */
     .month-tabs {
       display: flex;
@@ -687,6 +697,7 @@
             <span class="icon" id="mobileMenuIcon"></span>
           </button>
           <h1 class="page-title">Dashboard</h1>
+          <span class="last-refresh" id="lastRefreshIndicator" title="Auto-refreshes every 15s">Updated just now</span>
         </div>
         <div class="header-right">
           <a href="/shop/submit.html" class="btn btn-primary">
@@ -910,7 +921,41 @@
 
       // Load dashboard data
       await loadDashboardData();
+
+      // Auto-refresh every 15 seconds
+      setInterval(async () => {
+        try {
+          await loadDashboardData();
+          updateLastRefreshIndicator();
+          console.log('[AUTO_REFRESH] Shop data refreshed');
+        } catch (err) {
+          console.warn('[AUTO_REFRESH] Failed:', err.message);
+        }
+      }, 15000);
     });
+
+    // Track last refresh time
+    let lastRefreshTime = Date.now();
+
+    function updateLastRefreshIndicator() {
+      lastRefreshTime = Date.now();
+      const el = document.getElementById('lastRefreshIndicator');
+      if (el) el.textContent = 'Updated just now';
+    }
+
+    // Update indicator every second to show elapsed time
+    setInterval(() => {
+      const el = document.getElementById('lastRefreshIndicator');
+      if (!el) return;
+      const seconds = Math.floor((Date.now() - lastRefreshTime) / 1000);
+      if (seconds < 5) {
+        el.textContent = 'Updated just now';
+      } else if (seconds < 60) {
+        el.textContent = `Updated ${seconds}s ago`;
+      } else {
+        el.textContent = `Updated ${Math.floor(seconds / 60)}m ago`;
+      }
+    }, 1000);
 
     function applyFilterView() {
       if (statusFilter) {

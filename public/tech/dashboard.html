@@ -317,6 +317,15 @@
       gap: 12px;
     }
 
+    .last-refresh {
+      font-size: 11px;
+      color: var(--text-tertiary, #aeaeb2);
+      margin-left: 8px;
+      padding: 2px 8px;
+      background: var(--bg-grouped, #f2f2f7);
+      border-radius: 10px;
+    }
+
     .logo-icon {
       width: 32px;
       height: 32px;
@@ -1532,6 +1541,7 @@
     <div class="header-logo">
       <div class="logo-icon">A</div>
       <span class="logo-text">ADAS F1RST</span>
+      <span class="last-refresh" id="lastRefreshIndicator" title="Auto-refreshes every 10s">Updated just now</span>
     </div>
     <button class="btn-logout" id="logoutBtn">
       <span class="icon" id="logoutIcon"></span>
@@ -1986,8 +1996,12 @@
 
     // Start a job
     async function startJobAction(roPo) {
+      console.log('[START_JOB] ====== Start Job clicked ======');
+      console.log('[START_JOB] RO:', roPo);
+
       // Check if already have an active job
       if (activeJobData && activeJobData.roPo !== roPo) {
+        console.log('[START_JOB] Blocked - already has active job:', activeJobData.roPo);
         showToast('Complete your current job first', 'error');
         return;
       }
@@ -1996,6 +2010,8 @@
         showLoading('Starting job...');
 
         const token = getStorageItem('adas_access_token') || getStorageItem('token');
+        console.log('[START_JOB] Calling API /api/tech/start-job...');
+
         const response = await fetch('/api/tech/start-job', {
           method: 'POST',
           headers: {
@@ -2006,9 +2022,11 @@
         });
 
         const data = await response.json();
+        console.log('[START_JOB] API response:', JSON.stringify(data));
         hideLoading();
 
         if (!data.success) {
+          console.error('[START_JOB] API returned error:', data.error);
           if (data.activeJob) {
             showToast(`Complete RO #${data.activeJob.roPo} first`, 'error');
           } else {
@@ -2016,6 +2034,8 @@
           }
           return;
         }
+
+        console.log('[START_JOB] SUCCESS - Sheets updated, status is now "In Progress"');
 
         // Store active job
         const jobInfo = {
@@ -2028,6 +2048,7 @@
 
         localStorage.setItem(ACTIVE_JOB_STORAGE_KEY, JSON.stringify(jobInfo));
         activeJobData = jobInfo;
+        console.log('[START_JOB] Stored active job in localStorage:', JSON.stringify(jobInfo));
 
         showActiveJobBanner();
         closeModal();
@@ -2035,6 +2056,7 @@
         showToast('Job started!', 'success');
 
       } catch (err) {
+        console.error('[START_JOB] Exception:', err);
         hideLoading();
         showToast('Failed to start job: ' + err.message, 'error');
       }
@@ -2218,6 +2240,18 @@
       // Check for active job and load jobs
       await checkActiveJob();
       await loadJobs();
+
+      // Auto-refresh every 10 seconds
+      setInterval(async () => {
+        try {
+          await loadJobs();
+          await checkActiveJob();
+          updateLastRefreshIndicator();
+          console.log('[AUTO_REFRESH] Data refreshed');
+        } catch (err) {
+          console.warn('[AUTO_REFRESH] Failed:', err.message);
+        }
+      }, 10000);
     });
 
     function initIcons() {
@@ -2234,6 +2268,29 @@
       document.getElementById('closeCompleteIcon').innerHTML = Icons.x;
       document.getElementById('submitCompleteIcon').innerHTML = Icons.checkCircle || '✓';
     }
+
+    // Track last refresh time
+    let lastRefreshTime = Date.now();
+
+    function updateLastRefreshIndicator() {
+      lastRefreshTime = Date.now();
+      const el = document.getElementById('lastRefreshIndicator');
+      if (el) el.textContent = 'Updated just now';
+    }
+
+    // Update indicator every second to show elapsed time
+    setInterval(() => {
+      const el = document.getElementById('lastRefreshIndicator');
+      if (!el) return;
+      const seconds = Math.floor((Date.now() - lastRefreshTime) / 1000);
+      if (seconds < 5) {
+        el.textContent = 'Updated just now';
+      } else if (seconds < 60) {
+        el.textContent = `Updated ${seconds}s ago`;
+      } else {
+        el.textContent = `Updated ${Math.floor(seconds / 60)}m ago`;
+      }
+    }, 1000);
 
     async function loadJobs() {
       try {

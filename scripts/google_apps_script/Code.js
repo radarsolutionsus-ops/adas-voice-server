@@ -2455,15 +2455,18 @@ function applyStatusColorFormatting() {
   // Define the status column range (F2:F1000)
   const statusRange = sheet.getRange('F2:F1000');
 
-  // Status color configurations (FINALIZED December 2024 - 7 statuses)
+  // Status color configurations (UPDATED December 2024 - 10 statuses)
   const statusColors = [
-    { text: 'New', background: '#e8f0fe', fontColor: '#1a73e8' },
-    { text: 'Ready', background: '#e6f4ea', fontColor: '#137333' },
-    { text: 'No Cal', background: '#e9ecef', fontColor: '#6c757d' },  // Gray - No calibration required
-    { text: 'Scheduled', background: '#f3e8fd', fontColor: '#7c3aed' },
-    { text: 'Rescheduled', background: '#fff3e0', fontColor: '#e65100' },
-    { text: 'Completed', background: '#d2e3fc', fontColor: '#1967d2' },
-    { text: 'Cancelled', background: '#fce8e6', fontColor: '#c5221f' }
+    { text: 'New', background: '#e8f0fe', fontColor: '#4285f4' },           // Blue
+    { text: 'Ready', background: '#e6f4ea', fontColor: '#34a853' },         // Green
+    { text: 'No Cal', background: '#f5f5f5', fontColor: '#e0e0e0' },        // Light Gray
+    { text: 'Scheduled', background: '#f3e8fd', fontColor: '#9334e6' },     // Purple
+    { text: 'In Progress', background: '#fff3e0', fontColor: '#ff9800' },   // Orange/Amber
+    { text: 'Completed', background: '#e3f2fd', fontColor: '#1a73e8' },     // Dark Blue
+    { text: 'Needs Attention', background: '#fffde7', fontColor: '#fbbc04' }, // Yellow
+    { text: 'Not Ready', background: '#fce8e6', fontColor: '#ea4335' },     // Red
+    { text: 'Cancelled', background: '#f5f5f5', fontColor: '#9e9e9e' },     // Gray
+    { text: 'Rescheduled', background: '#fff3e0', fontColor: '#ff6d00' }    // Light Orange
   ];
 
   // Create conditional formatting rules for each status
@@ -2488,11 +2491,14 @@ function applyStatusColorFormatting() {
     'The following colors are now active:\n\n' +
     '🔵 New = Blue\n' +
     '🟢 Ready = Green\n' +
-    '⚪ No Cal = Gray\n' +
     '🟣 Scheduled = Purple\n' +
-    '🟠 Rescheduled = Orange\n' +
+    '🟠 In Progress = Orange/Amber\n' +
     '🔵 Completed = Dark Blue\n' +
-    '🔴 Cancelled = Red',
+    '🟡 Needs Attention = Yellow\n' +
+    '🔴 Not Ready = Red\n' +
+    '⚪ Cancelled = Gray\n' +
+    '🟧 Rescheduled = Light Orange\n' +
+    '⚪ No Cal = Light Gray',
     SpreadsheetApp.getUi().ButtonSet.OK
   );
 }

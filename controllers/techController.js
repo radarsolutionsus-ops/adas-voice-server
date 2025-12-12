@@ -857,7 +857,8 @@ export async function startJob(req, res) {
       return res.status(400).json({ success: false, error: 'RO/PO is required' });
     }
 
-    console.log(`${LOG_TAG} Start job request for RO ${roPo} by tech: ${user.techName}`);
+    console.log(`${LOG_TAG} ====== START JOB REQUEST ======`);
+    console.log(`${LOG_TAG} RO: ${roPo}, Tech: ${user.techName}`);
 
     // Check if tech already has an active job
     const allResult = await sheetWriter.getAllScheduleRows();
@@ -894,17 +895,25 @@ export async function startJob(req, res) {
     const timestamp = new Date().toISOString();
     const startNote = `[${timestamp}] Job started by ${user.techName}`;
 
+    console.log(`${LOG_TAG} Updating Google Sheets - Status: "In Progress", Note: "${startNote}"`);
+
     const result = await sheetWriter.upsertScheduleRowByRO(roPo, {
       status: 'In Progress',
       notes: `${row.notes || ''}\n${startNote}`.trim()
     });
 
+    console.log(`${LOG_TAG} Sheets update result:`, JSON.stringify(result));
+
     if (!result.success) {
+      console.error(`${LOG_TAG} FAILED to update Sheets for RO ${roPo}:`, result.error);
       return res.status(500).json({
         success: false,
         error: result.error || 'Failed to start job'
       });
     }
+
+    console.log(`${LOG_TAG} SUCCESS - Job ${roPo} status updated to "In Progress" in Google Sheets`);
+    console.log(`${LOG_TAG} ====== START JOB COMPLETE ======`);
 
     res.json({
       success: true,
