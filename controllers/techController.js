@@ -1042,6 +1042,17 @@ export async function getActiveJob(req, res) {
     }
 
     const techNameLower = (user.techName || '').toLowerCase().trim();
+
+    // Log all "In Progress" jobs to debug
+    const inProgressJobs = (result.rows || []).filter(row => {
+      const status = (row.status || '').toLowerCase();
+      return status === 'in progress';
+    });
+    console.log(`${LOG_TAG} Found ${inProgressJobs.length} jobs with "In Progress" status`);
+    inProgressJobs.forEach(job => {
+      console.log(`${LOG_TAG}   - RO: ${job.roPo}, Tech: "${job.technician || job.technicianAssigned || 'NONE'}", Status: "${job.status}"`);
+    });
+
     const activeJob = (result.rows || []).find(row => {
       const rowTech = (row.technician || row.technicianAssigned || '').toLowerCase().trim();
       const status = (row.status || '').toLowerCase();
@@ -1049,8 +1060,11 @@ export async function getActiveJob(req, res) {
     });
 
     if (!activeJob) {
+      console.log(`${LOG_TAG} No active job found for tech "${user.techName}" - returning null`);
       return res.json({ success: true, activeJob: null });
     }
+
+    console.log(`${LOG_TAG} Found active job: RO ${activeJob.roPo} for tech ${user.techName}`);
 
     res.json({
       success: true,
