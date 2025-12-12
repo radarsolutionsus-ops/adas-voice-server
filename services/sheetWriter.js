@@ -737,6 +737,12 @@ export async function upsertScheduleRowByRO(roPo, dataObject) {
     oem_position: dataObject.oemPosition || dataObject.oem_position || dataObject.oemLinks || '',
     // Column V: Estimate PDF link
     estimate_pdf: dataObject.estimatePdf || dataObject.estimate_pdf || '',
+    // Column W: PreScan PDF
+    prescan_pdf: dataObject.prescanPdf || dataObject.prescan_pdf || '',
+    // Column X: Job Start timestamp
+    job_start: dataObject.jobStart || dataObject.job_start || '',
+    // Column Y: Job End timestamp
+    job_end: dataObject.jobEnd || dataObject.job_end || '',
     // Flag indicating this update came from a Revv Report (for VIN validation logic)
     isRevvReport: dataObject.isRevvReport || false
   };
@@ -755,6 +761,8 @@ export async function upsertScheduleRowByRO(roPo, dataObject) {
   console.log(`${LOG_TAG} shop_name: ${cleanedData.shop_name || 'NOT SET'}`);
   console.log(`${LOG_TAG} oem_position: ${cleanedData.oem_position || 'NOT SET'}`);
   console.log(`${LOG_TAG} estimate_pdf: ${cleanedData.estimate_pdf || 'NOT SET'}`);
+  console.log(`${LOG_TAG} job_start: ${cleanedData.job_start || 'NOT SET'}`);
+  console.log(`${LOG_TAG} technician: ${cleanedData.technician || 'NOT SET'}`);
 
   // Use 'log_ro' action (matches GAS script)
   const result = await makeGASRequest('log_ro', cleanedData);

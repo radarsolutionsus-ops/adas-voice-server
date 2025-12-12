@@ -915,13 +915,14 @@ export async function startJob(req, res) {
       }
     }
 
-    console.log(`${LOG_TAG} Updating Google Sheets - Status: "In Progress", Technician: "${user.techName}", Date: ${todayStr}, Time: ${currentTime}`);
+    console.log(`${LOG_TAG} Updating Google Sheets - Status: "In Progress", Technician: "${user.techName}", Date: ${todayStr}, Time: ${currentTime}, JobStart: ${timestamp}`);
 
     const result = await sheetWriter.upsertScheduleRowByRO(roPo, {
       status: 'In Progress',
       technician: user.techName,
       scheduledDate: todayStr,
       scheduledTime: currentTime,
+      job_start: timestamp,  // Column X - Job Start timestamp
       notes: `${row.notes || ''}\n${startNote}`.trim()
     });
 
