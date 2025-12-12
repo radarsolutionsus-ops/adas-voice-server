@@ -981,6 +981,304 @@
         flex-direction: column;
       }
     }
+
+    /* ============================================
+       WEEKLY CALENDAR STYLES
+       ============================================ */
+
+    .calendar-section {
+      margin-bottom: 32px;
+    }
+
+    .calendar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding: 0 4px;
+    }
+
+    .calendar-header h2 {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text-primary, #1d1d1f);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .calendar-nav {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .calendar-nav button {
+      padding: 8px 12px;
+      border: 1px solid var(--border, rgba(0, 0, 0, 0.1));
+      border-radius: 8px;
+      background: #fff;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-secondary, #86868b);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .calendar-nav button:hover {
+      background: var(--bg-grouped, #f2f2f7);
+      color: var(--text-primary, #1d1d1f);
+    }
+
+    .calendar-nav button.today-btn {
+      background: #007aff;
+      color: white;
+      border-color: #007aff;
+    }
+
+    .calendar-nav button.today-btn:hover {
+      background: #0066d6;
+    }
+
+    .calendar-nav .week-range {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary, #1d1d1f);
+      min-width: 180px;
+      text-align: center;
+    }
+
+    /* Calendar Grid */
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+      background: var(--bg-grouped, #f2f2f7);
+      padding: 12px;
+      border-radius: 16px;
+    }
+
+    .calendar-day {
+      background: #fff;
+      border-radius: 12px;
+      min-height: 180px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border: 1px solid transparent;
+      transition: all 0.15s ease;
+    }
+
+    .calendar-day.today {
+      border-color: #007aff;
+      box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.15);
+    }
+
+    .calendar-day.has-jobs {
+      border-color: var(--border, rgba(0, 0, 0, 0.08));
+    }
+
+    .day-header {
+      padding: 10px 12px;
+      background: var(--bg-grouped, #f2f2f7);
+      border-bottom: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.06));
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .calendar-day.today .day-header {
+      background: rgba(0, 122, 255, 0.1);
+    }
+
+    .day-name {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary, #86868b);
+    }
+
+    .calendar-day.today .day-name {
+      color: #007aff;
+    }
+
+    .day-date {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-primary, #1d1d1f);
+    }
+
+    .calendar-day.today .day-date {
+      color: #007aff;
+    }
+
+    .day-count {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: var(--bg, #e5e5ea);
+      color: var(--text-secondary, #86868b);
+    }
+
+    .calendar-day.today .day-count {
+      background: #007aff;
+      color: white;
+    }
+
+    .day-jobs {
+      flex: 1;
+      padding: 8px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    /* Capacity Indicator */
+    .capacity-bar {
+      height: 3px;
+      background: var(--bg, #e5e5ea);
+      border-radius: 2px;
+      margin: 0 12px 8px;
+      overflow: hidden;
+    }
+
+    .capacity-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.3s ease;
+    }
+
+    .capacity-fill.low { background: #34c759; }
+    .capacity-fill.medium { background: #ff9500; }
+    .capacity-fill.high { background: #ff3b30; }
+
+    /* Calendar Job Card */
+    .cal-job-card {
+      padding: 8px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      border-left: 3px solid;
+    }
+
+    .cal-job-card:hover {
+      transform: translateX(2px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .cal-job-card.status-new,
+    .cal-job-card.status-ready {
+      background: rgba(255, 149, 0, 0.1);
+      border-color: #ff9500;
+    }
+
+    .cal-job-card.status-scheduled,
+    .cal-job-card.status-rescheduled {
+      background: rgba(0, 122, 255, 0.1);
+      border-color: #007aff;
+    }
+
+    .cal-job-card.status-in-progress {
+      background: rgba(175, 82, 222, 0.1);
+      border-color: #af52de;
+    }
+
+    .cal-job-card.status-completed {
+      background: rgba(52, 199, 89, 0.1);
+      border-color: #34c759;
+    }
+
+    .cal-job-card.status-cancelled {
+      background: rgba(142, 142, 147, 0.1);
+      border-color: #8e8e93;
+      opacity: 0.6;
+    }
+
+    .cal-job-ro {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-primary, #1d1d1f);
+      margin-bottom: 2px;
+    }
+
+    .cal-job-vehicle {
+      font-size: 11px;
+      color: var(--text-secondary, #86868b);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .cal-job-shop {
+      font-size: 10px;
+      color: var(--text-tertiary, #aeaeb2);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .cal-job-time {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-secondary, #86868b);
+      margin-top: 4px;
+    }
+
+    /* Empty day state */
+    .day-empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--text-tertiary, #aeaeb2);
+      font-size: 12px;
+    }
+
+    /* Calendar responsive */
+    @media (max-width: 900px) {
+      .calendar-grid {
+        grid-template-columns: repeat(4, 1fr);
+      }
+
+      .calendar-day:nth-child(n+5) {
+        display: none;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .calendar-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+
+      .calendar-day {
+        min-height: auto;
+      }
+
+      .calendar-day:nth-child(n+5) {
+        display: flex;
+      }
+
+      .day-jobs {
+        max-height: 200px;
+      }
+
+      .calendar-nav {
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+
+      .calendar-header {
+        flex-direction: column;
+        gap: 12px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -1011,6 +1309,35 @@
       <div>
         <h1 class="dashboard-title">Your Dashboard</h1>
         <p class="tech-name" id="techName">Loading...</p>
+      </div>
+    </div>
+
+    <!-- WEEKLY CALENDAR Section -->
+    <div class="calendar-section" id="calendarSection">
+      <div class="calendar-header">
+        <h2>
+          <span class="status-dot blue"></span>
+          Weekly Schedule
+        </h2>
+        <div class="calendar-nav">
+          <button onclick="navigateWeek(-1)" title="Previous Week">
+            <span id="prevWeekIcon"></span>
+            Prev
+          </button>
+          <button class="today-btn" onclick="navigateWeek(0)" title="Go to Today">
+            Today
+          </button>
+          <span class="week-range" id="weekRange">Loading...</span>
+          <button onclick="navigateWeek(1)" title="Next Week">
+            Next
+            <span id="nextWeekIcon"></span>
+          </button>
+        </div>
+      </div>
+
+      <div class="calendar-grid" id="calendarGrid">
+        <!-- Calendar days will be rendered by JavaScript -->
+        <div class="loading" style="grid-column: 1 / -1;"><div class="spinner"></div></div>
       </div>
     </div>
 
@@ -1115,6 +1442,141 @@
     let uploadedInvoiceFile = null;
     let uploadedPostScanFile = null;
 
+    // Calendar state
+    let currentWeekStart = getMonday(new Date());
+    const MAX_JOBS_PER_DAY = 3; // Capacity limit
+
+    // Get Monday of the week for a given date
+    function getMonday(date) {
+      const d = new Date(date);
+      const day = d.getDay();
+      const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+      d.setDate(diff);
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }
+
+    // Navigate week
+    function navigateWeek(direction) {
+      if (direction === 0) {
+        // Go to today
+        currentWeekStart = getMonday(new Date());
+      } else {
+        currentWeekStart.setDate(currentWeekStart.getDate() + (direction * 7));
+      }
+      renderCalendar();
+    }
+
+    // Format date range for header
+    function formatWeekRange(startDate) {
+      const endDate = new Date(startDate);
+      endDate.setDate(endDate.getDate() + 6);
+
+      const startMonth = startDate.toLocaleDateString('en-US', { month: 'short' });
+      const endMonth = endDate.toLocaleDateString('en-US', { month: 'short' });
+      const startDay = startDate.getDate();
+      const endDay = endDate.getDate();
+
+      if (startMonth === endMonth) {
+        return `${startMonth} ${startDay} - ${endDay}`;
+      } else {
+        return `${startMonth} ${startDay} - ${endMonth} ${endDay}`;
+      }
+    }
+
+    // Get jobs for a specific date
+    function getJobsForDate(date) {
+      const dateStr = date.toISOString().split('T')[0];
+      return myJobs.filter(job => {
+        if (!job.scheduledDate) return false;
+        const jobDate = new Date(job.scheduledDate).toISOString().split('T')[0];
+        return jobDate === dateStr;
+      });
+    }
+
+    // Get status class for job card
+    function getStatusClass(status) {
+      const s = (status || '').toLowerCase();
+      if (s === 'new') return 'status-new';
+      if (s === 'ready' || s === 'ready to schedule') return 'status-ready';
+      if (s === 'scheduled' || s === 'rescheduled') return 'status-scheduled';
+      if (s === 'in progress') return 'status-in-progress';
+      if (s === 'completed') return 'status-completed';
+      if (s === 'cancelled') return 'status-cancelled';
+      return 'status-scheduled';
+    }
+
+    // Render the calendar
+    function renderCalendar() {
+      const grid = document.getElementById('calendarGrid');
+      const weekRange = document.getElementById('weekRange');
+
+      if (!grid) return;
+
+      // Update week range header
+      weekRange.textContent = formatWeekRange(currentWeekStart);
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayStr = today.toISOString().split('T')[0];
+
+      const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      let html = '';
+
+      for (let i = 0; i < 7; i++) {
+        const date = new Date(currentWeekStart);
+        date.setDate(date.getDate() + i);
+        const dateStr = date.toISOString().split('T')[0];
+        const isToday = dateStr === todayStr;
+        const dayJobs = getJobsForDate(date);
+        const jobCount = dayJobs.length;
+        const capacityPercent = Math.min((jobCount / MAX_JOBS_PER_DAY) * 100, 100);
+        const capacityClass = capacityPercent <= 33 ? 'low' : capacityPercent <= 66 ? 'medium' : 'high';
+
+        html += `
+          <div class="calendar-day ${isToday ? 'today' : ''} ${jobCount > 0 ? 'has-jobs' : ''}">
+            <div class="day-header">
+              <div>
+                <div class="day-name">${dayNames[i]}</div>
+                <div class="day-date">${date.getDate()}</div>
+              </div>
+              ${jobCount > 0 ? `<span class="day-count">${jobCount}</span>` : ''}
+            </div>
+            ${jobCount > 0 ? `
+              <div class="capacity-bar">
+                <div class="capacity-fill ${capacityClass}" style="width: ${capacityPercent}%"></div>
+              </div>
+            ` : ''}
+            <div class="day-jobs">
+              ${jobCount > 0 ? dayJobs.map(job => renderCalendarJobCard(job)).join('') : `
+                <div class="day-empty">No jobs</div>
+              `}
+            </div>
+          </div>
+        `;
+      }
+
+      grid.innerHTML = html;
+    }
+
+    // Render a job card for the calendar
+    function renderCalendarJobCard(job) {
+      const statusClass = getStatusClass(job.status);
+      const ro = escapeHtml(job.roPo || '');
+      const vehicle = escapeHtml(job.vehicle || 'Unknown');
+      const shop = escapeHtml(job.shopName || '');
+      const time = job.scheduledTime || '';
+
+      return `
+        <div class="cal-job-card ${statusClass}" onclick="openModal('${ro}', false)">
+          <div class="cal-job-ro">RO #${ro}</div>
+          <div class="cal-job-vehicle">${vehicle}</div>
+          ${shop ? `<div class="cal-job-shop">${shop}</div>` : ''}
+          ${time ? `<div class="cal-job-time">${escapeHtml(time)}</div>` : ''}
+        </div>
+      `;
+    }
+
     // Helper functions
     function getStorageItem(key) {
       return localStorage.getItem(key) || sessionStorage.getItem(key);
@@ -1212,6 +1674,8 @@
       document.getElementById('closeModalIcon').innerHTML = Icons.x;
       document.getElementById('allJobsToggle').innerHTML = Icons.chevronRight;
       document.getElementById('viewOnlyIcon').innerHTML = Icons.eye;
+      document.getElementById('prevWeekIcon').innerHTML = Icons.chevronLeft || '&larr;';
+      document.getElementById('nextWeekIcon').innerHTML = Icons.chevronRight || '&rarr;';
     }
 
     async function loadJobs() {
@@ -1239,6 +1703,7 @@
 
         renderYourJobs();
         renderAllJobs();
+        renderCalendar();
 
       } catch (err) {
         console.error('Load error:', err);
