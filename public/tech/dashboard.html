@@ -1813,6 +1813,34 @@
       </div>
       <div class="modal-body">
         <div class="complete-modal-content">
+          <!-- Required Documents Section -->
+          <div class="modal-section" id="completeDocsSection">
+            <h4>📄 Required Documents</h4>
+            <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">Upload these documents to complete the job:</p>
+
+            <div id="completePostScanGroup" class="upload-group" style="margin-bottom:16px;">
+              <label style="display:block;margin-bottom:8px;font-weight:500;color:var(--text-secondary);">Post-Scan Report (PDF)</label>
+              <div id="completePostScanStatus"></div>
+              <div class="upload-zone" id="completePostScanZone" style="display:none;">
+                <input type="file" id="completePostScanInput" accept=".pdf">
+                <span class="icon" id="completePostScanIcon"></span>
+                <p>Upload Post-Scan PDF</p>
+                <p class="filename" id="completePostScanFileName" style="display:none;"></p>
+              </div>
+            </div>
+
+            <div id="completeInvoiceGroup" class="upload-group">
+              <label style="display:block;margin-bottom:8px;font-weight:500;color:var(--text-secondary);">Invoice (PDF)</label>
+              <div id="completeInvoiceStatus"></div>
+              <div class="upload-zone" id="completeInvoiceZone" style="display:none;">
+                <input type="file" id="completeInvoiceInput" accept=".pdf">
+                <span class="icon" id="completeInvoiceIcon"></span>
+                <p>Upload Invoice PDF</p>
+                <p class="filename" id="completeInvoiceFileName" style="display:none;"></p>
+              </div>
+            </div>
+          </div>
+
           <div class="modal-section">
             <h4>Calibrations Completed</h4>
             <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">Select all calibrations that were performed:</p>
@@ -1830,9 +1858,9 @@
 
           <div class="modal-section">
             <div class="action-buttons">
-              <button class="btn btn-complete" onclick="submitJobCompletion()">
+              <button class="btn btn-complete" id="completeJobSubmitBtn" onclick="submitJobCompletion()">
                 <span class="icon" id="submitCompleteIcon"></span>
-                Complete Job
+                <span id="completeJobBtnText">Complete Job</span>
               </button>
             </div>
           </div>
@@ -2322,11 +2350,86 @@
       }
     }
 
+    // Check if job has required documents for completion
+    function validateCompletionDocs(job) {
+      const missing = [];
+
+      // Check Post-Scan
+      const hasPostScan = job.postscanPdf || job.postScanPdf || job.postScanPdfUrl;
+      if (!hasPostScan || (typeof hasPostScan === 'string' && !hasPostScan.startsWith('http'))) {
+        missing.push('Post-Scan');
+      }
+
+      // Check Invoice
+      const hasInvoice = job.invoicePdf || job.invoice_pdf || job.invoicePdfUrl;
+      if (!hasInvoice || (typeof hasInvoice === 'string' && !hasInvoice.startsWith('http'))) {
+        missing.push('Invoice');
+      }
+
+      return {
+        canComplete: missing.length === 0,
+        missing: missing,
+        hasPostScan: !missing.includes('Post-Scan'),
+        hasInvoice: !missing.includes('Invoice')
+      };
+    }
+
+    // Files to upload during completion
+    let completePostScanFile = null;
+    let completeInvoiceFile = null;
+
     // Open complete job modal
     function openCompleteJobModal() {
       if (!activeJobData) return;
 
       document.getElementById('completeJobRO').textContent = `RO #${activeJobData.roPo}`;
+
+      // Reset file variables
+      completePostScanFile = null;
+      completeInvoiceFile = null;
+
+      // Check document status
+      const validation = validateCompletionDocs(activeJobData);
+
+      // Setup Post-Scan status
+      const postScanStatus = document.getElementById('completePostScanStatus');
+      const postScanZone = document.getElementById('completePostScanZone');
+      if (validation.hasPostScan) {
+        const postScanUrl = activeJobData.postscanPdf || activeJobData.postScanPdf || activeJobData.postScanPdfUrl;
+        postScanStatus.innerHTML = `<a href="${postScanUrl}" target="_blank" class="doc-item available" style="display:inline-flex;width:auto;margin-bottom:8px;">
+          <span class="icon">${Icons.file}</span>
+          <span class="doc-name">Post-Scan</span>
+          <span class="doc-status">✓ Uploaded</span>
+        </a>`;
+        postScanZone.style.display = 'none';
+      } else {
+        postScanStatus.innerHTML = '';
+        postScanZone.style.display = 'block';
+        document.getElementById('completePostScanIcon').innerHTML = Icons.upload || '';
+      }
+
+      // Setup Invoice status
+      const invoiceStatus = document.getElementById('completeInvoiceStatus');
+      const invoiceZone = document.getElementById('completeInvoiceZone');
+      if (validation.hasInvoice) {
+        const invoiceUrl = activeJobData.invoicePdf || activeJobData.invoice_pdf || activeJobData.invoicePdfUrl;
+        invoiceStatus.innerHTML = `<a href="${invoiceUrl}" target="_blank" class="doc-item available" style="display:inline-flex;width:auto;margin-bottom:8px;">
+          <span class="icon">${Icons.file}</span>
+          <span class="doc-name">Invoice</span>
+          <span class="doc-status">✓ Uploaded</span>
+        </a>`;
+        invoiceZone.style.display = 'none';
+      } else {
+        invoiceStatus.innerHTML = '';
+        invoiceZone.style.display = 'block';
+        document.getElementById('completeInvoiceIcon').innerHTML = Icons.upload || '';
+      }
+
+      // Setup upload handlers for the complete modal
+      initCompleteModalUploadHandlers();
+
+      // Update button state
+      updateCompleteButtonState();
 
       // Populate calibrations from required calibrations
       const container = document.getElementById('completeCalibrationsContainer');
@@ -2349,14 +2452,129 @@
       document.getElementById('completeJobModal').classList.add('open');
     }
 
+    // Initialize upload handlers for complete modal
+    function initCompleteModalUploadHandlers() {
+      // Post-Scan upload
+      const postScanZone = document.getElementById('completePostScanZone');
+      const postScanInput = document.getElementById('completePostScanInput');
+      const postScanFileName = document.getElementById('completePostScanFileName');
+
+      if (postScanZone && postScanInput) {
+        // Remove existing handlers by cloning
+        const newPostScanZone = postScanZone.cloneNode(true);
+        postScanZone.parentNode.replaceChild(newPostScanZone, postScanZone);
+        const newPostScanInput = newPostScanZone.querySelector('#completePostScanInput');
+
+        newPostScanZone.addEventListener('click', () => newPostScanInput.click());
+        newPostScanInput.addEventListener('change', () => {
+          if (newPostScanInput.files.length) {
+            const file = newPostScanInput.files[0];
+            if (!file.name.toLowerCase().endsWith('.pdf')) {
+              showToast('Please upload a PDF file', 'error');
+              return;
+            }
+            completePostScanFile = file;
+            const fileNameEl = newPostScanZone.querySelector('#completePostScanFileName');
+            fileNameEl.textContent = file.name;
+            fileNameEl.style.display = 'block';
+            updateCompleteButtonState();
+          }
+        });
+      }
+
+      // Invoice upload
+      const invoiceZone = document.getElementById('completeInvoiceZone');
+      const invoiceInput = document.getElementById('completeInvoiceInput');
+
+      if (invoiceZone && invoiceInput) {
+        // Remove existing handlers by cloning
+        const newInvoiceZone = invoiceZone.cloneNode(true);
+        invoiceZone.parentNode.replaceChild(newInvoiceZone, invoiceZone);
+        const newInvoiceInput = newInvoiceZone.querySelector('#completeInvoiceInput');
+
+        newInvoiceZone.addEventListener('click', () => newInvoiceInput.click());
+        newInvoiceInput.addEventListener('change', () => {
+          if (newInvoiceInput.files.length) {
+            const file = newInvoiceInput.files[0];
+            if (!file.name.toLowerCase().endsWith('.pdf')) {
+              showToast('Please upload a PDF file', 'error');
+              return;
+            }
+            completeInvoiceFile = file;
+            const fileNameEl = newInvoiceZone.querySelector('#completeInvoiceFileName');
+            fileNameEl.textContent = file.name;
+            fileNameEl.style.display = 'block';
+            updateCompleteButtonState();
+          }
+        });
+      }
+    }
+
+    // Update complete button state based on document availability
+    function updateCompleteButtonState() {
+      const btn = document.getElementById('completeJobSubmitBtn');
+      const btnText = document.getElementById('completeJobBtnText');
+      if (!btn || !activeJobData) return;
+
+      const validation = validateCompletionDocs(activeJobData);
+
+      // Check if missing docs have files selected
+      const postScanReady = validation.hasPostScan || completePostScanFile;
+      const invoiceReady = validation.hasInvoice || completeInvoiceFile;
+
+      if (postScanReady && invoiceReady) {
+        btn.classList.remove('btn-disabled');
+        btn.disabled = false;
+        btnText.textContent = (completePostScanFile || completeInvoiceFile) ? 'Upload & Complete' : 'Complete Job';
+      } else {
+        btn.classList.add('btn-disabled');
+        btn.disabled = true;
+        const missingNames = [];
+        if (!postScanReady) missingNames.push('Post-Scan');
+        if (!invoiceReady) missingNames.push('Invoice');
+        btnText.textContent = `Upload ${missingNames.join(' & ')} to Complete`;
+      }
+    }
+
     // Close complete job modal
     function closeCompleteJobModal() {
       document.getElementById('completeJobModal').classList.remove('open');
     }
 
+    // Upload a document file
+    async function uploadDocumentFile(roPo, docType, file) {
+      const token = getStorageItem('adas_access_token') || getStorageItem('token');
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('docType', docType);
+
+      const response = await fetch(`/api/tech/vehicles/${encodeURIComponent(roPo)}/upload`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      return response.json();
+    }
+
     // Submit job completion
     async function submitJobCompletion() {
       if (!activeJobData) return;
+
+      // Validate documents
+      const validation = validateCompletionDocs(activeJobData);
+      const postScanReady = validation.hasPostScan || completePostScanFile;
+      const invoiceReady = validation.hasInvoice || completeInvoiceFile;
+
+      if (!postScanReady || !invoiceReady) {
+        const missingNames = [];
+        if (!postScanReady) missingNames.push('Post-Scan');
+        if (!invoiceReady) missingNames.push('Invoice');
+        showToast(`Please upload ${missingNames.join(' and ')} before completing`, 'error');
+        return;
+      }
 
       // Get selected calibrations
       const checkboxes = document.querySelectorAll('#completeCalibrationsContainer input[type="checkbox"]:checked');
@@ -2364,6 +2582,31 @@
       const notes = document.getElementById('completeJobNotes').value.trim();
 
       try {
+        // Upload documents first if needed
+        if (completePostScanFile || completeInvoiceFile) {
+          showLoading('Uploading documents...');
+
+          // Upload Post-Scan if needed
+          if (completePostScanFile) {
+            const postScanResult = await uploadDocumentFile(activeJobData.roPo, 'postScan', completePostScanFile);
+            if (!postScanResult.success) {
+              hideLoading();
+              showToast('Failed to upload Post-Scan: ' + (postScanResult.error || 'Unknown error'), 'error');
+              return;
+            }
+          }
+
+          // Upload Invoice if needed
+          if (completeInvoiceFile) {
+            const invoiceResult = await uploadDocumentFile(activeJobData.roPo, 'invoice', completeInvoiceFile);
+            if (!invoiceResult.success) {
+              hideLoading();
+              showToast('Failed to upload Invoice: ' + (invoiceResult.error || 'Unknown error'), 'error');
+              return;
+            }
+          }
+        }
+
         showLoading('Completing job...');
 
         const token = getStorageItem('adas_access_token') || getStorageItem('token');
@@ -2391,6 +2634,10 @@
         // Clear active job
         localStorage.removeItem(ACTIVE_JOB_STORAGE_KEY);
         activeJobData = null;
+
+        // Reset file variables
+        completePostScanFile = null;
+        completeInvoiceFile = null;
 
         hideActiveJobBanner();
         closeCompleteJobModal();

@@ -198,7 +198,7 @@
               <div class="info-label">Required Calibrations</div>
               <div class="info-value" id="vehicleCalibrations">-</div>
             </div>
-            <div class="info-item">
+            <div class="info-item" id="notesSection">
               <div class="info-label">Notes</div>
               <div class="notes-box" id="vehicleNotes">-</div>
             </div>
@@ -279,6 +279,43 @@
   <script>
     let currentVehicle = null;
 
+    /**
+     * Filter notes to show only shop-visible content
+     * Hides internal timestamps and tech operational logs
+     */
+    function getShopVisibleNotes(fullNotes) {
+      if (!fullNotes) return '';
+
+      // Split by common delimiters
+      const noteParts = fullNotes.split(/\s*\|\s*/).map(n => n.trim()).filter(Boolean);
+
+      // Filter out internal/admin notes
+      const shopVisible = noteParts.filter(note => {
+        // Hide ISO timestamps like [2025-12-12T19:27:46.241Z]
+        if (/^\[20\d{2}-\d{2}-\d{2}T\d{2}:\d{2}/.test(note)) return false;
+
+        // Hide "Job started by [tech]" entries
+        if (/Job started by/i.test(note)) return false;
+
+        // Hide schedule change logs
+        if (/\[?SCHEDULE CHANGED/i.test(note)) return false;
+
+        // Hide tech-specific operational notes
+        if (/Pre-scan complete|Post-scan complete|Calibration started|Calibration failed/i.test(note)) return false;
+
+        // Hide arrival logs
+        if (/\[ARRIVED\]/i.test(note)) return false;
+
+        // Hide any note that starts with a bracketed timestamp
+        if (/^\[.*?\]/.test(note) && /\d{4}-\d{2}-\d{2}/.test(note)) return false;
+
+        return true;
+      });
+
+      // Return filtered notes or empty string
+      return shopVisible.join(' | ');
+    }
+
     document.addEventListener('DOMContentLoaded', async () => {
       if (!initShopPortal()) return;
       setupCommonHandlers();
@@ -343,7 +380,19 @@
 
       document.getElementById('vehicleVin').textContent = v.vin || '-';
       document.getElementById('vehicleCalibrations').textContent = v.requiredCalibrations || 'Not determined';
-      document.getElementById('vehicleNotes').textContent = v.notes || 'No notes';
+
+      // Filter notes to hide internal/admin content
+      const shopNotes = getShopVisibleNotes(v.notes);
+      const notesSection = document.getElementById('notesSection');
+      const vehicleNotes = document.getElementById('vehicleNotes');
+
+      if (shopNotes && shopNotes.trim()) {
+        vehicleNotes.textContent = shopNotes;
+        notesSection.style.display = 'block';
+      } else {
+        // Hide notes section entirely if no shop-visible notes
+        notesSection.style.display = 'none';
+      }
 
       // Scheduled date with time
       if ((v.status === 'Scheduled' || v.status === 'Rescheduled') && v.scheduledDate) {
