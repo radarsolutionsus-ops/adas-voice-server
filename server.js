@@ -67,6 +67,11 @@ app.use(express.static(path.join(__dirname, "public")));
 app.use("/api/auth", authRoutes);
 app.use("/api/portal", portalRoutes);
 
+// Public endpoint for VAPID key (no auth required for PWA push notification setup)
+app.get("/api/tech/calendar/vapid-key", (req, res) => {
+  res.json({ publicKey: process.env.VAPID_PUBLIC_KEY || '' });
+});
+
 // Role-based portal routes
 app.use("/api/shop", shopRoutes);
 app.use("/api/tech", techRoutes);

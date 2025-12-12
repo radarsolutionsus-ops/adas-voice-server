@@ -61,6 +61,19 @@ const REGION_TECH_MAP = {
   'South Miami': 'Martin'
 };
 
+// Shops tab column indices (0-based) - for Tech Portal Calendar
+const SHOP_COL = {
+  NAME: 0,       // A - Shop Name
+  EMAIL: 1,      // B - Email
+  ADDRESS: 2,    // C - Address
+  BILLING_CC: 3, // D - Billing CC
+  NOTES: 4,      // E - Notes
+  USERNAME: 5,   // F - Username
+  PASSWORD: 6,   // G - Password
+  REGION: 7,     // H - Region
+  ACTIVE: 8      // I - Active
+};
+
 // Column indices (0-based)
 const COL = {
   TIMESTAMP: 0,       // A - Timestamp Created
@@ -381,6 +394,11 @@ function doPost(e) {
 
       case 'get_shop_counts':
         result = getShopVehicleCounts(data);
+        break;
+
+      // Tech Portal Calendar
+      case 'get_tech_schedule':
+        result = getTechSchedule(data);
         break;
 
       default:
@@ -5670,6 +5688,115 @@ function testDumpShopsData() {
   for (let i = 1; i < Math.min(6, data.length); i++) {
     Logger.log('Row ' + i + ': Name="' + data[i][0] + '", Col G (Region)="' + data[i][6] + '"');
   }
+}
+
+// ============================================================
+// TECH PORTAL CALENDAR FUNCTIONS
+// ============================================================
+
+/**
+ * Get scheduled jobs for a technician
+ * Used by Tech Portal Calendar
+ * @param {Object} data - { technician, startDate, endDate }
+ * @returns {Object} - { success, jobs, count }
+ */
+function getTechSchedule(data) {
+  const technician = data.technician;
+  const startDate = data.startDate || '';
+  const endDate = data.endDate || '';
+
+  const ss = SpreadsheetApp.getActive();
+  const sheet = ss.getSheetByName(SCHEDULE_SHEET);
+  if (!sheet) return { success: false, error: 'Schedule sheet not found' };
+
+  const dataRange = sheet.getDataRange().getValues();
+  const jobs = [];
+
+  // Get shop addresses from Shops tab
+  const shopsSheet = ss.getSheetByName(SHOPS_SHEET);
+  const shopData = shopsSheet ? shopsSheet.getDataRange().getValues() : [];
+  const shopAddresses = {};
+
+  // Build shop address lookup (skip header row)
+  for (let i = 1; i < shopData.length; i++) {
+    const shopName = String(shopData[i][SHOP_COL.NAME] || '').trim().toLowerCase();
+    const address = shopData[i][SHOP_COL.ADDRESS] || '';
+    if (shopName && address) {
+      shopAddresses[shopName] = address;
+    }
+  }
+
+  // Iterate through schedule rows (skip header)
+  for (let i = 1; i < dataRange.length; i++) {
+    const row = dataRange[i];
+    const rowTech = String(row[COL.TECHNICIAN] || '').trim().toLowerCase();
+    const rowDate = row[COL.SCHEDULED_DATE];
+
+    // Filter by technician (case-insensitive)
+    if (technician && rowTech !== technician.toLowerCase()) continue;
+
+    // Format date for comparison
+    let dateStr = '';
+    if (rowDate) {
+      try {
+        const dateObj = new Date(rowDate);
+        if (!isNaN(dateObj.getTime())) {
+          dateStr = Utilities.formatDate(dateObj, 'America/New_York', 'yyyy-MM-dd');
+        }
+      } catch (e) {
+        dateStr = String(rowDate);
+      }
+    }
+
+    // Filter by date range
+    if (startDate && dateStr && dateStr < startDate) continue;
+    if (endDate && dateStr && dateStr > endDate) continue;
+
+    // Skip cancelled jobs
+    const status = String(row[COL.STATUS] || '').trim();
+    if (status.toLowerCase() === 'cancelled') continue;
+
+    const shopName = String(row[COL.SHOP_NAME] || '').trim();
+    const shopNameLower = shopName.toLowerCase();
+
+    // Format scheduled time
+    let scheduledTime = row[COL.SCHEDULED_TIME] || '';
+    if (scheduledTime && typeof scheduledTime === 'object') {
+      // If it's a Date object, format it
+      try {
+        scheduledTime = Utilities.formatDate(scheduledTime, 'America/New_York', 'hh:mm a');
+      } catch (e) {
+        scheduledTime = String(scheduledTime);
+      }
+    }
+
+    jobs.push({
+      ro_po: row[COL.RO_PO],
+      shop_name: shopName,
+      shop_address: shopAddresses[shopNameLower] || '',
+      vehicle: row[COL.VEHICLE],
+      vin: row[COL.VIN],
+      status: status,
+      scheduled_date: dateStr,
+      scheduled_time: scheduledTime,
+      required_calibrations: row[COL.REQUIRED_CALS],
+      completed_calibrations: row[COL.COMPLETED_CALS],
+      dtcs: row[COL.DTCS],
+      notes: row[COL.NOTES],
+      estimate_pdf: row[COL.ESTIMATE_PDF],
+      revv_report_pdf: row[COL.REVV_PDF]
+    });
+  }
+
+  // Sort by date and time
+  jobs.sort((a, b) => {
+    if (a.scheduled_date !== b.scheduled_date) {
+      return a.scheduled_date.localeCompare(b.scheduled_date);
+    }
+    return (a.scheduled_time || '').localeCompare(b.scheduled_time || '');
+  });
+
+  return { success: true, jobs: jobs, count: jobs.length };
 }
 
 /**

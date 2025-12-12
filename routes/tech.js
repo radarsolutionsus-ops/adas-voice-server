@@ -10,6 +10,7 @@ import { authenticateToken } from '../middleware/authMiddleware.js';
 import { requireRole, requirePermission } from '../middleware/roleGuard.js';
 import { ROLES } from '../config/roles.js';
 import * as techController from '../controllers/techController.js';
+import * as calendarController from '../controllers/calendarController.js';
 
 const router = express.Router();
 
@@ -65,6 +66,34 @@ router.post('/vehicles/:roPo/upload', upload.single('file'), techController.uplo
 
 // Request assignment to a job
 router.post('/request-assignment', techController.requestAssignment);
+
+// ============================================================
+// CALENDAR ENDPOINTS (for Tech Portal Calendar feature)
+// ============================================================
+
+// Get jobs for calendar view (with date range filtering)
+router.post('/calendar/jobs', calendarController.getCalendarJobs);
+
+// Accept a job assignment
+router.post('/calendar/accept-job', calendarController.acceptJob);
+
+// Reject/decline a job assignment
+router.post('/calendar/reject-job', calendarController.rejectJob);
+
+// Log arrival at shop
+router.post('/calendar/log-arrival', calendarController.logArrival);
+
+// Log job completion
+router.post('/calendar/log-completion', calendarController.logCompletion);
+
+// Get slot capacity for a date
+router.post('/calendar/capacity', calendarController.getCapacity);
+
+// Subscribe to push notifications
+router.post('/calendar/subscribe', calendarController.subscribeToNotifications);
+
+// Get VAPID public key (no auth required for this one)
+router.get('/calendar/vapid-key', calendarController.getVapidKey);
 
 // Multer error handler
 router.use((err, req, res, next) => {
