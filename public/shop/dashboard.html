@@ -1302,10 +1302,9 @@
       // Update week range display
       weekRangeEl.textContent = formatWeekRange(currentWeekStart);
 
-      // Get scheduled vehicles
+      // Get all vehicles with a valid scheduled date (show ALL statuses on calendar)
       const scheduledVehicles = vehicles.filter(v =>
-        v.scheduledDate && !v.scheduledDate.includes('1899') &&
-        (v.status === 'Scheduled' || v.status === 'Rescheduled' || v.status === 'In Progress' || v.status === 'Ready')
+        v.scheduledDate && !v.scheduledDate.includes('1899')
       );
 
       const today = new Date();

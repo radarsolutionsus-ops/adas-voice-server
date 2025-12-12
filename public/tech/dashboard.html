@@ -1524,6 +1524,98 @@
         gap: 12px;
       }
     }
+
+    /* Confirm Modal Styles */
+    .confirm-modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 10000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .confirm-modal-overlay.open {
+      display: flex;
+    }
+
+    .confirm-modal-content {
+      background: white;
+      border-radius: 14px;
+      max-width: 340px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+    }
+
+    .confirm-modal-body {
+      padding: 24px 20px 20px;
+      text-align: center;
+    }
+
+    .confirm-modal-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+      background: rgba(255, 149, 0, 0.12);
+    }
+
+    .confirm-modal-icon svg {
+      width: 24px;
+      height: 24px;
+      color: #ff9500;
+    }
+
+    .confirm-modal-title {
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--text-primary, #1d1d1f);
+      margin: 0 0 8px;
+    }
+
+    .confirm-modal-message {
+      font-size: 14px;
+      color: var(--text-secondary, #86868b);
+      line-height: 1.5;
+      margin: 0;
+      white-space: pre-line;
+    }
+
+    .confirm-modal-actions {
+      display: flex;
+      border-top: 1px solid var(--border, rgba(0, 0, 0, 0.1));
+    }
+
+    .confirm-modal-btn {
+      flex: 1;
+      padding: 14px;
+      font-size: 17px;
+      font-weight: 500;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    .confirm-modal-btn:first-child {
+      border-right: 1px solid var(--border, rgba(0, 0, 0, 0.1));
+      color: #007aff;
+    }
+
+    .confirm-modal-btn:last-child {
+      color: #ff9500;
+      font-weight: 600;
+    }
+
+    .confirm-modal-btn:hover {
+      background: var(--bg-grouped, #f2f2f7);
+    }
   </style>
 </head>
 <body>
@@ -1535,6 +1627,21 @@
 
   <!-- Toast Container -->
   <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Confirm Modal -->
+  <div class="confirm-modal-overlay" id="confirmModalOverlay">
+    <div class="confirm-modal-content">
+      <div class="confirm-modal-body">
+        <div class="confirm-modal-icon" id="confirmModalIcon"></div>
+        <h3 class="confirm-modal-title" id="confirmModalTitle">Confirm Action</h3>
+        <p class="confirm-modal-message" id="confirmModalMessage">Are you sure?</p>
+      </div>
+      <div class="confirm-modal-actions">
+        <button class="confirm-modal-btn" id="confirmModalCancel">Cancel</button>
+        <button class="confirm-modal-btn" id="confirmModalConfirm">Confirm</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Simple Header -->
   <header class="simple-header">
@@ -1993,6 +2100,59 @@
       if (timerEl) timerEl.textContent = display;
     }
 
+    // Show confirm modal and return Promise
+    function showConfirmModal(title, message, confirmText = 'Confirm', cancelText = 'Cancel') {
+      return new Promise((resolve) => {
+        const overlay = document.getElementById('confirmModalOverlay');
+        const titleEl = document.getElementById('confirmModalTitle');
+        const messageEl = document.getElementById('confirmModalMessage');
+        const iconEl = document.getElementById('confirmModalIcon');
+        const confirmBtn = document.getElementById('confirmModalConfirm');
+        const cancelBtn = document.getElementById('confirmModalCancel');
+
+        // Set content
+        titleEl.textContent = title;
+        messageEl.textContent = message;
+        confirmBtn.textContent = confirmText;
+        cancelBtn.textContent = cancelText;
+        iconEl.innerHTML = Icons.alertCircle || '⚠️';
+
+        // Show modal
+        overlay.classList.add('open');
+
+        // Handle confirm
+        const handleConfirm = () => {
+          cleanup();
+          resolve(true);
+        };
+
+        // Handle cancel
+        const handleCancel = () => {
+          cleanup();
+          resolve(false);
+        };
+
+        // Handle backdrop click
+        const handleBackdrop = (e) => {
+          if (e.target === overlay) {
+            handleCancel();
+          }
+        };
+
+        // Cleanup listeners
+        const cleanup = () => {
+          overlay.classList.remove('open');
+          confirmBtn.removeEventListener('click', handleConfirm);
+          cancelBtn.removeEventListener('click', handleCancel);
+          overlay.removeEventListener('click', handleBackdrop);
+        };
+
+        confirmBtn.addEventListener('click', handleConfirm);
+        cancelBtn.addEventListener('click', handleCancel);
+        overlay.addEventListener('click', handleBackdrop);
+      });
+    }
+
     // Start a job
     async function startJobAction(roPo, scheduledDate) {
       console.log('[START_JOB] ====== Start Job clicked ======');
@@ -2018,10 +2178,12 @@
             month: 'short',
             day: 'numeric'
           });
-          const confirmed = confirm(
-            `This job is scheduled for ${formattedDate}.\n\n` +
-            `Starting now will change the scheduled date to today.\n\n` +
-            `Do you want to start this job now?`
+
+          const confirmed = await showConfirmModal(
+            'Start Job Early?',
+            `This job is scheduled for ${formattedDate}.\n\nStarting now will change the scheduled date to today.\n\nDo you want to proceed?`,
+            'Start Now',
+            'Cancel'
           );
 
           if (!confirmed) {
