@@ -41,6 +41,7 @@ const PDF_TYPE_FOLDERS = {
   'revv_report': 'RevvReports',
   'scan_report': 'PostScanReports',
   'invoice': 'Invoices',
+  'extra_docs': 'ExtraDocs',
   'document': 'Documents'
 };
 

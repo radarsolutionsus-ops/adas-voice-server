@@ -3360,6 +3360,26 @@
         </div>
 
         <div class="modal-section">
+          <h4>Extra Docs (Optional)</h4>
+          <p style="font-size:12px;color:var(--text-tertiary);margin-bottom:8px;">Photos, OEM position statements, or other documents</p>
+          <div class="upload-zone" id="extraDocsUploadZone">
+            <input type="file" id="extraDocsFileInput" accept=".pdf,.jpg,.jpeg,.png">
+            <span class="icon">${Icons.upload}</span>
+            <p>Upload Extra Document</p>
+            <p class="filename" id="extraDocsFileName" style="display:none;"></p>
+          </div>
+          ${(currentJob.extraDocs || currentJob.extra_docs) ? `
+            <div style="margin-top:8px;">
+              <a href="${currentJob.extraDocs || currentJob.extra_docs}" target="_blank" class="doc-item available" style="display:inline-flex;width:auto;">
+                <span class="icon">${Icons.file}</span>
+                <span class="doc-name">Extra Docs</span>
+                <span class="doc-status">View</span>
+              </a>
+            </div>
+          ` : ''}
+        </div>
+
+        <div class="modal-section">
           <div class="action-buttons">
             <button class="btn btn-complete ${canComplete ? '' : 'btn-disabled'}" ${canComplete ? 'onclick="updateStatus(\'Completed\')"' : 'disabled'}>
               <span class="icon">${Icons.checkCircle}</span>
@@ -3566,6 +3586,37 @@
         });
       }
 
+      // Extra docs upload
+      const extraDocsZone = document.getElementById('extraDocsUploadZone');
+      const extraDocsInput = document.getElementById('extraDocsFileInput');
+
+      if (extraDocsZone && extraDocsInput) {
+        extraDocsZone.addEventListener('click', () => extraDocsInput.click());
+
+        extraDocsZone.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          extraDocsZone.classList.add('dragover');
+        });
+
+        extraDocsZone.addEventListener('dragleave', () => {
+          extraDocsZone.classList.remove('dragover');
+        });
+
+        extraDocsZone.addEventListener('drop', (e) => {
+          e.preventDefault();
+          extraDocsZone.classList.remove('dragover');
+          if (e.dataTransfer.files.length) {
+            handleExtraDocsFile(e.dataTransfer.files[0]);
+          }
+        });
+
+        extraDocsInput.addEventListener('change', () => {
+          if (extraDocsInput.files.length) {
+            handleExtraDocsFile(extraDocsInput.files[0]);
+          }
+        });
+      }
+
       async function handleInvoiceFile(file) {
         if (!file.name.toLowerCase().endsWith('.pdf')) {
           showToast('Please upload a PDF file', 'error');
@@ -3597,6 +3648,24 @@
         // Upload immediately
         await uploadDocument(file, 'postscan');
       }
+
+      async function handleExtraDocsFile(file) {
+        const validExtensions = ['.pdf', '.jpg', '.jpeg', '.png'];
+        const ext = '.' + file.name.split('.').pop().toLowerCase();
+        if (!validExtensions.includes(ext)) {
+          showToast('Please upload a PDF or image file', 'error');
+          return;
+        }
+
+        const fileName = document.getElementById('extraDocsFileName');
+        if (fileName) {
+          fileName.textContent = file.name;
+          fileName.style.display = 'block';
+        }
+
+        // Upload immediately
+        await uploadDocument(file, 'extraDocs');
+      }
     }
 
     async function uploadDocument(file, type) {
@@ -3607,7 +3676,8 @@
         'invoice': 'invoice',
         'postscan': 'postScan',
         'revv': 'revvReport',
-        'revvReport': 'revvReport'
+        'revvReport': 'revvReport',
+        'extraDocs': 'extraDocs'
       };
       const docType = typeMap[type] || type;
 

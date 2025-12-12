@@ -115,6 +115,7 @@ export async function getAllVehicles(req, res) {
       revvReportPdf: v.revvReportPdf || v.revv_report_pdf || '',
       postScanPdf: v.postScanPdf || v.postscan_pdf || '',
       invoicePdf: v.invoicePdf || v.invoice_pdf || '',
+      extraDocs: v.extraDocs || v.extra_docs || '',
       lastUpdated: v.timestampCreated || ''
     }));
 
@@ -183,6 +184,7 @@ export async function getMyVehicles(req, res) {
       revvReportPdf: v.revvReportPdf || v.revv_report_pdf || '',
       postScanPdf: v.postScanPdf || v.postscan_pdf || '',
       invoicePdf: v.invoicePdf || v.invoice_pdf || '',
+      extraDocs: v.extraDocs || v.extra_docs || '',
       lastUpdated: v.timestampCreated || ''
     }));
 
@@ -257,7 +259,8 @@ export async function getTodaySchedule(req, res) {
       prescanPdf: v.prescanPdf || v.preScanPdf || v.prescan_pdf || '',
       revvReportPdf: v.revvReportPdf || v.revv_report_pdf || '',
       postScanPdf: v.postScanPdf || v.postscan_pdf || '',
-      invoicePdf: v.invoicePdf || v.invoice_pdf || ''
+      invoicePdf: v.invoicePdf || v.invoice_pdf || '',
+      extraDocs: v.extraDocs || v.extra_docs || ''
     }));
 
     res.json({
@@ -323,6 +326,7 @@ export async function getVehicleDetail(req, res) {
         revvReportPdf: row.revvReportPdf || row.revv_report_pdf || '',
         postScanPdf: row.postScanPdf || row.postscan_pdf || '',
         invoicePdf: row.invoicePdf || row.invoice_pdf || '',
+        extraDocs: row.extraDocs || row.extra_docs || '',
         arrivalTime: row.arrivalTime || '',
         completionTime: row.completionTime || '',
         timestampCreated: row.timestampCreated || ''
@@ -689,7 +693,7 @@ export async function uploadDocument(req, res) {
     const docType = req.body?.docType || req.body?.type;
 
     // Validate docType
-    const validDocTypes = ['postScan', 'invoice', 'revvReport'];
+    const validDocTypes = ['postScan', 'invoice', 'revvReport', 'extraDocs'];
     if (!validDocTypes.includes(docType)) {
       console.log(`${LOG_TAG} Invalid docType received: "${docType}"`);
       return res.status(400).json({
@@ -718,7 +722,8 @@ export async function uploadDocument(req, res) {
     const folderTypeMap = {
       'postScan': 'scan_report',
       'invoice': 'invoice',
-      'revvReport': 'revv_report'
+      'revvReport': 'revv_report',
+      'extraDocs': 'extra_docs'
     };
 
     // Upload to Drive
@@ -741,7 +746,8 @@ export async function uploadDocument(req, res) {
     const columnMap = {
       'postScan': 'postScanPdf',
       'invoice': 'invoicePdf',
-      'revvReport': 'revvReportPdf'
+      'revvReport': 'revvReportPdf',
+      'extraDocs': 'extraDocs'
     };
 
     // Update sheet with URL
@@ -828,11 +834,49 @@ export async function uploadDocument(req, res) {
       }
     }
 
+    // Process Invoice: parse PDF, extract invoice number/amount/date
+    let invoiceData = null;
+    if (docType === 'invoice') {
+      try {
+        const pdfParser = await import('../services/pdfParser.js');
+
+        console.log(`${LOG_TAG} Parsing Invoice PDF for data extraction...`);
+        const parseResult = await pdfParser.default.parsePDF(req.file.buffer, req.file.originalname);
+
+        if (parseResult.success && parseResult.data) {
+          const parsedData = parseResult.data;
+
+          invoiceData = {
+            invoiceNumber: parsedData.invoiceNumber || '',
+            invoiceAmount: parsedData.invoiceAmount || parsedData.totalAmount || '',
+            invoiceDate: parsedData.invoiceDate || ''
+          };
+
+          // Update the sheet with parsed invoice data
+          if (invoiceData.invoiceNumber || invoiceData.invoiceAmount || invoiceData.invoiceDate) {
+            console.log(`${LOG_TAG} Extracted invoice data - Number: ${invoiceData.invoiceNumber}, Amount: ${invoiceData.invoiceAmount}, Date: ${invoiceData.invoiceDate}`);
+
+            await sheetWriter.upsertScheduleRowByRO(roPo, {
+              invoiceNumber: invoiceData.invoiceNumber,
+              invoiceAmount: invoiceData.invoiceAmount,
+              invoiceDate: invoiceData.invoiceDate
+            });
+          } else {
+            console.log(`${LOG_TAG} No invoice data extracted from PDF`);
+          }
+        }
+      } catch (parseErr) {
+        console.error(`${LOG_TAG} Error parsing invoice PDF:`, parseErr.message);
+        // Don't fail the upload if parsing fails
+      }
+    }
+
     res.json({
       success: true,
       message: `${docType} uploaded successfully`,
       url: fileUrl,
-      emailSent: docType === 'revvReport' ? emailSent : undefined
+      emailSent: docType === 'revvReport' ? emailSent : undefined,
+      invoiceData: docType === 'invoice' ? invoiceData : undefined
     });
   } catch (err) {
     console.error(`${LOG_TAG} Error uploading document:`, err.message);

@@ -183,7 +183,7 @@ const SCHEDULE_COLUMNS = {
   INVOICE_DATE: 17,        // R
   NOTES: 18,               // S - Full notes summary (entire RO journey)
   FLOW_HISTORY: 19,        // T - Hidden column for flow history (sidebar)
-  OEM_POSITION: 20         // U - OEM Position Statement links
+  EXTRA_DOCS: 20           // U - Extra Docs (additional documents)
 };
 
 // Column mappings for Billing (A-L)
@@ -454,7 +454,8 @@ function scheduleRowToObject(row, rowIndex) {
     invoiceDate: row[SCHEDULE_COLUMNS.INVOICE_DATE] || '',
     notes: row[SCHEDULE_COLUMNS.NOTES] || '',
     fullScrubText: row[SCHEDULE_COLUMNS.FULL_SCRUB_TEXT] || '',
-    oemPosition: row[SCHEDULE_COLUMNS.OEM_POSITION] || ''
+    extraDocs: row[SCHEDULE_COLUMNS.EXTRA_DOCS] || '',
+    oemPosition: row[SCHEDULE_COLUMNS.EXTRA_DOCS] || ''  // Legacy alias
   };
 }
 
@@ -733,8 +734,8 @@ export async function upsertScheduleRowByRO(roPo, dataObject) {
     notes: dataObject.notes || '',
     // Column T: Flow History (timestamped document submissions)
     flow_history: dataObject.flowHistory || dataObject.flow_history || '',
-    // Column U: OEM Position Statement links
-    oem_position: dataObject.oemPosition || dataObject.oem_position || dataObject.oemLinks || '',
+    // Column U: Extra Docs (additional documents)
+    extra_docs: dataObject.extraDocs || dataObject.extra_docs || dataObject.oemPosition || dataObject.oem_position || '',
     // Column V: Estimate PDF link
     estimate_pdf: dataObject.estimatePdf || dataObject.estimate_pdf || '',
     // Column W: PreScan PDF
@@ -759,7 +760,7 @@ export async function upsertScheduleRowByRO(roPo, dataObject) {
   console.log(`${LOG_TAG} status: ${cleanedData.status_from_shop || 'NOT SET'}`);
   console.log(`${LOG_TAG} revv_report_pdf: ${cleanedData.revv_report_pdf || 'NOT SET'}`);
   console.log(`${LOG_TAG} shop_name: ${cleanedData.shop_name || 'NOT SET'}`);
-  console.log(`${LOG_TAG} oem_position: ${cleanedData.oem_position || 'NOT SET'}`);
+  console.log(`${LOG_TAG} extra_docs: ${cleanedData.extra_docs || 'NOT SET'}`);
   console.log(`${LOG_TAG} estimate_pdf: ${cleanedData.estimate_pdf || 'NOT SET'}`);
   console.log(`${LOG_TAG} job_start: ${cleanedData.job_start || 'NOT SET'}`);
   console.log(`${LOG_TAG} technician: ${cleanedData.technician || 'NOT SET'}`);

@@ -144,7 +144,8 @@ export async function getVehicleByRO(req, res) {
         revvReportPdf: row.revvReportPdf || row.revv_report_pdf || '',
         postScanPdf: row.postScanPdf || row.post_scan_pdf || '',
         invoicePdf: row.invoicePdf || row.invoice_pdf || '',
-        oemPosition: row.oemPosition || row.oem_position || '',
+        extraDocs: row.extraDocs || row.extra_docs || '',
+        oemPosition: row.oemPosition || row.oem_position || row.extraDocs || row.extra_docs || '',  // Legacy alias
         flowHistory: row.flowHistory || row.flow_history || '',
         timestampCreated: row.timestampCreated || row.timestamp_created || ''
       }

@@ -97,7 +97,7 @@ const COL = {
   NOTES: 18,          // S - Notes
   FLOW_HISTORY: 19,   // T - Flow History / Full Scrub Text
   FULL_SCRUB: 19,     // T - Alias for backward compatibility
-  OEM_POSITION: 20,   // U - OEM Position Statement links
+  EXTRA_DOCS: 20,     // U - Extra Docs (additional documents)
   ESTIMATE_PDF: 21,   // V - Estimate PDF link
   PRESCAN_PDF: 22,    // W - PreScan PDF (or "NO_DTCS_CONFIRMED")
   JOB_START: 23,      // X - Job Start timestamp
@@ -628,8 +628,8 @@ function createNewRow(sheet, data, roPo) {
   const initialFlowEntry = timestamp + '  NEW          Row created';
   const flowHistory = data.flow_history || data.flowHistory || initialFlowEntry;
 
-  // OEM Position Statement links (Column U)
-  const oemPosition = data.oem_position || data.oemPosition || data.oem_links || '';
+  // Extra Docs (Column U) - additional documents like OEM position statements, photos, etc.
+  const extraDocs = data.extra_docs || data.extraDocs || data.oem_position || data.oemPosition || '';
 
   // Auto-assign technician based on shop region if not already specified
   Logger.log('[CREATE_ROW] About to assign tech for shop: "' + shopName + '"');
@@ -658,7 +658,7 @@ function createNewRow(sheet, data, roPo) {
     data.invoice_date || data.invoiceDate || '',                 // R: Invoice Date
     data.notes || data.shop_notes || '',                         // S: Notes (short preview)
     flowHistory,                                                  // T: Flow History
-    oemPosition,                                                  // U: OEM Position Statement links
+    extraDocs,                                                    // U: Extra Docs (additional documents)
     data.estimate_pdf || data.estimatePdf || '',                 // V: Estimate PDF link
     data.prescan_pdf || data.preScanPdf || '',                   // W: PreScan PDF
     data.job_start || data.jobStart || '',                       // X: Job Start timestamp
@@ -832,11 +832,12 @@ function updateExistingRow(sheet, rowNum, data) {
     flowHistory = flowHistory ? flowHistory + '\n' + newFlowEntry : newFlowEntry;
   }
 
-  // Handle OEM Position - update if new data provided
-  let oemPosition = curr[COL.OEM_POSITION] || '';
-  const newOemPosition = data.oem_position || data.oemPosition || data.oem_links || '';
-  if (newOemPosition && newOemPosition.trim().length > 0) {
-    oemPosition = newOemPosition;
+  // Handle Extra Docs - update if new data provided (append to existing)
+  let extraDocs = curr[COL.EXTRA_DOCS] || '';
+  const newExtraDocs = data.extra_docs || data.extraDocs || data.oem_position || data.oemPosition || '';
+  if (newExtraDocs && newExtraDocs.trim().length > 0) {
+    // Append new docs to existing (comma-separated)
+    extraDocs = extraDocs ? extraDocs + ', ' + newExtraDocs : newExtraDocs;
   }
 
   // AUTO-ASSIGN TECH: If no tech assigned yet, look up based on shop region
@@ -868,7 +869,7 @@ function updateExistingRow(sheet, rowNum, data) {
     data.invoice_date || data.invoiceDate || curr[COL.INVOICE_DATE], // R
     notes,                                                        // S: Notes (short preview)
     flowHistory,                                                  // T: Flow History
-    oemPosition,                                                  // U: OEM Position Statement links
+    extraDocs,                                                    // U: Extra Docs (additional documents)
     data.estimate_pdf || data.estimatePdf || curr[COL.ESTIMATE_PDF] || '', // V: Estimate PDF link
     data.prescan_pdf || data.preScanPdf || curr[COL.PRESCAN_PDF] || '', // W: PreScan PDF
     data.job_start || data.jobStart || curr[COL.JOB_START] || '', // X: Job Start timestamp
@@ -959,7 +960,7 @@ function techUpdateRow(data) {
     curr[COL.INVOICE_DATE],                                       // R: KEEP
     data.notes ? (curr[COL.NOTES] ? curr[COL.NOTES] + ' | ' + data.notes : data.notes) : curr[COL.NOTES], // S: Append
     data.flowHistory || data.flow_history || curr[COL.FLOW_HISTORY] || '', // T: Flow History - append new entries
-    curr[COL.OEM_POSITION] || '',                                 // U: KEEP
+    data.extra_docs ? (curr[COL.EXTRA_DOCS] ? curr[COL.EXTRA_DOCS] + ', ' + data.extra_docs : data.extra_docs) : curr[COL.EXTRA_DOCS] || '', // U: Append Extra Docs
     curr[COL.ESTIMATE_PDF] || '',                                 // V: KEEP
     data.prescan_pdf || curr[COL.PRESCAN_PDF] || '',             // W: PreScan PDF - Can update
     data.job_start || curr[COL.JOB_START] || '',                 // X: Job Start - Can update
@@ -1086,7 +1087,8 @@ function getScheduleByRO(roPo) {
       notes: String(data[COL.NOTES] || ''),
       flow_history: String(data[COL.FLOW_HISTORY] || ''),
       flowHistory: String(data[COL.FLOW_HISTORY] || ''),
-      oem_position: String(data[COL.OEM_POSITION] || ''),
+      extra_docs: String(data[COL.EXTRA_DOCS] || ''),
+      oem_position: String(data[COL.EXTRA_DOCS] || ''),  // Legacy alias for backwards compatibility
       estimate_pdf: String(data[COL.ESTIMATE_PDF] || '')
     },
     rowNumber: rowNum
@@ -1994,11 +1996,11 @@ function populateOemLinkForRow(rowNum) {
 
   const rowData = sheet.getRange(rowNum, 1, 1, TOTAL_COLUMNS).getValues()[0];
   const vehicle = rowData[COL.VEHICLE] || '';
-  const currentOem = rowData[COL.OEM_POSITION] || '';
+  const currentExtraDocs = rowData[COL.EXTRA_DOCS] || '';
 
-  // Skip if already has OEM link
-  if (currentOem && currentOem.length > 0) {
-    return { success: true, message: 'OEM link already populated' };
+  // Skip if already has OEM link in extra docs
+  if (currentExtraDocs && currentExtraDocs.length > 0) {
+    return { success: true, message: 'Extra docs already populated' };
   }
 
   const oemInfo = getOemPortalFromVehicle(vehicle);
@@ -2026,7 +2028,7 @@ function setOemLinkAsRichText(sheet, rowNum, makeName, url) {
     .setText(label)
     .setLinkUrl(url)
     .build();
-  sheet.getRange(rowNum, COL.OEM_POSITION + 1).setRichTextValue(richText);
+  sheet.getRange(rowNum, COL.EXTRA_DOCS + 1).setRichTextValue(richText);
 }
 
 /**
@@ -2053,10 +2055,10 @@ function populateAllMissingOemLinks() {
 
   for (let i = 0; i < data.length; i++) {
     const vehicle = data[i][COL.VEHICLE] || '';
-    const currentOem = data[i][COL.OEM_POSITION] || '';
+    const currentExtraDocs = data[i][COL.EXTRA_DOCS] || '';
 
-    // Skip if already has OEM link
-    if (currentOem && currentOem.length > 0) {
+    // Skip if already has content in extra docs
+    if (currentExtraDocs && currentExtraDocs.length > 0) {
       skipped++;
       continue;
     }
@@ -2297,7 +2299,7 @@ function buildSidebarHtml(row) {
   const postScanUrl = rowData[COL.POSTSCAN_PDF] || '';
   const invoiceUrl = rowData[COL.INVOICE_PDF] || '';
   const flowHistory = rowData[COL.FLOW_HISTORY] || '';
-  const oemPosition = rowData[COL.OEM_POSITION] || '';
+  const extraDocs = rowData[COL.EXTRA_DOCS] || '';
   const estimateUrl = rowData[COL.ESTIMATE_PDF] || '';
 
   // DEBUG: Log flow history for troubleshooting
@@ -2396,8 +2398,8 @@ function buildSidebarHtml(row) {
        (hasInvoice
          ? '<a href="' + escapeHtml(invoiceUrl) + '" target="_blank" class="doc-link present"><span class="material-icons">check_circle</span><span>Invoice</span><span class="material-icons open-icon">open_in_new</span></a>'
          : '<div class="doc-link pending"><span class="material-icons">hourglass_empty</span><span>Invoice - Pending</span></div>') +
-       (oemPosition
-         ? '<a href="' + escapeHtml(oemPosition) + '" target="_blank" class="doc-link oem"><span class="material-icons">business</span><span>OEM Position Statement</span><span class="material-icons open-icon">open_in_new</span></a>'
+       (extraDocs
+         ? '<a href="' + escapeHtml(extraDocs) + '" target="_blank" class="doc-link oem"><span class="material-icons">attach_file</span><span>Extra Docs</span><span class="material-icons open-icon">open_in_new</span></a>'
          : '') +
 '    </div>' +
 '    <div class="section">' +
@@ -2625,7 +2627,7 @@ function openUnifiedSidebar() {
   const revvPdfUrl = rowData[COL.REVV_PDF] || '';
   const postScanUrl = rowData[COL.POSTSCAN_PDF] || '';
   const invoiceUrl = rowData[COL.INVOICE_PDF] || '';
-  const oemPosition = rowData[COL.OEM_POSITION] || '';
+  const extraDocs = rowData[COL.EXTRA_DOCS] || '';
 
   // Get full scrub DIRECTLY from Column T
   let fullScrub = rowData[COL.FULL_SCRUB] || '';
@@ -2738,8 +2740,8 @@ function openUnifiedSidebar() {
       ${revvPdfUrl ? '<a href="' + escapeHtml(revvPdfUrl) + '" target="_blank" class="link">📄 Revv Report PDF</a>' : ''}
       ${postScanUrl ? '<a href="' + escapeHtml(postScanUrl) + '" target="_blank" class="link">📄 Post-Scan Report</a>' : ''}
       ${invoiceUrl ? '<a href="' + escapeHtml(invoiceUrl) + '" target="_blank" class="link">📄 Invoice PDF</a>' : ''}
-      ${oemPosition ? '<div class="field"><div class="field-label">OEM Position Statement</div><div class="field-value"><a href="' + escapeHtml(oemPosition) + '" target="_blank" class="link">' + escapeHtml(oemPosition) + '</a></div></div>' : ''}
-      ${!revvPdfUrl && !postScanUrl && !invoiceUrl && !oemPosition ? '<div class="empty">No documents attached</div>' : ''}
+      ${extraDocs ? '<div class="field"><div class="field-label">Extra Docs</div><div class="field-value"><a href="' + escapeHtml(extraDocs) + '" target="_blank" class="link">' + escapeHtml(extraDocs) + '</a></div></div>' : ''}
+      ${!revvPdfUrl && !postScanUrl && !invoiceUrl && !extraDocs ? '<div class="empty">No documents attached</div>' : ''}
     </div>
   </div>
 
