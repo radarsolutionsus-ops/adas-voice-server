@@ -148,6 +148,158 @@
         grid-template-columns: 1fr;
       }
     }
+
+    /* Ready to Schedule Banner */
+    .ready-to-schedule-banner {
+      background: linear-gradient(135deg, #059669 0%, #047857 100%);
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-bottom: 24px;
+      color: white;
+      display: none;
+    }
+
+    .ready-to-schedule-banner.has-vehicles {
+      display: block;
+      animation: glow-pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes glow-pulse {
+      0%, 100% { box-shadow: 0 4px 20px rgba(5, 150, 105, 0.3); }
+      50% { box-shadow: 0 4px 30px rgba(5, 150, 105, 0.5); }
+    }
+
+    .ready-banner-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .ready-banner-icon {
+      width: 40px;
+      height: 40px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .ready-banner-icon svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    .ready-banner-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    .ready-banner-subtitle {
+      font-size: 14px;
+      opacity: 0.9;
+      margin: 0;
+    }
+
+    .ready-vehicles-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .ready-vehicle-item {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+      padding: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      backdrop-filter: blur(10px);
+    }
+
+    .ready-vehicle-info {
+      flex: 1;
+    }
+
+    .ready-vehicle-ro {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .ready-vehicle-details {
+      font-size: 13px;
+      opacity: 0.9;
+    }
+
+    .ready-vehicle-cals {
+      font-size: 12px;
+      opacity: 0.8;
+      margin-top: 4px;
+    }
+
+    .btn-schedule-now {
+      background: #ffffff;
+      color: #059669;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .btn-schedule-now:hover {
+      background: #f0fdf4;
+      transform: scale(1.02);
+    }
+
+    /* Ready to Schedule Nav Badge */
+    .nav-badge-ready {
+      background: #059669;
+      color: white;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 10px;
+      animation: pulse-ready 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-ready {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+
+    .nav-item-ready {
+      display: none;
+    }
+
+    .nav-item-ready.has-vehicles {
+      display: flex;
+    }
+
+    @media (max-width: 768px) {
+      .ready-to-schedule-banner {
+        margin: 0 -16px 20px;
+        border-radius: 0;
+        padding: 16px;
+      }
+
+      .ready-vehicle-item {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+      }
+
+      .btn-schedule-now {
+        text-align: center;
+      }
+    }
   </style>
 </head>
 <body>
@@ -178,6 +330,11 @@
             <span class="nav-icon" id="navNew"></span>
             <span class="nav-text">New</span>
             <span class="nav-badge" id="newCount" style="display:none;">0</span>
+          </a>
+          <a href="/shop/dashboard.html?status=Ready" class="nav-item nav-item-ready" id="navItemReady" data-filter="Ready">
+            <span class="nav-icon" id="navReady"></span>
+            <span class="nav-text">Ready to Schedule</span>
+            <span class="nav-badge-ready" id="readyCount">0</span>
           </a>
           <a href="/shop/dashboard.html?status=Scheduled" class="nav-item" data-filter="Scheduled">
             <span class="nav-icon" id="navScheduled"></span>
@@ -229,6 +386,20 @@
       </header>
 
       <div class="content-area">
+        <!-- Ready to Schedule Banner (shown when vehicles are ready) -->
+        <div class="ready-to-schedule-banner" id="readyBanner">
+          <div class="ready-banner-header">
+            <div class="ready-banner-icon" id="readyBannerIcon"></div>
+            <div>
+              <h3 class="ready-banner-title">Ready to Schedule</h3>
+              <p class="ready-banner-subtitle" id="readyBannerSubtitle">Vehicles are ready for calibration</p>
+            </div>
+          </div>
+          <div class="ready-vehicles-list" id="readyVehiclesList">
+            <!-- Populated by JavaScript -->
+          </div>
+        </div>
+
         <!-- Stats Grid (hidden when filtering) -->
         <div class="stats-grid" id="statsGrid">
           <div class="stat-card clickable" onclick="window.location='/shop/dashboard.html'">
@@ -375,17 +546,19 @@
 
     function applyFilterView() {
       if (statusFilter) {
-        // Hide stats, scheduled jobs, and quick actions when filtering
+        // Hide stats, scheduled jobs, quick actions, and ready banner when filtering
         document.getElementById('statsGrid').style.display = 'none';
         document.getElementById('scheduledCard').style.display = 'none';
         document.getElementById('quickActionsCard').style.display = 'none';
+        document.getElementById('readyBanner').style.display = 'none';
 
         // Update vehicles card to span full width without grid
         document.getElementById('dashboardGrid').className = '';
         document.getElementById('vehiclesCard').style.gridColumn = '';
 
         // Update card title and hide view all button
-        document.getElementById('vehiclesCardTitle').textContent = `${statusFilter} Vehicles`;
+        const displayStatus = statusFilter === 'Ready' ? 'Ready to Schedule' : statusFilter;
+        document.getElementById('vehiclesCardTitle').textContent = `${displayStatus} Vehicles`;
         document.getElementById('viewAllBtn').style.display = 'inline-flex';
       } else {
         // Show all cards on dashboard
@@ -413,9 +586,13 @@
       document.getElementById('mobileMenuIcon').innerHTML = Icons.menu;
       document.getElementById('navDashboard').innerHTML = Icons.chart;
       document.getElementById('navNew').innerHTML = Icons.sparkles;
+      document.getElementById('navReady').innerHTML = Icons.checkCircle;
       document.getElementById('navScheduled').innerHTML = Icons.calendar;
       document.getElementById('navInProgress').innerHTML = Icons.wrench;
       document.getElementById('navCompleted').innerHTML = Icons.checkCircle;
+
+      // Ready banner icon
+      document.getElementById('readyBannerIcon').innerHTML = Icons.checkCircle;
 
       // Header icons
       document.getElementById('plusIcon').innerHTML = Icons.plus;
@@ -475,6 +652,9 @@
         // Update stats
         updateStats(vehicles);
 
+        // Update ready to schedule banner and sidebar
+        updateReadyToSchedule(vehicles);
+
         // Update scheduled jobs
         updateScheduledJobs(vehicles);
 
@@ -490,6 +670,11 @@
         `;
       }
     }
+
+    // Auto-refresh every 30 seconds
+    setInterval(() => {
+      loadDashboardData();
+    }, 30000);
 
     function updateStats(vehicles) {
       const total = vehicles.length;
@@ -507,6 +692,47 @@
         document.getElementById('newCount').textContent = newCount;
         document.getElementById('newCount').style.display = '';
       }
+    }
+
+    function updateReadyToSchedule(vehicles) {
+      // Filter for ready-to-schedule vehicles: status="Ready" AND no scheduledDate
+      const readyVehicles = vehicles.filter(v =>
+        v.status === 'Ready' &&
+        (!v.scheduledDate || v.scheduledDate.trim() === '')
+      );
+
+      const banner = document.getElementById('readyBanner');
+      const navItem = document.getElementById('navItemReady');
+      const readyCountEl = document.getElementById('readyCount');
+      const subtitleEl = document.getElementById('readyBannerSubtitle');
+      const listEl = document.getElementById('readyVehiclesList');
+
+      if (readyVehicles.length === 0) {
+        // Hide banner and nav item
+        banner.classList.remove('has-vehicles');
+        navItem.classList.remove('has-vehicles');
+        return;
+      }
+
+      // Show banner and nav item
+      banner.classList.add('has-vehicles');
+      navItem.classList.add('has-vehicles');
+      readyCountEl.textContent = readyVehicles.length;
+      subtitleEl.textContent = `${readyVehicles.length} vehicle${readyVehicles.length === 1 ? ' is' : 's are'} ready for calibration`;
+
+      // Populate the vehicle list
+      listEl.innerHTML = readyVehicles.map(v => `
+        <div class="ready-vehicle-item">
+          <div class="ready-vehicle-info">
+            <div class="ready-vehicle-ro">RO #${escapeHtml(v.roPo)}</div>
+            <div class="ready-vehicle-details">${escapeHtml(v.vehicle || 'Unknown Vehicle')}</div>
+            ${v.requiredCals ? `<div class="ready-vehicle-cals">${escapeHtml(v.requiredCals)}</div>` : ''}
+          </div>
+          <a href="/shop/vehicle.html?ro=${encodeURIComponent(v.roPo)}&action=schedule" class="btn-schedule-now">
+            Schedule Now
+          </a>
+        </div>
+      `).join('');
     }
 
     function updateScheduledJobs(vehicles) {
@@ -615,6 +841,10 @@
         filtered = allVehicles.filter(v => {
           if (statusFilter === 'Scheduled') {
             return v.status === 'Scheduled' || v.status === 'Rescheduled';
+          }
+          if (statusFilter === 'Ready') {
+            // Ready to schedule: status="Ready" AND no scheduledDate
+            return v.status === 'Ready' && (!v.scheduledDate || v.scheduledDate.trim() === '');
           }
           return v.status === statusFilter;
         });

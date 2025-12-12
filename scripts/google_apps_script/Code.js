@@ -3,7 +3,7 @@
  * 5-STATUS WORKFLOW + AUTO-REFRESH SIDEBAR + VIEW-ONLY + FLOW HISTORY
  *
  * Sheet: ADAS_FIRST_Operations
- * Main tab: ADAS_Schedule (Columns A-U)
+ * Main tab: ADAS_Schedule (Columns A-Z = 26 columns)
  *
  * Column Mapping:
  * A: Timestamp Created (MM/dd/yyyy HH:mm)
@@ -11,7 +11,7 @@
  * C: RO/PO
  * D: VIN
  * E: Vehicle (Year Make Model)
- * F: Status (5 values: New, Ready, Scheduled, Completed, Cancelled)
+ * F: Status (8 values: New, Ready, No Cal, Scheduled, Rescheduled, In Progress, Completed, Cancelled)
  * G: Scheduled Date
  * H: Scheduled Time
  * I: Technician Assigned
@@ -27,6 +27,11 @@
  * S: Notes (Short Preview)
  * T: Flow History (timestamped status changes - hidden)
  * U: OEM Position Statement links
+ * V: Estimate PDF link
+ * W: PreScan PDF
+ * X: Job Start timestamp
+ * Y: Job End timestamp
+ * Z: Notification Flags (JSON)
  */
 
 const SCHEDULE_SHEET = 'ADAS_Schedule';
@@ -110,6 +115,20 @@ const STATUS_MIGRATION = {
   'Needs Review': 'New',
   'Blocked': 'Cancelled'
 };
+
+/**
+ * Helper function to ensure row array has exactly TOTAL_COLUMNS (26) elements
+ * Pads with empty strings if too short, trims if too long
+ */
+function ensureRowLength(row) {
+  while (row.length < TOTAL_COLUMNS) {
+    row.push('');
+  }
+  if (row.length > TOTAL_COLUMNS) {
+    row = row.slice(0, TOTAL_COLUMNS);
+  }
+  return row;
+}
 
 // Status colors and icons (used in dropdown and sidebar)
 const STATUS_CONFIG = {
@@ -355,6 +374,15 @@ function doPost(e) {
         result = getAllTechs();
         break;
 
+      // Ready to Schedule
+      case 'get_ready_vehicles':
+        result = getReadyToScheduleVehicles(data);
+        break;
+
+      case 'get_shop_counts':
+        result = getShopVehicleCounts(data);
+        break;
+
       default:
         result = { success: false, error: `Unknown action: ${action}` };
     }
@@ -590,7 +618,7 @@ function createNewRow(sheet, data, roPo) {
   const technician = data.technician || getAssignedTechForShop(shopName);
   Logger.log('[CREATE_ROW] Technician assigned: "' + technician + '" for shop: "' + shopName + '"');
 
-  // Build new row (A through U = 21 columns)
+  // Build new row (A through Z = 26 columns)
   const newRow = [
     timestamp,                                                    // A: Timestamp
     shopName,                                                     // B: Shop Name
@@ -613,18 +641,70 @@ function createNewRow(sheet, data, roPo) {
     data.notes || data.shop_notes || '',                         // S: Notes (short preview)
     flowHistory,                                                  // T: Flow History
     oemPosition,                                                  // U: OEM Position Statement links
-    data.estimate_pdf || data.estimatePdf || ''                  // V: Estimate PDF link
+    data.estimate_pdf || data.estimatePdf || '',                 // V: Estimate PDF link
+    data.prescan_pdf || data.preScanPdf || '',                   // W: PreScan PDF
+    data.job_start || data.jobStart || '',                       // X: Job Start timestamp
+    data.job_end || data.jobEnd || '',                           // Y: Job End timestamp
+    data.notification_flags || ''                                // Z: Notification Flags (JSON)
   ];
+
+  // Ensure exactly 26 columns
+  const safeRow = ensureRowLength(newRow);
 
   // Insert at row 2 (after header) instead of appending to bottom
   sheet.insertRowBefore(2);
-  var range = sheet.getRange(2, 1, 1, newRow.length);
-  range.setValues([newRow]);
+  var range = sheet.getRange(2, 1, 1, TOTAL_COLUMNS);
+  range.setValues([safeRow]);
 
   Logger.log('Inserted new row at top (row 2) for RO: ' + roPo);
 
   // Apply Column T formatting after insert
   applyColumnTFormatting(sheet);
+
+  // ========== AUTO-READY TRIGGER FOR NEW ROWS ==========
+  // If RevvADAS PDF is provided when creating new row, trigger auto-ready
+  const newRevvPdf = data.revv_report_pdf || data.revvReportPdf || '';
+
+  if (newRevvPdf) {
+    Logger.log('[AUTO-READY] New row created with RevvADAS PDF for RO ' + roPo + ', triggering auto-ready...');
+
+    // Check for discrepancies in scrub results
+    const hasDiscrepancy = flowHistory && (
+      flowHistory.toUpperCase().includes('MISSING') ||
+      flowHistory.toUpperCase().includes('ATTENTION') ||
+      flowHistory.toUpperCase().includes('DISCREPANCY') ||
+      flowHistory.toUpperCase().includes('MISMATCH')
+    );
+
+    if (hasDiscrepancy) {
+      // Set to Needs Attention
+      sheet.getRange(2, COL.STATUS + 1).setValue('Needs Attention');
+      const timestampNow = Utilities.formatDate(new Date(), 'America/New_York', 'MM/dd/yy h:mm a');
+      const flagNote = 'Auto-flagged: Discrepancy found on ' + timestampNow;
+      const existingNotes = sheet.getRange(2, COL.NOTES + 1).getValue() || '';
+      sheet.getRange(2, COL.NOTES + 1).setValue(
+        existingNotes ? existingNotes + ' | ' + flagNote : flagNote
+      );
+      Logger.log('[AUTO-READY] RO ' + roPo + ' set to Needs Attention due to discrepancy');
+    } else {
+      // No discrepancy - send intake email and set to Ready
+      try {
+        const emailResult = sendIntakeEmailToShop(2); // Row 2 since we inserted at top
+        Logger.log('[AUTO-READY] RO ' + roPo + ': email=' + (emailResult.success ? emailResult.email : emailResult.error));
+      } catch (e) {
+        Logger.log('[AUTO-READY] Email error for RO ' + roPo + ': ' + e.message);
+        // Still set to Ready even if email fails
+        sheet.getRange(2, COL.STATUS + 1).setValue('Ready');
+        const timestampNow = Utilities.formatDate(new Date(), 'America/New_York', 'MM/dd/yy h:mm a');
+        const readyNote = 'Auto-set to Ready on ' + timestampNow + ' (email failed: ' + e.message + ')';
+        const existingNotes = sheet.getRange(2, COL.NOTES + 1).getValue() || '';
+        sheet.getRange(2, COL.NOTES + 1).setValue(
+          existingNotes ? existingNotes + ' | ' + readyNote : readyNote
+        );
+      }
+    }
+  }
+  // ========== END AUTO-READY TRIGGER ==========
 
   return {
     success: true,
@@ -799,13 +879,66 @@ function updateExistingRow(sheet, rowNum, data) {
     notes,                                                        // S: Notes (short preview)
     flowHistory,                                                  // T: Flow History
     oemPosition,                                                  // U: OEM Position Statement links
-    data.estimate_pdf || data.estimatePdf || curr[COL.ESTIMATE_PDF] || '' // V: Estimate PDF link
+    data.estimate_pdf || data.estimatePdf || curr[COL.ESTIMATE_PDF] || '', // V: Estimate PDF link
+    data.prescan_pdf || data.preScanPdf || curr[COL.PRESCAN_PDF] || '', // W: PreScan PDF
+    data.job_start || data.jobStart || curr[COL.JOB_START] || '', // X: Job Start timestamp
+    data.job_end || data.jobEnd || curr[COL.JOB_END] || '',       // Y: Job End timestamp
+    data.notification_flags || curr[COL.NOTIFICATION_FLAGS] || '' // Z: Notification Flags (JSON)
   ];
 
-  range.setValues([updatedRow]);
+  // Ensure exactly 26 columns
+  const safeRow = ensureRowLength(updatedRow);
+  range.setValues([safeRow]);
 
   // Apply Column T formatting after update
   applyColumnTFormatting(sheet);
+
+  // ========== AUTO-READY TRIGGER ==========
+  // Check if RevvADAS PDF was just added (wasn't there before, now it is)
+  const oldRevvPdf = curr[COL.REVV_PDF] || '';
+  const newRevvPdf = data.revv_report_pdf || data.revvReportPdf || '';
+
+  if (newRevvPdf && !oldRevvPdf) {
+    // RevvADAS PDF was just uploaded - trigger auto-ready process
+    Logger.log('[AUTO-READY] RevvADAS PDF uploaded for RO ' + roPo + ', triggering auto-ready...');
+
+    // Check for discrepancies in scrub results
+    const hasDiscrepancy = flowHistory && (
+      flowHistory.toUpperCase().includes('MISSING') ||
+      flowHistory.toUpperCase().includes('ATTENTION') ||
+      flowHistory.toUpperCase().includes('DISCREPANCY') ||
+      flowHistory.toUpperCase().includes('MISMATCH')
+    );
+
+    if (hasDiscrepancy) {
+      // Set to Needs Attention
+      sheet.getRange(rowNum, COL.STATUS + 1).setValue('Needs Attention');
+      const timestamp = Utilities.formatDate(new Date(), 'America/New_York', 'MM/dd/yy h:mm a');
+      const flagNote = 'Auto-flagged: Discrepancy found on ' + timestamp;
+      const existingNotes = sheet.getRange(rowNum, COL.NOTES + 1).getValue() || '';
+      sheet.getRange(rowNum, COL.NOTES + 1).setValue(
+        existingNotes ? existingNotes + ' | ' + flagNote : flagNote
+      );
+      Logger.log('[AUTO-READY] RO ' + roPo + ' set to Needs Attention due to discrepancy');
+    } else {
+      // No discrepancy - send intake email and set to Ready
+      try {
+        const emailResult = sendIntakeEmailToShop(rowNum);
+        Logger.log('[AUTO-READY] RO ' + roPo + ': email=' + (emailResult.success ? emailResult.email : emailResult.error));
+      } catch (e) {
+        Logger.log('[AUTO-READY] Email error for RO ' + roPo + ': ' + e.message);
+        // Still set to Ready even if email fails
+        sheet.getRange(rowNum, COL.STATUS + 1).setValue('Ready');
+        const timestamp = Utilities.formatDate(new Date(), 'America/New_York', 'MM/dd/yy h:mm a');
+        const readyNote = 'Auto-set to Ready on ' + timestamp + ' (email failed: ' + e.message + ')';
+        const existingNotes = sheet.getRange(rowNum, COL.NOTES + 1).getValue() || '';
+        sheet.getRange(rowNum, COL.NOTES + 1).setValue(
+          existingNotes ? existingNotes + ' | ' + readyNote : readyNote
+        );
+      }
+    }
+  }
+  // ========== END AUTO-READY TRIGGER ==========
 
   return {
     success: true,
@@ -868,10 +1001,16 @@ function techUpdateRow(data) {
     data.notes ? (curr[COL.NOTES] ? curr[COL.NOTES] + ' | ' + data.notes : data.notes) : curr[COL.NOTES], // S: Append
     data.flowHistory || data.flow_history || curr[COL.FLOW_HISTORY] || '', // T: Flow History - append new entries
     curr[COL.OEM_POSITION] || '',                                 // U: KEEP
-    curr[COL.ESTIMATE_PDF] || ''                                  // V: KEEP
+    curr[COL.ESTIMATE_PDF] || '',                                 // V: KEEP
+    data.prescan_pdf || curr[COL.PRESCAN_PDF] || '',             // W: PreScan PDF - Can update
+    data.job_start || curr[COL.JOB_START] || '',                 // X: Job Start - Can update
+    data.job_end || curr[COL.JOB_END] || '',                     // Y: Job End - Can update
+    curr[COL.NOTIFICATION_FLAGS] || ''                           // Z: KEEP
   ];
 
-  range.setValues([updatedRow]);
+  // Ensure exactly 26 columns
+  const safeRow = ensureRowLength(updatedRow);
+  range.setValues([safeRow]);
 
   // EXPLICIT STATUS WRITE - Belt and suspenders approach
   // Write status directly to Column F (index 5, so +1 = column 6) to ensure it's set
@@ -5456,6 +5595,120 @@ function testTechAssignment(testShopName) {
   Logger.log('Shop: ' + testShopName + ' → Assigned Tech: ' + result);
 
   return { shop: testShopName, assignedTech: result };
+}
+
+// ====== READY TO SCHEDULE FUNCTIONS ======
+
+/**
+ * Get vehicles that are Ready but not yet scheduled
+ * @param {Object} data - { shopName?: string } optional shop filter
+ * @returns {Object} { success: boolean, count: number, data: Array }
+ */
+function getReadyToScheduleVehicles(data) {
+  const ss = SpreadsheetApp.getActive();
+  const sheet = ss.getSheetByName(SCHEDULE_SHEET);
+
+  if (!sheet) {
+    return { success: false, error: 'Schedule sheet not found' };
+  }
+
+  const allData = sheet.getDataRange().getValues();
+  const shopFilter = (data.shopName || '').toLowerCase().trim();
+  const vehicles = [];
+
+  for (let i = 1; i < allData.length; i++) {
+    const row = allData[i];
+    const status = String(row[COL.STATUS] || '').trim();
+    const scheduledDate = String(row[COL.SCHEDULED_DATE] || '').trim();
+    const shopName = String(row[COL.SHOP_NAME] || '').toLowerCase().trim();
+
+    // Check if status is "Ready" and no scheduled date
+    if (status === 'Ready' && !scheduledDate) {
+      // Apply shop filter if provided
+      if (shopFilter && !shopName.includes(shopFilter) && !shopFilter.includes(shopName)) {
+        continue;
+      }
+
+      vehicles.push({
+        roPo: row[COL.RO_PO],
+        shopName: row[COL.SHOP_NAME],
+        vehicle: row[COL.VEHICLE],
+        vin: row[COL.VIN],
+        status: status,
+        requiredCals: row[COL.REQUIRED_CALS],
+        timestamp: row[COL.TIMESTAMP]
+      });
+    }
+  }
+
+  return { success: true, count: vehicles.length, data: vehicles };
+}
+
+/**
+ * Get vehicle counts by status for a shop (including ready-to-schedule count)
+ * @param {Object} data - { shopName?: string } optional shop filter
+ * @returns {Object} { success: boolean, counts: { total, new, ready, scheduled, inProgress, completed } }
+ */
+function getShopVehicleCounts(data) {
+  const ss = SpreadsheetApp.getActive();
+  const sheet = ss.getSheetByName(SCHEDULE_SHEET);
+
+  if (!sheet) {
+    return { success: false, error: 'Schedule sheet not found' };
+  }
+
+  const allData = sheet.getDataRange().getValues();
+  const shopFilter = (data.shopName || '').toLowerCase().trim();
+
+  const counts = {
+    total: 0,
+    new: 0,
+    ready: 0,  // Ready but not scheduled
+    scheduled: 0,
+    inProgress: 0,
+    completed: 0
+  };
+
+  for (let i = 1; i < allData.length; i++) {
+    const row = allData[i];
+    const shopName = String(row[COL.SHOP_NAME] || '').toLowerCase().trim();
+
+    // Apply shop filter if provided
+    if (shopFilter && !shopName.includes(shopFilter) && !shopFilter.includes(shopName)) {
+      continue;
+    }
+
+    const status = String(row[COL.STATUS] || '').trim();
+    const scheduledDate = String(row[COL.SCHEDULED_DATE] || '').trim();
+
+    counts.total++;
+
+    switch (status) {
+      case 'New':
+        counts.new++;
+        break;
+      case 'Ready':
+        // Ready but not scheduled = ready to schedule
+        if (!scheduledDate) {
+          counts.ready++;
+        } else {
+          counts.scheduled++;
+        }
+        break;
+      case 'Scheduled':
+      case 'Rescheduled':
+        counts.scheduled++;
+        break;
+      case 'In Progress':
+        counts.inProgress++;
+        break;
+      case 'Completed':
+        counts.completed++;
+        break;
+    }
+  }
+
+  return { success: true, counts: counts };
 }
 
 /**
