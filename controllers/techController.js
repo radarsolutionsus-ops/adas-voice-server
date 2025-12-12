@@ -1256,6 +1256,42 @@ export async function requestAssignment(req, res) {
   }
 }
 
+/**
+ * POST /api/tech/check-email
+ * Trigger immediate email check (useful when waiting for Post-Scan to arrive)
+ */
+export async function triggerEmailCheck(req, res) {
+  try {
+    const user = req.user;
+    console.log(`${LOG_TAG} Manual email check triggered by: ${user.techName}`);
+
+    // Import email listener
+    const emailListener = await import('../services/emailListener.js');
+
+    // Trigger immediate check
+    if (emailListener.default.isRunning()) {
+      await emailListener.default.checkNewEmails();
+      console.log(`${LOG_TAG} Email check completed`);
+      res.json({
+        success: true,
+        message: 'Email check completed'
+      });
+    } else {
+      console.log(`${LOG_TAG} Email listener not running`);
+      res.status(503).json({
+        success: false,
+        error: 'Email listener is not running'
+      });
+    }
+  } catch (err) {
+    console.error(`${LOG_TAG} Error triggering email check:`, err.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to trigger email check'
+    });
+  }
+}
+
 export default {
   getAllVehicles,
   getMyVehicles,
@@ -1271,5 +1307,6 @@ export default {
   requestAssignment,
   startJob,
   completeJob,
-  getActiveJob
+  getActiveJob,
+  triggerEmailCheck
 };

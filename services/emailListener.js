@@ -1275,6 +1275,44 @@ async function processEmail(message) {
           }
         }
       }
+
+      // CRITICAL FIX: For scan reports (post-scan, pre-scan), extract VIN from PDF content
+      // and use it to find the correct RO (don't rely on filename-based RO like "ST" or "post")
+      if (!exactMatch && !roNormalized) {
+        for (const pdf of pdfs) {
+          const pdfType = detectPDFType(pdf.filename);
+          if (pdfType === 'scan_report') {
+            try {
+              const pdfParse = await import('pdf-parse');
+              const pdfData = await pdfParse.default(pdf.buffer);
+              const pdfText = pdfData.text || '';
+
+              // Extract VIN from scan report content
+              const vinPattern = /\b([A-HJ-NPR-Z0-9]{17})\b/gi;
+              const vinMatches = pdfText.match(vinPattern);
+
+              if (vinMatches && vinMatches.length > 0) {
+                const extractedVin = vinMatches[0].toUpperCase();
+                console.log(`${LOG_TAG} *** Extracted VIN from scan report: ${extractedVin}`);
+
+                const vinMatch = await sheetWriter.lookupByVIN(extractedVin);
+                if (vinMatch) {
+                  const existingRO = vinMatch.ro_po || vinMatch.roPo || vinMatch.ro_number;
+                  if (existingRO) {
+                    console.log(`${LOG_TAG} *** SCAN REPORT VIN MATCH! Using RO "${existingRO}" instead of "${roPo}"`);
+                    originalRoPo = roPo;
+                    roPo = existingRO;
+                    roNormalized = true;
+                    break;
+                  }
+                }
+              }
+            } catch (scanErr) {
+              console.log(`${LOG_TAG} Could not extract VIN from scan report: ${scanErr.message}`);
+            }
+          }
+        }
+      }
     }
 
     // Step 1: Upload PDFs to Drive

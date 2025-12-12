@@ -3356,6 +3356,12 @@
               <p>Upload Post-Scan PDF</p>
               <p class="filename" id="postScanFileName" style="display:none;"></p>
             </div>
+            <div style="margin-top:8px;padding:8px 12px;background:var(--bg-warning, #fff3cd);border-radius:6px;font-size:12px;display:flex;align-items:center;justify-content:space-between;">
+              <span>📧 Waiting for Post-Scan via email?</span>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="checkForPostScan()" id="checkEmailBtn" style="font-size:11px;padding:4px 10px;">
+                🔄 Check Now
+              </button>
+            </div>
           `}
         </div>
 
@@ -3712,6 +3718,61 @@
         showToast('Failed to upload: ' + err.message, 'error');
       }
     }
+
+    // Check for Post-Scan via email (triggers immediate email check)
+    async function checkForPostScan() {
+      const btn = document.getElementById('checkEmailBtn');
+      if (!btn || !currentJob) return;
+
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '⏳ Checking...';
+
+      try {
+        const token = getStorageItem('adas_access_token') || getStorageItem('token');
+        const response = await fetch('/api/tech/check-email', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          // Wait a moment for processing
+          await new Promise(r => setTimeout(r, 2000));
+
+          // Refresh job data
+          await loadJobs();
+          currentJob = allJobs.find(j => j.roPo === currentJob.roPo);
+
+          if (currentJob) {
+            const hasPostScan = currentJob.postscanPdf || currentJob.postScanPdf || currentJob.postScanPdfUrl;
+            if (hasPostScan) {
+              showToast('Post-Scan found! 🎉', 'success');
+            } else {
+              showToast('No new Post-Scan yet', 'info');
+            }
+            // Re-render modal
+            const modalBody = document.getElementById('modalBody');
+            modalBody.innerHTML = renderInProgressStatusModal();
+            initInProgressUploadHandlers();
+          }
+        } else {
+          showToast(data.error || 'Check failed', 'error');
+        }
+      } catch (err) {
+        showToast('Error checking email', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    }
+
+    // Make checkForPostScan globally accessible
+    window.checkForPostScan = checkForPostScan;
 
     function getSelectedCalibrations() {
       const calibrations = [];

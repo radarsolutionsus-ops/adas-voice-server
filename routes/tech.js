@@ -104,6 +104,11 @@ router.post('/calendar/subscribe', calendarController.subscribeToNotifications);
 // Get VAPID public key (no auth required for this one)
 router.get('/calendar/vapid-key', calendarController.getVapidKey);
 
+// ============================================================
+// EMAIL CHECK ENDPOINT (trigger immediate email check)
+// ============================================================
+router.post('/check-email', techController.triggerEmailCheck);
+
 // Multer error handler
 router.use((err, req, res, next) => {
   if (err instanceof multer.MulterError) {

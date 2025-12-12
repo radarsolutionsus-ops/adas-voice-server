@@ -1354,14 +1354,13 @@
       }
 
       grid.innerHTML = activeJobs.map(job => {
-        const elapsed = calculateElapsedTime(job.jobStartedAt || job.updatedAt);
         return `
           <div class="active-job-card" onclick="window.location='/shop/vehicle.html?ro=${encodeURIComponent(job.roPo)}'">
             <div class="active-job-header">
               <span class="active-job-ro">RO #${escapeHtml(job.roPo)}</span>
-              <div class="active-job-timer">
+              <div class="active-job-status">
                 <span class="pulse"></span>
-                <span class="elapsed-time" data-started="${job.jobStartedAt || job.updatedAt || ''}">${elapsed}</span>
+                <span>In Progress</span>
               </div>
             </div>
             <div class="active-job-vehicle">${escapeHtml(job.vehicle || 'Unknown Vehicle')}</div>
@@ -1525,15 +1524,7 @@
       });
     }
 
-    // Update active job timers every second
-    setInterval(() => {
-      document.querySelectorAll('.elapsed-time').forEach(el => {
-        const started = el.dataset.started;
-        if (started) {
-          el.textContent = calculateElapsedTime(started);
-        }
-      });
-    }, 1000);
+    // Shop portal doesn't show elapsed time - timer is only on Tech Portal
 
     function updateRecentVehicles(vehicles) {
       allVehicles = vehicles;
