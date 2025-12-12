@@ -1846,8 +1846,8 @@
   <script src="/js/api.js"></script>
   <script>
     // Version for debugging deployments
-    const TECH_PORTAL_VERSION = '2.1.0-grace60';
-    console.log('[TECH_PORTAL] Version:', TECH_PORTAL_VERSION, '(60s grace period for Sheets cache)');
+    const TECH_PORTAL_VERSION = '2.2.0-fixed-handler';
+    console.log('[TECH_PORTAL] Version:', TECH_PORTAL_VERSION, '- Start Job handler fix');
 
     // State
     let allJobs = [];
@@ -2751,6 +2751,7 @@
         modalBody.innerHTML = renderReadyStatusModal();
       } else if (effectiveStatus === 'scheduled' || effectiveStatus === 'rescheduled') {
         modalBody.innerHTML = renderScheduledStatusModal();
+        initStartJobHandler(); // Attach click handler after HTML is set
       } else if (effectiveStatus === 'in progress') {
         modalBody.innerHTML = renderInProgressStatusModal();
         initInProgressUploadHandlers();
@@ -3014,20 +3015,27 @@
               ${isActiveJob ? 'Job In Progress' : 'Start Job'}
             </button>
           </div>
-          <script>
-            // Attach click handler directly after button renders
-            (function() {
-              const btn = document.getElementById('startJobBtn');
-              if (btn && !btn.disabled) {
-                btn.onclick = function() {
-                  console.log('[START_JOB] Button clicked via direct handler');
-                  handleStartJobClick(this);
-                };
-              }
-            })();
-          </script>
         </div>
       `;
+    }
+
+    // Initialize Start Job button handler (called after modal renders)
+    function initStartJobHandler() {
+      const btn = document.getElementById('startJobBtn');
+      console.log('[START_JOB] initStartJobHandler called, button found:', !!btn, 'disabled:', btn?.disabled);
+      if (btn && !btn.disabled) {
+        btn.addEventListener('click', function(e) {
+          e.preventDefault();
+          console.log('[START_JOB] Button clicked!');
+          const roPo = this.getAttribute('data-ropo');
+          const scheduledDate = this.getAttribute('data-scheduled');
+          console.log('[START_JOB] Data attributes - RO:', roPo, 'Scheduled:', scheduledDate);
+          startJobAction(roPo, scheduledDate);
+        });
+        console.log('[START_JOB] Click handler attached successfully');
+      } else {
+        console.log('[START_JOB] Button not found or disabled, handler NOT attached');
+      }
     }
 
     function renderInProgressStatusModal() {
