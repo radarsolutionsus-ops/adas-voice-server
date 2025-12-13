@@ -485,6 +485,15 @@ function extractRoFromFilename(filename) {
   // Remove extension
   const name = filename.replace(/\.pdf$/i, '');
 
+  // SKIP EXTRACTION FOR SCAN REPORTS - These should use VIN matching instead
+  // Filenames like "3096 Post Scan.pdf" should NOT extract "3096" because it might be wrong
+  // VIN matching in processEmail() will find the correct RO
+  const lower = name.toLowerCase();
+  if (lower.includes('post') || lower.includes('pre') || lower.includes('scan') || lower.includes('autel')) {
+    console.log(`${LOG_TAG} Skipping RO extraction for scan report filename: ${filename} (will use VIN matching)`);
+    return null;
+  }
+
   // Pattern 1: Filename is just a number (e.g., "3045.pdf")
   if (/^\d{3,6}$/.test(name)) {
     return name;
@@ -2263,6 +2272,16 @@ async function processEmail(message) {
     return { success: true, roPo, messageId: message.id };
   } catch (err) {
     console.error(`${LOG_TAG} Failed to process email:`, err.message);
+
+    // CRITICAL FIX: Always mark email as processed to prevent infinite reprocessing loops
+    // Even if processing failed, we don't want to keep trying the same email forever
+    try {
+      await markAsProcessed(message.id);
+      console.log(`${LOG_TAG} Marked failed email as processed to prevent reprocessing loop`);
+    } catch (markErr) {
+      console.error(`${LOG_TAG} Failed to mark email as processed:`, markErr.message);
+    }
+
     return { success: false, error: err.message, messageId: message.id };
   }
 }

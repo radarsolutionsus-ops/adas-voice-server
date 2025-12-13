@@ -1099,6 +1099,57 @@ export async function completeJob(req, res) {
 }
 
 /**
+ * Download PDF from Google Drive URL
+ * Extracts file ID and downloads content as buffer
+ * @param {string} driveUrl - Google Drive URL
+ * @returns {Promise<Buffer|null>} - PDF buffer or null if failed
+ */
+async function downloadPdfFromDrive(driveUrl) {
+  if (!driveUrl || !driveUrl.startsWith('http')) {
+    return null;
+  }
+
+  try {
+    // Extract file ID from various Google Drive URL formats
+    // Format 1: https://drive.google.com/file/d/FILE_ID/view
+    // Format 2: https://drive.google.com/open?id=FILE_ID
+    // Format 3: https://docs.google.com/document/d/FILE_ID/edit
+    let fileId = null;
+
+    const idFromPath = driveUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    if (idFromPath) {
+      fileId = idFromPath[1];
+    } else {
+      const idFromQuery = driveUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+      if (idFromQuery) {
+        fileId = idFromQuery[1];
+      }
+    }
+
+    if (!fileId) {
+      console.log(`${LOG_TAG} Could not extract file ID from Drive URL: ${driveUrl}`);
+      return null;
+    }
+
+    // Use Google Drive API to download the file
+    // Import the drive service
+    const driveUpload = await import('../services/driveUpload.js');
+
+    // Try to get the file content
+    const buffer = await driveUpload.default.downloadFile(fileId);
+    if (buffer) {
+      console.log(`${LOG_TAG} Downloaded PDF from Drive: ${fileId} (${buffer.length} bytes)`);
+      return buffer;
+    }
+
+    return null;
+  } catch (err) {
+    console.error(`${LOG_TAG} Failed to download PDF from Drive:`, err.message);
+    return null;
+  }
+}
+
+/**
  * Send completion email to shop (background task)
  */
 async function sendCompletionEmailToShop(roPo, row, completedCalibrations) {
@@ -1116,10 +1167,62 @@ async function sendCompletionEmailToShop(roPo, row, completedCalibrations) {
       return;
     }
 
+    // Get document URLs
+    const postScanLink = row.postScanPdf || row.postscan_pdf || row.post_scan_pdf || '';
+    const invoiceLink = row.invoicePdf || row.invoice_pdf || '';
+    const revvPdfLink = row.revvReportPdf || row.revv_report_pdf || '';
+
+    console.log(`${LOG_TAG} Completion email docs - PostScan: ${postScanLink ? 'YES' : 'NO'}, Invoice: ${invoiceLink ? 'YES' : 'NO'}, Revv: ${revvPdfLink ? 'YES' : 'NO'}`);
+
+    // Download PDFs from Drive URLs to attach to email
+    let postScanPdfBuffer = null;
+    let invoicePdfBuffer = null;
+    let revvPdfBuffer = null;
+
+    // Download PDFs in parallel
+    const downloadPromises = [];
+
+    if (postScanLink) {
+      downloadPromises.push(
+        downloadPdfFromDrive(postScanLink)
+          .then(buf => { postScanPdfBuffer = buf; })
+          .catch(err => console.error(`${LOG_TAG} PostScan download failed:`, err.message))
+      );
+    }
+
+    if (invoiceLink) {
+      downloadPromises.push(
+        downloadPdfFromDrive(invoiceLink)
+          .then(buf => { invoicePdfBuffer = buf; })
+          .catch(err => console.error(`${LOG_TAG} Invoice download failed:`, err.message))
+      );
+    }
+
+    if (revvPdfLink) {
+      downloadPromises.push(
+        downloadPdfFromDrive(revvPdfLink)
+          .then(buf => { revvPdfBuffer = buf; })
+          .catch(err => console.error(`${LOG_TAG} Revv PDF download failed:`, err.message))
+      );
+    }
+
+    // Wait for all downloads to complete (with timeout)
+    if (downloadPromises.length > 0) {
+      console.log(`${LOG_TAG} Downloading ${downloadPromises.length} PDFs from Drive...`);
+      await Promise.race([
+        Promise.all(downloadPromises),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Download timeout')), 30000))
+      ]).catch(err => {
+        console.error(`${LOG_TAG} PDF download error:`, err.message);
+      });
+    }
+
+    console.log(`${LOG_TAG} PDF downloads complete - PostScan: ${postScanPdfBuffer ? 'OK' : 'NONE'}, Invoice: ${invoicePdfBuffer ? 'OK' : 'NONE'}, Revv: ${revvPdfBuffer ? 'OK' : 'NONE'}`);
+
     // Import email service
     const { sendJobCompletionEmail } = await import('../services/emailResponder.js');
 
-    // Send completion email
+    // Send completion email with PDF buffers attached
     const emailResult = await sendJobCompletionEmail({
       shopEmail: shopEmail,
       shopName: shopName,
@@ -1129,13 +1232,19 @@ async function sendCompletionEmailToShop(roPo, row, completedCalibrations) {
       calibrationsPerformed: completedCalibrations || row.requiredCalibrations || '',
       invoiceNumber: row.invoiceNumber || row.invoice_number || '',
       invoiceAmount: row.invoiceAmount || row.invoice_amount || '',
-      postScanLink: row.postScanPdf || row.postscanPdf || '',
-      invoiceLink: row.invoicePdf || row.invoice_pdf || '',
-      revvPdfLink: row.revvReportPdf || row.revv_report_pdf || ''
+      // Include PDF buffers for attachments
+      postScanPdfBuffer: postScanPdfBuffer,
+      invoicePdfBuffer: invoicePdfBuffer,
+      revvPdfBuffer: revvPdfBuffer,
+      // Also include links as fallback
+      postScanLink: postScanLink,
+      invoiceLink: invoiceLink,
+      revvPdfLink: revvPdfLink
     });
 
     if (emailResult.success) {
-      console.log(`${LOG_TAG} Completion email sent to ${shopEmail} for RO ${roPo}`);
+      console.log(`${LOG_TAG} ✅ Completion email sent to ${shopEmail} for RO ${roPo}`);
+      console.log(`${LOG_TAG}    Attachments: PostScan=${postScanPdfBuffer ? 'YES' : 'NO'}, Invoice=${invoicePdfBuffer ? 'YES' : 'NO'}, Revv=${revvPdfBuffer ? 'YES' : 'NO'}`);
     } else {
       console.error(`${LOG_TAG} Failed to send completion email: ${emailResult.error}`);
     }

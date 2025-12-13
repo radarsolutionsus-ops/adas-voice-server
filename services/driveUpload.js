@@ -407,10 +407,40 @@ export async function getDownloadLink(fileId) {
   }
 }
 
+/**
+ * Download file content from Google Drive
+ *
+ * @param {string} fileId - The Google Drive file ID
+ * @returns {Promise<Buffer|null>} - File content as buffer, or null if failed
+ */
+export async function downloadFile(fileId) {
+  try {
+    const drive = await initializeDriveClient();
+
+    // Get file content using Google Drive API
+    const response = await drive.files.get(
+      { fileId, alt: 'media' },
+      { responseType: 'arraybuffer' }
+    );
+
+    if (response.data) {
+      const buffer = Buffer.from(response.data);
+      console.log(`${LOG_TAG} Downloaded file ${fileId} (${buffer.length} bytes)`);
+      return buffer;
+    }
+
+    return null;
+  } catch (err) {
+    console.error(`${LOG_TAG} Failed to download file ${fileId}:`, err.message);
+    return null;
+  }
+}
+
 export default {
   uploadPDF,
   uploadMultiplePDFs,
   listROFiles,
   deleteFile,
-  getDownloadLink
+  getDownloadLink,
+  downloadFile
 };
