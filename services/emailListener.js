@@ -1189,7 +1189,35 @@ async function processEmail(message) {
           };
         }
 
-        // RO extracted from subject/filename - continue processing
+        // RO extracted from subject/filename - try to find exact or suffixed match in sheets
+        console.log(`${LOG_TAG} *** [SCAN FALLBACK] Base RO extracted: ${roPo}, checking for suffixed variants...`);
+
+        // Try to find the actual RO in sheets (may have suffix like -ENT, -SIXT, etc.)
+        try {
+          const allRows = await sheetWriter.getAllScheduleRows();
+          if (allRows && allRows.length > 0) {
+            // Look for exact match first, then prefix match
+            const exactMatch = allRows.find(row => row.ro_po === roPo);
+            if (exactMatch) {
+              console.log(`${LOG_TAG} *** [SCAN FALLBACK] Found exact RO match: ${roPo}`);
+            } else {
+              // Look for RO starting with extracted number (e.g., "3096" matches "3096-ENT")
+              const prefixMatch = allRows.find(row => {
+                const rowRo = (row.ro_po || '').toUpperCase();
+                return rowRo.startsWith(roPo) && rowRo.length > roPo.length;
+              });
+              if (prefixMatch) {
+                const fullRo = prefixMatch.ro_po;
+                console.log(`${LOG_TAG} *** [SCAN FALLBACK] Found suffixed RO match: ${roPo} → ${fullRo}`);
+                roPo = fullRo;
+                roSource = `${roSource}:matched_suffix`;
+              }
+            }
+          }
+        } catch (lookupErr) {
+          console.log(`${LOG_TAG} *** [SCAN FALLBACK] Could not lookup RO variants: ${lookupErr.message}`);
+        }
+
         console.log(`${LOG_TAG} *** [SCAN FALLBACK] Continuing with RO: ${roPo} (source: ${roSource})`);
         // Mark as normalized to prevent subsequent subject parsing from overwriting
         roNormalized = true;
