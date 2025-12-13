@@ -375,24 +375,25 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 16px;
-  background: linear-gradient(135deg, #34c759 0%, #30d158 100%);
-  color: white;
-  border: none;
+  padding: 8px 14px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .btn-switch-portal:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(52, 199, 89, 0.4);
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
 }
 
 .switch-icon {
-  font-size: 16px;
+  font-size: 14px;
 }
 
 /* Content Area */
