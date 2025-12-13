@@ -1150,17 +1150,47 @@ async function processEmail(message) {
         }
       }
 
-      // If VIN matching failed for scan-only email, mark as processed and return early
-      // This prevents garbage RO extraction like "ST" from "Post Scan.pdf"
+      // If VIN matching failed for scan-only email, try RO extraction from subject/filename
+      // Pattern: "3096 Post Scan" subject or "3096 Post Scan.pdf" filename → RO "3096"
       if (!roPo && scanReportPdfs.length === pdfs.length) {
-        console.log(`${LOG_TAG} *** [SCAN VIN] FAILED: No RO found via VIN matching for scan-only email`);
-        console.log(`${LOG_TAG} *** Marking email as processed to prevent reprocessing loop`);
-        await markAsProcessed(message.id);
-        return {
-          success: false,
-          error: 'Scan report VIN not found in system - email marked as processed',
-          messageId: message.id
-        };
+        console.log(`${LOG_TAG} *** [SCAN VIN] VIN matching failed, trying RO extraction from subject/filename...`);
+
+        // Try to extract RO from email subject first (e.g., "3096 Post Scan" → "3096")
+        const subjectRoMatch = subject.match(/^(\d{3,6})(?:[-_\s]|$)/);
+        if (subjectRoMatch) {
+          roPo = subjectRoMatch[1];
+          roSource = 'subject_scan_fallback';
+          console.log(`${LOG_TAG} *** [SCAN FALLBACK] Extracted RO from subject: ${roPo}`);
+        }
+
+        // If not found in subject, try filename (e.g., "3096 Post Scan.pdf" → "3096")
+        if (!roPo) {
+          for (const pdf of scanReportPdfs) {
+            const filename = pdf.filename || '';
+            const filenameRoMatch = filename.match(/^(\d{3,6})(?:[-_\s]|$)/);
+            if (filenameRoMatch) {
+              roPo = filenameRoMatch[1];
+              roSource = `filename_scan_fallback:${pdf.filename}`;
+              console.log(`${LOG_TAG} *** [SCAN FALLBACK] Extracted RO from filename: ${roPo}`);
+              break;
+            }
+          }
+        }
+
+        // If still no RO found, mark as processed and return
+        if (!roPo) {
+          console.log(`${LOG_TAG} *** [SCAN VIN] FAILED: No RO found via VIN matching or filename for scan-only email`);
+          console.log(`${LOG_TAG} *** Marking email as processed to prevent reprocessing loop`);
+          await markAsProcessed(message.id);
+          return {
+            success: false,
+            error: 'Scan report VIN not found in system - email marked as processed',
+            messageId: message.id
+          };
+        }
+
+        // RO extracted from subject/filename - continue processing
+        console.log(`${LOG_TAG} *** [SCAN FALLBACK] Continuing with RO: ${roPo} (source: ${roSource})`);
       }
     }
 

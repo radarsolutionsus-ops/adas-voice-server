@@ -691,6 +691,11 @@ export async function sendJobCompletionEmail(params) {
 
       <p>All calibrations have been performed according to OEM specifications. The post-scan report confirms all ADAS systems are functioning properly.</p>
 
+      <div style="background: #edf2f7; border-radius: 6px; padding: 15px; margin: 20px 0; text-align: center;">
+        <p style="margin: 0 0 10px; font-size: 14px;">View job details and documents in the portal:</p>
+        <a href="https://adasf1rst.com" style="display: inline-block; background: #2b6cb0; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold;">Open ADAS F1RST Portal</a>
+      </div>
+
       <p>If you have any questions about this job or need additional services, please reply to this email or call us.</p>
 
       <p>Thank you for your business!</p>
@@ -733,6 +738,11 @@ ATTACHED DOCUMENTS:
 - Invoice - Service charges for completed work
 
 All calibrations have been performed according to OEM specifications. The post-scan report confirms all ADAS systems are functioning properly.
+
+────────────────────────────────────────
+View job details and documents in the portal:
+https://adasf1rst.com
+────────────────────────────────────────
 
 If you have any questions about this job or need additional services, please reply to this email or call us.
 
