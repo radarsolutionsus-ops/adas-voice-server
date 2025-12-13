@@ -12,6 +12,47 @@
   let currentUserRole = null;
   let currentTechName = null;
 
+  // ============================================
+  // LOADING OVERLAY FUNCTIONS
+  // ============================================
+
+  window.showLoadingOverlay = function(message = 'Loading...') {
+    let overlay = document.getElementById('loadingOverlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'loadingOverlay';
+      overlay.innerHTML = `
+        <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:9999;">
+          <div style="background:white;padding:40px;border-radius:16px;text-align:center;max-width:300px;">
+            <div id="loadingSpinner" style="width:50px;height:50px;border:4px solid #e5e7eb;border-top-color:#7c3aed;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 20px;"></div>
+            <p id="loadingMessage" style="font-size:18px;font-weight:600;color:#374151;margin:0;">${message}</p>
+            <p style="font-size:14px;color:#6b7280;margin-top:8px;">Please wait...</p>
+          </div>
+        </div>
+        <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+      `;
+      document.body.appendChild(overlay);
+    } else {
+      document.getElementById('loadingMessage').textContent = message;
+      overlay.style.display = 'block';
+    }
+  };
+
+  window.hideLoadingOverlay = function() {
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) overlay.style.display = 'none';
+  };
+
+  window.showSuccessOverlay = function(message = 'Success!') {
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) {
+      const spinner = document.getElementById('loadingSpinner');
+      const msgEl = document.getElementById('loadingMessage');
+      if (spinner) spinner.style.display = 'none';
+      if (msgEl) msgEl.innerHTML = `<span style="color:#16a34a;font-size:32px;">✓</span><br>${message}`;
+    }
+  };
+
   document.addEventListener('DOMContentLoaded', async () => {
     if (!initTechPortal()) return;
 
@@ -344,19 +385,31 @@
   async function executeStatusUpdate(newStatus) {
     if (!currentJob) return;
 
+    const isComplete = newStatus === 'Completed';
+    showLoadingOverlay(isComplete ? 'Completing job...' : 'Updating status...');
+
     try {
       const response = await TechAPI.put(`/api/tech/vehicles/${currentJob.roPo}/status`, {
         status: newStatus
       });
 
       if (response.success) {
+        // Clear active job cache if completing
+        if (isComplete && typeof TechAPI !== 'undefined' && TechAPI.clearActiveJobCache) {
+          TechAPI.clearActiveJobCache();
+        }
+        showSuccessOverlay(isComplete ? 'Job completed!' : `Status: ${newStatus}`);
+        await new Promise(r => setTimeout(r, 1500));
+        hideLoadingOverlay();
         Toast.success(`Status updated to ${newStatus}`);
         closeModal();
         await loadJobs();
       } else {
+        hideLoadingOverlay();
         Toast.error(response.error || 'Failed to update status');
       }
     } catch (err) {
+      hideLoadingOverlay();
       Toast.error('Failed to update status');
     }
   }

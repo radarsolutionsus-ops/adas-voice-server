@@ -164,6 +164,48 @@ const TechAPI = {
   async getDocuments(roPo) {
     const data = await this.request(`/api/tech/vehicles/${encodeURIComponent(roPo)}/documents`);
     return data.documents;
+  },
+
+  /**
+   * Get active job (In Progress) for current tech
+   * Uses sessionStorage cache on API failure
+   */
+  async getActiveJob() {
+    try {
+      const data = await this.request('/api/tech/active-job');
+      if (data.success && data.activeJob) {
+        // Cache in sessionStorage for persistence
+        sessionStorage.setItem('activeJob', JSON.stringify(data.activeJob));
+        sessionStorage.setItem('activeJobTime', Date.now().toString());
+        return data.activeJob;
+      } else {
+        // No active job
+        sessionStorage.removeItem('activeJob');
+        sessionStorage.removeItem('activeJobTime');
+        return null;
+      }
+    } catch (err) {
+      console.warn('Failed to get active job from API, using cache:', err.message);
+      // Return cached job on error (prevents timer disappearing)
+      const cached = sessionStorage.getItem('activeJob');
+      return cached ? JSON.parse(cached) : null;
+    }
+  },
+
+  /**
+   * Get cached active job (without API call)
+   */
+  getCachedActiveJob() {
+    const cached = sessionStorage.getItem('activeJob');
+    return cached ? JSON.parse(cached) : null;
+  },
+
+  /**
+   * Clear active job cache (call when job is completed)
+   */
+  clearActiveJobCache() {
+    sessionStorage.removeItem('activeJob');
+    sessionStorage.removeItem('activeJobTime');
   }
 };
 

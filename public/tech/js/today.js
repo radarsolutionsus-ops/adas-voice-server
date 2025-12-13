@@ -250,21 +250,35 @@ function formatTime(timeStr) {
   if (!timeStr) return null;
   if (String(timeStr).includes('1899')) return null;
 
+  let time = String(timeStr).trim();
+
+  // Remove any duplicate AM/PM patterns like "PM AM" or "AM PM"
+  time = time.replace(/\s*(AM|PM)\s*(AM|PM)/gi, ' $1').trim();
+
+  // If already has AM/PM at end, just clean and return
+  if (/\d+:\d+\s*(AM|PM)$/i.test(time)) {
+    return time.replace(/\s+/g, ' ').trim();
+  }
+
   try {
-    if (String(timeStr).includes('T')) {
-      const timeDate = new Date(timeStr);
+    if (time.includes('T')) {
+      const timeDate = new Date(time);
       if (!isNaN(timeDate.getTime())) {
         return timeDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
       }
-    } else if (timeStr.includes(':')) {
-      const [hours, minutes] = timeStr.split(':');
-      const date = new Date();
-      date.setHours(parseInt(hours), parseInt(minutes));
-      return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    } else if (time.includes(':')) {
+      const match = time.match(/(\d{1,2}):(\d{2})/);
+      if (match) {
+        let hours = parseInt(match[1], 10);
+        const minutes = match[2];
+        const period = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12 || 12;
+        return `${hours}:${minutes} ${period}`;
+      }
     }
-    return timeStr;
+    return time;
   } catch {
-    return timeStr;
+    return time;
   }
 }
 
