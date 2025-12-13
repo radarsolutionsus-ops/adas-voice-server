@@ -139,13 +139,33 @@
     const container = document.getElementById('todayJobs');
     const today = new Date().toISOString().split('T')[0];
 
+    // Include ALL jobs scheduled for today (including completed)
     const todayJobs = allJobs.filter(job => {
       const jobDate = (job.scheduledDate || '').split('T')[0];
-      const status = (job.status || '').toLowerCase();
-      return jobDate === today && status !== 'completed';
+      return jobDate === today;
     });
 
-    document.getElementById('todayCount').textContent = todayJobs.length;
+    // Sort: In Progress first, then Scheduled/Rescheduled, then Ready, then Completed
+    todayJobs.sort((a, b) => {
+      const statusOrder = {
+        'in progress': 0,
+        'scheduled': 1,
+        'rescheduled': 1,
+        'en route': 2,
+        'on site': 2,
+        'ready': 3,
+        'completed': 4
+      };
+      const orderA = statusOrder[(a.status || '').toLowerCase()] ?? 99;
+      const orderB = statusOrder[(b.status || '').toLowerCase()] ?? 99;
+      if (orderA !== orderB) return orderA - orderB;
+      // Secondary sort by time
+      return (a.scheduledTime || '').localeCompare(b.scheduledTime || '');
+    });
+
+    // Count excludes completed for the header badge
+    const activeCount = todayJobs.filter(j => (j.status || '').toLowerCase() !== 'completed').length;
+    document.getElementById('todayCount').textContent = activeCount;
 
     if (todayJobs.length === 0) {
       container.innerHTML = `
@@ -206,9 +226,11 @@
     const time = formatTime(job.scheduledTime);
     const statusClass = getStatusClass(job.status);
     const roPo = escapeHtml(job.roPo || '');
+    const isCompleted = (job.status || '').toLowerCase() === 'completed';
+    const isInProgress = (job.status || '').toLowerCase() === 'in progress';
 
     return `
-      <div class="job-card ${isToday ? 'today' : ''}" onclick="openJobModal('${roPo}')">
+      <div class="job-card ${isToday ? 'today' : ''} ${statusClass}" onclick="openJobModal('${roPo}')">
         <div class="job-main">
           <div class="job-time">${time || '--:--'}</div>
           <div class="job-info">

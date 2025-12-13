@@ -131,11 +131,15 @@ export async function getVehicleDetail(req, res) {
     // Normalize PDF fields - handle both snake_case and camelCase from GAS
     const estimatePdf = row.estimate_pdf || row.estimatePdf || '';
     const revvReportPdf = row.revv_pdf || row.revvPdf || row.revvReportPdf || row.revv_report_pdf || '';
+    // Pre-Scan (from shop, Column W) - SEPARATE from Post-Scan
+    const preScanPdf = row.prescan_pdf || row.prescanPdf || row.preScanPdf || '';
+    // Post-Scan (from tech, Column N) - SEPARATE from Pre-Scan
     const postScanPdf = row.postscan_pdf || row.postScanPdf || row.post_scan_pdf || '';
     const invoicePdf = row.invoice_pdf || row.invoicePdf || '';
 
     console.log(`${LOG_TAG} Vehicle ${roPo} PDFs:`, {
       estimatePdf: estimatePdf ? 'YES' : 'NO',
+      preScanPdf: preScanPdf ? 'YES' : 'NO',
       revvReportPdf: revvReportPdf ? 'YES' : 'NO',
       postScanPdf: postScanPdf ? 'YES' : 'NO',
       invoicePdf: invoicePdf ? 'YES' : 'NO'
@@ -155,9 +159,9 @@ export async function getVehicleDetail(req, res) {
         dtcs: row.dtcs || '',
         notes: row.notes || '',
         estimatePdf: estimatePdf,
-        preScanPdf: postScanPdf,  // Pre-scan stored in postScan column
+        preScanPdf: preScanPdf,   // Pre-Scan from shop (Column W) - BEFORE work
         revvReportPdf: revvReportPdf,
-        postScanPdf: postScanPdf,
+        postScanPdf: postScanPdf, // Post-Scan from tech (Column N) - AFTER work
         invoicePdf: invoicePdf,
         flowHistory: row.flowHistory || row.flow_history || '',
         timestampCreated: row.timestampCreated || row.timestamp || ''
@@ -221,6 +225,7 @@ export async function submitVehicle(req, res) {
     }
 
     // Create the schedule entry
+    // Pre-Scan goes to Column W (prescanPdf), NOT Column N (postScanPdf)
     const result = await sheetWriter.upsertScheduleRowByRO(roPo, {
       shopName: user.sheetName,
       vin: vin,
@@ -228,7 +233,7 @@ export async function submitVehicle(req, res) {
       notes: fullNotes,
       status: 'New',
       estimatePdf: estimatePdfUrl || '',
-      postScanPdf: prescanPdfUrl || ''
+      prescanPdf: prescanPdfUrl || ''  // Pre-Scan from shop goes to Column W
     });
 
     if (!result.success) {
@@ -365,6 +370,7 @@ export async function submitVehicleWithFiles(req, res) {
     }
 
     // Create the schedule entry with extracted data
+    // Pre-Scan goes to Column W (prescanPdf), NOT Column N (postScanPdf)
     const result = await sheetWriter.upsertScheduleRowByRO(cleanRoPo, {
       shopName: user.sheetName,
       vin: extractedVin,
@@ -372,7 +378,7 @@ export async function submitVehicleWithFiles(req, res) {
       notes: fullNotes.trim(),
       status: 'New',
       estimatePdf: estimatePdfUrl,
-      postScanPdf: preScanPdfUrl // Pre-scan stored in postScanPdf column
+      prescanPdf: preScanPdfUrl  // Pre-Scan from shop goes to Column W
     });
 
     if (!result.success) {

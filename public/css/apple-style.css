@@ -1410,6 +1410,30 @@ a:hover {
   border-left: 3px solid var(--color-primary);
 }
 
+/* Completed jobs in Today's Schedule - subtle green styling */
+.job-card.status-completed {
+  background: #f0fdf4;
+  border-left: 4px solid #22c55e;
+  opacity: 0.85;
+}
+
+.job-card.status-completed:hover {
+  opacity: 1;
+}
+
+/* In Progress jobs - highlight with purple */
+.job-card.status-in-progress {
+  background: #eef2ff;
+  border-left: 4px solid #6366f1;
+}
+
+/* Scheduled jobs - amber highlight */
+.job-card.status-scheduled,
+.job-card.status-rescheduled {
+  background: #fffbeb;
+  border-left: 4px solid #f59e0b;
+}
+
 .job-main {
   display: flex;
   align-items: center;
