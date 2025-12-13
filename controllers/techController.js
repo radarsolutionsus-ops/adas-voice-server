@@ -52,8 +52,9 @@ export async function getAllVehicles(req, res) {
   try {
     const { status, search, shop } = req.query;
     const user = req.user;
+    const techName = getTechName(user);
 
-    console.log(`${LOG_TAG} Getting all vehicles for tech: ${user.techName}`);
+    console.log(`${LOG_TAG} Getting all vehicles for tech: ${techName}`);
 
     const result = await sheetWriter.getAllScheduleRows();
 
@@ -146,8 +147,9 @@ export async function getMyVehicles(req, res) {
   try {
     const user = req.user;
     const { status } = req.query;
+    const techName = getTechName(user);
 
-    console.log(`${LOG_TAG} Getting assigned vehicles for tech: ${user.techName}`);
+    console.log(`${LOG_TAG} Getting assigned vehicles for tech: ${techName}`);
 
     const result = await sheetWriter.getAllScheduleRows();
 
@@ -159,7 +161,7 @@ export async function getMyVehicles(req, res) {
     }
 
     // Filter by technician
-    let vehicles = filterByTechnician(result.rows || [], user.techName);
+    let vehicles = filterByTechnician(result.rows || [], techName);
 
     // Filter by status if provided
     if (status && status !== 'all') {
@@ -215,8 +217,9 @@ export async function getTodaySchedule(req, res) {
   try {
     const user = req.user;
     const { mine } = req.query;
+    const techName = getTechName(user);
 
-    console.log(`${LOG_TAG} Getting today's schedule for tech: ${user.techName}`);
+    console.log(`${LOG_TAG} Getting today's schedule for tech: ${techName}`);
 
     const result = await sheetWriter.getAllScheduleRows();
 
@@ -232,7 +235,7 @@ export async function getTodaySchedule(req, res) {
 
     // Optionally filter by assigned tech
     if (mine === 'true' || mine === '1') {
-      vehicles = filterByTechnician(vehicles, user.techName);
+      vehicles = filterByTechnician(vehicles, techName);
     }
 
     // Exclude cancelled
@@ -291,8 +294,9 @@ export async function getVehicleDetail(req, res) {
   try {
     const { roPo } = req.params;
     const user = req.user;
+    const techName = getTechName(user);
 
-    console.log(`${LOG_TAG} Getting vehicle ${roPo} for tech: ${user.techName}`);
+    console.log(`${LOG_TAG} Getting vehicle ${roPo} for tech: ${techName}`);
 
     const row = await sheetWriter.getScheduleRowByRO(roPo);
 
@@ -355,6 +359,7 @@ export async function updateStatus(req, res) {
     const { roPo } = req.params;
     const { status, notes } = req.body;
     const user = req.user;
+    const techName = getTechName(user);
 
     if (!status) {
       return res.status(400).json({ success: false, error: 'Status is required' });
@@ -373,13 +378,13 @@ export async function updateStatus(req, res) {
       return res.status(404).json({ success: false, error: 'Vehicle not found' });
     }
 
-    console.log(`${LOG_TAG} Updating status for RO ${roPo} to "${status}" by tech: ${user.techName}`);
+    console.log(`${LOG_TAG} Updating status for RO ${roPo} to "${status}" by tech: ${techName}`);
 
     const timestamp = new Date().toISOString();
     let updatedNotes = row.notes || '';
 
     // Add status change note
-    updatedNotes += `\n[${timestamp}] Status changed to "${status}" by ${user.techName}`;
+    updatedNotes += `\n[${timestamp}] Status changed to "${status}" by ${techName}`;
 
     // Add optional note if provided
     if (notes) {
@@ -420,16 +425,17 @@ export async function markArrival(req, res) {
   try {
     const { roPo } = req.params;
     const user = req.user;
+    const techName = getTechName(user);
 
     const row = await sheetWriter.getScheduleRowByRO(roPo);
     if (!row) {
       return res.status(404).json({ success: false, error: 'Vehicle not found' });
     }
 
-    console.log(`${LOG_TAG} Logging arrival for RO ${roPo} by tech: ${user.techName}`);
+    console.log(`${LOG_TAG} Logging arrival for RO ${roPo} by tech: ${techName}`);
 
     const timestamp = new Date().toISOString();
-    const arrivalNote = `[${timestamp}] Tech ${user.techName} arrived on site`;
+    const arrivalNote = `[${timestamp}] Tech ${techName} arrived on site`;
 
     const result = await sheetWriter.upsertScheduleRowByRO(roPo, {
       status: 'On Site',
@@ -552,6 +558,7 @@ export async function addTechNote(req, res) {
     const { roPo } = req.params;
     const { note } = req.body;
     const user = req.user;
+    const techName = getTechName(user);
 
     if (!note || !note.trim()) {
       return res.status(400).json({ success: false, error: 'Note is required' });
@@ -563,7 +570,7 @@ export async function addTechNote(req, res) {
     }
 
     const timestamp = new Date().toISOString();
-    const techNote = `[${timestamp}] Tech ${user.techName}: ${note.trim()}`;
+    const techNote = `[${timestamp}] Tech ${techName}: ${note.trim()}`;
 
     const result = await sheetWriter.upsertScheduleRowByRO(roPo, {
       notes: `${row.notes || ''}\n${techNote}`.trim()
@@ -633,6 +640,7 @@ export async function getDocuments(req, res) {
 export async function getStats(req, res) {
   try {
     const user = req.user;
+    const techName = getTechName(user);
 
     const result = await sheetWriter.getAllScheduleRows();
     if (!result.success) {
@@ -643,9 +651,9 @@ export async function getStats(req, res) {
     }
 
     const allVehicles = result.rows || [];
-    const myVehicles = filterByTechnician(allVehicles, user.techName);
+    const myVehicles = filterByTechnician(allVehicles, techName);
     const todayAll = filterTodaySchedule(allVehicles);
-    const todayMine = filterByTechnician(todayAll, user.techName);
+    const todayMine = filterByTechnician(todayAll, techName);
 
     // Count by status for all vehicles
     const statsByStatus = {
@@ -701,6 +709,7 @@ export async function uploadDocument(req, res) {
   try {
     const { roPo } = req.params;
     const user = req.user;
+    const techName = getTechName(user);
 
     // Debug logging for form data - log everything
     console.log(`${LOG_TAG} Upload request for RO: ${roPo}`);
@@ -737,7 +746,7 @@ export async function uploadDocument(req, res) {
       return res.status(404).json({ success: false, error: 'Vehicle not found' });
     }
 
-    console.log(`${LOG_TAG} Uploading ${docType} for RO ${roPo} by tech: ${user.techName}`);
+    console.log(`${LOG_TAG} Uploading ${docType} for RO ${roPo} by tech: ${techName}`);
 
     // Import drive upload service dynamically
     const { uploadPDF } = await import('../services/driveUpload.js');
@@ -850,7 +859,7 @@ export async function uploadDocument(req, res) {
           make: row.vehicle?.split(' ')[1],
           model: row.vehicle?.split(' ').slice(2).join(' '),
           full: row.vehicle
-        }, parsedCalibrations, user.techName);
+        }, parsedCalibrations, techName);
 
       } catch (emailErr) {
         console.error(`${LOG_TAG} Error in post-upload processing:`, emailErr.message);
@@ -1373,7 +1382,7 @@ export async function requestAssignment(req, res) {
       return res.status(404).json({ success: false, error: 'Vehicle not found' });
     }
 
-    const techName = requestingTech || user.techName;
+    const techName = requestingTech || getTechName(user);
     const currentTech = row.technician || row.technicianAssigned || '';
 
     console.log(`${LOG_TAG} Assignment request for RO ${roPo} by ${techName} (current: ${currentTech})`);
@@ -1417,7 +1426,8 @@ export async function requestAssignment(req, res) {
 export async function triggerEmailCheck(req, res) {
   try {
     const user = req.user;
-    console.log(`${LOG_TAG} Manual email check triggered by: ${user.techName}`);
+    const techName = getTechName(user);
+    console.log(`${LOG_TAG} Manual email check triggered by: ${techName}`);
 
     // Import email listener
     const emailListener = await import('../services/emailListener.js');
