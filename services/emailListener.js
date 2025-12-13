@@ -1202,9 +1202,10 @@ async function processEmail(message) {
               console.log(`${LOG_TAG} *** [SCAN FALLBACK] Found exact RO match: ${roPo}`);
             } else {
               // Look for RO starting with extracted number (e.g., "3096" matches "3096-ENT")
+              const roPoUpper = roPo.toUpperCase();
               const prefixMatch = allRows.find(row => {
                 const rowRo = (row.ro_po || '').toUpperCase();
-                return rowRo.startsWith(roPo) && rowRo.length > roPo.length;
+                return rowRo.startsWith(roPoUpper) && rowRo.length > roPoUpper.length;
               });
               if (prefixMatch) {
                 const fullRo = prefixMatch.ro_po;
@@ -2097,11 +2098,13 @@ async function processEmail(message) {
     console.log(`${LOG_TAG} === STATUS DECISION: ${status} (${statusChangeNote}) ===`);
 
     // === STATUS PROTECTION: Prevent downgrade from higher-priority statuses ===
-    // Status hierarchy: Completed > Scheduled > Rescheduled > Ready > No Cal > New
+    // Status hierarchy: Completed > In Progress > Scheduled > Rescheduled > Ready > No Cal > New
     // Only allow status to go UP, never DOWN (except Cancelled can override anything)
     // Note: "No Cal" is a terminal state similar to Ready - once set, don't downgrade
+    // Note: "In Progress" means tech is actively working - NEVER downgrade this
     const STATUS_PRIORITY = {
-      'Completed': 6,
+      'Completed': 7,
+      'In Progress': 6,  // Tech actively working - highest protection below Completed
       'Scheduled': 5,
       'Rescheduled': 4,
       'Ready': 3,
