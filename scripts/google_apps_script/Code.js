@@ -4353,7 +4353,10 @@ function formatTimestampForNotes(date) {
 
 /**
  * Get assigned technician based on shop region
- * Reads region from Shops tab Column G, matches tech from Technicians tab Column F (Regions)
+ * Uses hardcoded SHOP_REGION_MAP and REGION_TECH_MAP as primary source,
+ * falls back to Shops/Technicians sheets if not found in maps.
+ *
+ * JMD AUTO BODY COLLISION → Broward → Randy
  */
 function getAssignedTechForShop(shopName) {
   Logger.log('getAssignedTechForShop called with: "' + shopName + '"');
@@ -4363,25 +4366,54 @@ function getAssignedTechForShop(shopName) {
     return 'Felipe';
   }
 
-  const shopNameLower = String(shopName).toLowerCase().trim();
-  let region = 'Hialeah'; // Default region
-  let foundShop = false;
+  const shopNameNormalized = String(shopName).trim();
+  const shopNameLower = shopNameNormalized.toLowerCase();
 
-  // Step 1: Find shop's region from Shops tab (Column G = index 6)
+  // Step 1: Try hardcoded SHOP_REGION_MAP first (most reliable)
+  let region = null;
+
+  // Exact match first
+  if (SHOP_REGION_MAP[shopNameNormalized]) {
+    region = SHOP_REGION_MAP[shopNameNormalized];
+    Logger.log('Found exact match in SHOP_REGION_MAP: "' + shopNameNormalized + '" → "' + region + '"');
+  }
+
+  // Fuzzy match on hardcoded map
+  if (!region) {
+    for (const [mapShop, mapRegion] of Object.entries(SHOP_REGION_MAP)) {
+      if (mapShop.toLowerCase() === shopNameLower ||
+          mapShop.toLowerCase().includes(shopNameLower) ||
+          shopNameLower.includes(mapShop.toLowerCase())) {
+        region = mapRegion;
+        Logger.log('Found fuzzy match in SHOP_REGION_MAP: "' + shopNameNormalized + '" → "' + mapShop + '" → "' + region + '"');
+        break;
+      }
+    }
+  }
+
+  // Step 2: If found in map, use REGION_TECH_MAP directly
+  if (region && REGION_TECH_MAP[region]) {
+    const tech = REGION_TECH_MAP[region];
+    Logger.log('Using REGION_TECH_MAP: "' + region + '" → "' + tech + '"');
+    return tech;
+  }
+
+  // Step 3: Fall back to Shops sheet lookup (Column H = SHOP_COL.REGION = index 7)
+  let foundShop = false;
   try {
     const shopsSheet = SpreadsheetApp.getActive().getSheetByName(SHOPS_SHEET);
     if (shopsSheet) {
       const shopsData = shopsSheet.getDataRange().getValues();
-      Logger.log('Shops sheet has ' + shopsData.length + ' rows');
+      Logger.log('Shops sheet has ' + shopsData.length + ' rows, looking up region from Column H (index 7)');
 
       for (let i = 1; i < shopsData.length; i++) {
-        const rowShopName = String(shopsData[i][0] || '').toLowerCase().trim();
+        const rowShopName = String(shopsData[i][SHOP_COL.NAME] || '').toLowerCase().trim();
         // Fuzzy match: exact, contains, or contained by
         if (rowShopName === shopNameLower ||
             rowShopName.includes(shopNameLower) ||
             shopNameLower.includes(rowShopName)) {
-          const shopRegion = shopsData[i][6]; // Column G = Region
-          Logger.log('Found shop match: "' + shopsData[i][0] + '" → Region: "' + shopRegion + '"');
+          const shopRegion = shopsData[i][SHOP_COL.REGION]; // Column H = Region (index 7)
+          Logger.log('Found shop match in sheet: "' + shopsData[i][SHOP_COL.NAME] + '" → Region: "' + shopRegion + '"');
           if (shopRegion) {
             region = String(shopRegion).trim();
           }
@@ -4391,7 +4423,7 @@ function getAssignedTechForShop(shopName) {
       }
 
       if (!foundShop) {
-        Logger.log('No shop match found for: "' + shopName + '" - using default region: ' + region);
+        Logger.log('No shop match found in Shops sheet for: "' + shopName + '"');
       }
     } else {
       Logger.log('Shops sheet not found!');
@@ -4400,40 +4432,44 @@ function getAssignedTechForShop(shopName) {
     Logger.log('Error reading Shops sheet: ' + e.message);
   }
 
-  // Step 2: Find active tech assigned to this region from Technicians tab
-  // Column F (index 5) = Regions (comma-separated), Column H (index 7) = Active
-  try {
-    const techsSheet = SpreadsheetApp.getActive().getSheetByName(TECHNICIANS_SHEET);
-    if (techsSheet) {
-      const techsData = techsSheet.getDataRange().getValues();
-      const regionLower = region.toLowerCase();
-      Logger.log('Looking for tech with region containing: "' + regionLower + '"');
+  // Step 4: If region from sheet, check REGION_TECH_MAP first
+  if (region && REGION_TECH_MAP[region]) {
+    const tech = REGION_TECH_MAP[region];
+    Logger.log('Using REGION_TECH_MAP for sheet region: "' + region + '" → "' + tech + '"');
+    return tech;
+  }
 
-      for (let i = 1; i < techsData.length; i++) {
-        const techName = techsData[i][0];
-        const techRegions = String(techsData[i][5] || '').toLowerCase();
-        const isActiveRaw = techsData[i][7];
-        // Handle various "active" representations: true, TRUE, "TRUE", "Yes", 1, etc.
-        const isActive = isActiveRaw === true ||
-                         String(isActiveRaw).toLowerCase() === 'true' ||
-                         String(isActiveRaw).toLowerCase() === 'yes' ||
-                         isActiveRaw === 1;
+  // Step 5: Fall back to Technicians sheet lookup
+  if (region) {
+    try {
+      const techsSheet = SpreadsheetApp.getActive().getSheetByName(TECHNICIANS_SHEET);
+      if (techsSheet) {
+        const techsData = techsSheet.getDataRange().getValues();
+        const regionLower = region.toLowerCase();
+        Logger.log('Looking for tech with region containing: "' + regionLower + '"');
 
-        Logger.log('Tech "' + techName + '": regions="' + techRegions + '", active=' + isActiveRaw + ' (parsed: ' + isActive + ')');
+        for (let i = 1; i < techsData.length; i++) {
+          const techName = techsData[i][0];
+          const techRegions = String(techsData[i][5] || '').toLowerCase();
+          const isActiveRaw = techsData[i][7];
+          const isActive = isActiveRaw === true ||
+                           String(isActiveRaw).toLowerCase() === 'true' ||
+                           String(isActiveRaw).toLowerCase() === 'yes' ||
+                           isActiveRaw === 1;
 
-        // Check if tech covers this region and is active
-        if (techRegions.includes(regionLower) && isActive) {
-          Logger.log('MATCH! Assigning tech: ' + techName);
-          return techName; // Column A = Tech Name
+          Logger.log('Tech "' + techName + '": regions="' + techRegions + '", active=' + isActiveRaw + ' (parsed: ' + isActive + ')');
+
+          if (techRegions.includes(regionLower) && isActive) {
+            Logger.log('MATCH from Technicians sheet! Assigning tech: ' + techName);
+            return techName;
+          }
         }
-      }
 
-      Logger.log('No active tech found for region: ' + region);
-    } else {
-      Logger.log('Technicians sheet not found!');
+        Logger.log('No active tech found for region: ' + region);
+      }
+    } catch (e) {
+      Logger.log('Error reading Technicians sheet: ' + e.message);
     }
-  } catch (e) {
-    Logger.log('Error reading Technicians sheet: ' + e.message);
   }
 
   // Default fallback

@@ -1315,9 +1315,10 @@ async function processEmail(message) {
       }
     }
 
-    // ADDITIONAL FIX: VIN matching for scan reports regardless of roSource
-    // This handles cases where RO came from filename (e.g., "12317 post.pdf" → "12317")
-    // but VIN matching finds a different existing RO
+    // CRITICAL FIX: VIN matching for scan reports (Post-Scan, Pre-Scan)
+    // For scan reports, ALWAYS use VIN to find the correct RO
+    // This handles cases like "3096 Post.pdf" where filename RO might not exist
+    // Priority: In Progress > Scheduled > any status
     if (!roNormalized) {
       for (const pdf of pdfs) {
         const pdfType = detectPDFType(pdf.filename);
@@ -1333,23 +1334,40 @@ async function processEmail(message) {
 
             if (vinMatches && vinMatches.length > 0) {
               const extractedVin = vinMatches[0].toUpperCase();
-              console.log(`${LOG_TAG} *** [GLOBAL] Extracted VIN from scan report: ${extractedVin}`);
+              console.log(`${LOG_TAG} *** [SCAN REPORT VIN] Extracted VIN: ${extractedVin}`);
 
               const vinMatch = await sheetWriter.lookupByVIN(extractedVin);
               if (vinMatch) {
                 const existingRO = vinMatch.ro_po || vinMatch.roPo || vinMatch.ro_number;
-                // Only use VIN-matched RO if it's different from current and exists
-                if (existingRO && existingRO !== roPo) {
-                  console.log(`${LOG_TAG} *** [GLOBAL] VIN MATCH! Using RO "${existingRO}" instead of "${roPo}"`);
-                  originalRoPo = roPo;
-                  roPo = existingRO;
-                  roNormalized = true;
-                  break;
+                const existingStatus = vinMatch.status || '';
+                console.log(`${LOG_TAG} *** [SCAN REPORT VIN] Found row: RO="${existingRO}", Status="${existingStatus}"`);
+
+                // Check if filename-derived RO exists in sheet
+                const currentRoExists = await sheetWriter.getScheduleRowByRO(roPo);
+
+                if (existingRO) {
+                  // If filename RO doesn't exist, ALWAYS use VIN-matched RO
+                  // If filename RO exists but VIN matches a different row, use VIN-matched RO
+                  if (!currentRoExists || existingRO !== roPo) {
+                    console.log(`${LOG_TAG} *** [SCAN REPORT VIN] Using RO "${existingRO}" instead of "${roPo}" (currentRoExists=${!!currentRoExists})`);
+                    originalRoPo = roPo;
+                    roPo = existingRO;
+                    roNormalized = true;
+                    break;
+                  } else {
+                    console.log(`${LOG_TAG} *** [SCAN REPORT VIN] RO "${roPo}" exists and matches VIN - using it`);
+                    roNormalized = true;
+                    break;
+                  }
                 }
+              } else {
+                console.log(`${LOG_TAG} *** [SCAN REPORT VIN] No row found for VIN: ${extractedVin}`);
               }
+            } else {
+              console.log(`${LOG_TAG} *** [SCAN REPORT VIN] No VIN found in PDF: ${pdf.filename}`);
             }
           } catch (scanErr) {
-            console.log(`${LOG_TAG} [GLOBAL] Could not extract VIN from scan report: ${scanErr.message}`);
+            console.log(`${LOG_TAG} [SCAN REPORT VIN] Error extracting VIN: ${scanErr.message}`);
           }
         }
       }
@@ -2316,9 +2334,22 @@ function detectPDFType(filename) {
   }
 
   // SCAN REPORT: Autel or scan in filename
-  if (lower.includes('scan') || lower.includes('autel') || lower.includes('postscan') || lower.includes('post-scan')) {
+  // Also detect "post" alone as Post-Scan (e.g., "3096 Post.pdf")
+  const isScanReport = lower.includes('scan') ||
+                       lower.includes('autel') ||
+                       lower.includes('postscan') ||
+                       lower.includes('post-scan') ||
+                       lower.includes(' post') ||  // "3096 Post.pdf"
+                       lower.includes('_post') ||  // "3096_Post.pdf"
+                       lower.includes('-post') ||  // "3096-Post.pdf"
+                       lower.includes('prescan') ||
+                       lower.includes('pre-scan') ||
+                       lower.includes(' pre') ||   // "3096 Pre.pdf"
+                       lower.includes('_pre') ||   // "3096_Pre.pdf"
+                       lower.includes('-pre');     // "3096-Pre.pdf"
+  if (isScanReport) {
     const isPostScan = lower.includes('post') || lower.includes('final') || lower.includes('after');
-    console.log(`${LOG_TAG} Detected ${isPostScan ? 'Post-' : ''}Scan Report: ${filename}`);
+    console.log(`${LOG_TAG} Detected ${isPostScan ? 'Post-' : 'Pre-'}Scan Report: ${filename}`);
     return 'scan_report';
   }
 
