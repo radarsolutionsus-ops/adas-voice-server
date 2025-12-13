@@ -1308,17 +1308,31 @@
     function formatTime(timeStr) {
       if (!timeStr) return '';
       try {
-        // Handle various formats
-        if (timeStr.includes('T')) {
-          const d = new Date(timeStr);
+        let time = String(timeStr).trim();
+
+        // Fix duplicate AM/PM first (e.g., "8:55 PM AM" -> "8:55 PM")
+        time = time.replace(/\s*(AM|PM)\s*(AM|PM)/gi, ' $1').trim();
+
+        // If already has AM/PM, just clean and return
+        if (/\d+:\d+\s*(AM|PM)$/i.test(time)) {
+          return time;
+        }
+
+        // Handle ISO formats
+        if (time.includes('T')) {
+          const d = new Date(time);
           return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
         }
-        // Handle "HH:MM" format
-        const [hours, minutes] = timeStr.split(':');
-        const h = parseInt(hours);
-        const ampm = h >= 12 ? 'PM' : 'AM';
-        const h12 = h % 12 || 12;
-        return `${h12}:${minutes} ${ampm}`;
+        // Handle "HH:MM" format (24-hour)
+        const match = time.match(/^(\d{1,2}):(\d{2})/);
+        if (match) {
+          const h = parseInt(match[1]);
+          const minutes = match[2];
+          const ampm = h >= 12 ? 'PM' : 'AM';
+          const h12 = h % 12 || 12;
+          return `${h12}:${minutes} ${ampm}`;
+        }
+        return time;
       } catch { return timeStr; }
     }
 

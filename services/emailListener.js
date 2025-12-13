@@ -1072,6 +1072,7 @@ async function processEmail(message) {
 
     // === RO/PO EXTRACTION CHAIN ===
     // FIXED PRIORITY ORDER:
+    // 0. SCAN REPORTS (Post-Scan, Pre-Scan): Use VIN matching FIRST - NEVER extract RO from filename
     // 1. Email subject (JMD sends just RO number as subject like "3095")
     // 2. Explicit filename (PO/RO prefix like "PO 11999-PM.pdf")
     // 3. Estimate filename (numeric only like "3095.pdf")
@@ -1083,6 +1084,79 @@ async function processEmail(message) {
     let roSource = null;
     let isSyntheticRo = false;
     let detectedSuffix = null;
+    let roNormalized = false;  // Track if RO was found via VIN matching
+
+    // === STEP 0: SCAN REPORT VIN MATCHING (CRITICAL - RUN FIRST) ===
+    // For Post-Scan and Pre-Scan PDFs, ALWAYS use VIN matching to find the correct RO
+    // This prevents extracting garbage like "ST" from "Post" in filenames
+    const scanReportPdfs = pdfs.filter(pdf => {
+      const lower = (pdf.filename || '').toLowerCase();
+      return lower.includes('post') || lower.includes('pre') ||
+             lower.includes('scan') || lower.includes('autel');
+    });
+
+    if (scanReportPdfs.length > 0) {
+      console.log(`${LOG_TAG} *** SCAN REPORT DETECTED: ${scanReportPdfs.map(p => p.filename).join(', ')}`);
+      console.log(`${LOG_TAG} *** Using VIN matching to find correct RO...`);
+
+      for (const pdf of scanReportPdfs) {
+        try {
+          const pdfParse = await import('pdf-parse');
+          const pdfData = await pdfParse.default(pdf.buffer);
+          const pdfText = pdfData.text || '';
+
+          // Extract VIN from scan report content (17 chars, no I/O/Q)
+          const vinPattern = /\b([A-HJ-NPR-Z0-9]{17})\b/gi;
+          const vinMatches = pdfText.match(vinPattern);
+
+          if (vinMatches && vinMatches.length > 0) {
+            // Validate VIN candidates and find the best one
+            let extractedVin = null;
+            for (const match of vinMatches) {
+              const candidate = match.toUpperCase();
+              if (isValidVinCandidate(candidate)) {
+                extractedVin = candidate;
+                break;
+              }
+            }
+
+            if (extractedVin) {
+              console.log(`${LOG_TAG} *** [SCAN VIN] Extracted VIN from ${pdf.filename}: ${extractedVin}`);
+
+              const vinMatch = await sheetWriter.lookupByVIN(extractedVin);
+              if (vinMatch) {
+                const existingRO = vinMatch.ro_po || vinMatch.roPo || vinMatch.ro_number;
+                const existingStatus = vinMatch.status || '';
+                console.log(`${LOG_TAG} *** [SCAN VIN] VIN ${extractedVin} → RO: ${existingRO} (status: ${existingStatus})`);
+
+                if (existingRO) {
+                  roPo = existingRO;
+                  roSource = `scan_vin_match:${pdf.filename}`;
+                  roNormalized = true;
+                  console.log(`${LOG_TAG} *** [SCAN VIN] SUCCESS: Using RO "${roPo}" from VIN match`);
+                  break;
+                }
+              } else {
+                console.log(`${LOG_TAG} *** [SCAN VIN] No row found for VIN: ${extractedVin}`);
+              }
+            } else {
+              console.log(`${LOG_TAG} *** [SCAN VIN] No valid VIN found in ${pdf.filename}`);
+            }
+          } else {
+            console.log(`${LOG_TAG} *** [SCAN VIN] No VIN pattern matches in ${pdf.filename}`);
+          }
+        } catch (scanErr) {
+          console.log(`${LOG_TAG} *** [SCAN VIN] Error processing ${pdf.filename}: ${scanErr.message}`);
+        }
+      }
+
+      // If VIN matching failed for scan reports, mark email as processed but don't create garbage row
+      if (!roPo && scanReportPdfs.length === pdfs.length) {
+        console.log(`${LOG_TAG} *** [SCAN VIN] FAILED: No RO found via VIN matching for scan-only email`);
+        console.log(`${LOG_TAG} *** Marking email as processed to avoid reprocessing`);
+        // Still let it continue to try other methods in case there's additional context
+      }
+    }
 
     // Helper: Detect insurance suffix from filename (ENT, SIXT, etc.)
     const detectSuffix = (filename) => {
@@ -1239,9 +1313,9 @@ async function processEmail(message) {
     // When RO comes from PDF content (e.g., "3080-ENT"), check if a base match exists ("3080")
     // This prevents creating duplicate rows for the same job
     let originalRoPo = roPo;  // Keep original for later reference
-    let roNormalized = false;
+    // Note: roNormalized already declared at top of function
 
-    if (roSource && roSource.startsWith('pdf_content')) {
+    if (!roNormalized && roSource && roSource.startsWith('pdf_content')) {
       // Helper to extract base RO number (strips -ENT, -FOX, -PM suffixes)
       const getBaseRO = (ro) => {
         if (!ro) return null;

@@ -3741,6 +3741,15 @@
       };
       const docType = typeMap[type] || type;
 
+      // Show loading indicator with document type
+      const loadingMessages = {
+        'invoice': 'Uploading Invoice...',
+        'postScan': 'Uploading Post-Scan...',
+        'revvReport': 'Uploading RevvADAS Report...',
+        'extraDocs': 'Uploading Document...'
+      };
+      showLoading(loadingMessages[docType] || 'Uploading...');
+
       try {
         const formData = new FormData();
         // IMPORTANT: Text fields MUST come BEFORE file for multer to parse them correctly
@@ -3759,6 +3768,10 @@
         const data = await response.json();
         if (!data.success) throw new Error(data.error);
 
+        // Show success briefly
+        showLoading('Upload Complete ✓');
+        await new Promise(r => setTimeout(r, 800));
+
         // Refresh the job data and re-render modal
         await loadJobs();
         currentJob = allJobs.find(j => j.roPo === currentJob.roPo);
@@ -3768,7 +3781,10 @@
           initInProgressUploadHandlers();
         }
 
+        hideLoading();
+        showToast('Document uploaded successfully', 'success');
       } catch (err) {
+        hideLoading();
         showToast('Failed to upload: ' + err.message, 'error');
       }
     }

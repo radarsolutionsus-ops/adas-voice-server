@@ -504,6 +504,11 @@ export async function markComplete(req, res) {
       });
     }
 
+    // Send completion email to shop (async, don't block response)
+    sendCompletionEmailToShop(roPo, row, completedCalibrations || row.requiredCalibrations).catch(err => {
+      console.error(`${LOG_TAG} Background completion email failed for RO ${roPo}:`, err.message);
+    });
+
     res.json({
       success: true,
       message: 'Job marked as complete',
