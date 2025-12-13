@@ -24,6 +24,11 @@ import {
 
 const LOG_TAG = '[TECH_CTRL]';
 
+// Helper to get tech name with fallbacks
+function getTechName(user) {
+  return user?.techName || user?.name || user?.username || 'Unknown';
+}
+
 // Valid status values for techs
 const VALID_STATUSES = [
   'New',
@@ -463,25 +468,39 @@ export async function markComplete(req, res) {
     const { roPo } = req.params;
     const { completedCalibrations, notes, postScanPdfUrl } = req.body;
     const user = req.user;
+    const techName = getTechName(user);
 
     const row = await sheetWriter.getScheduleRowByRO(roPo);
     if (!row) {
       return res.status(404).json({ success: false, error: 'Vehicle not found' });
     }
 
-    console.log(`${LOG_TAG} Marking complete for RO ${roPo} by tech: ${user.techName}`);
+    console.log(`${LOG_TAG} Marking complete for RO ${roPo} by tech: ${techName}`);
 
-    const timestamp = new Date().toISOString();
+    // Record completion time in Miami timezone
+    const now = new Date();
+    const timestamp = now.toISOString();
+    const jobEndFormatted = now.toLocaleString('en-US', {
+      timeZone: 'America/New_York',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+
     let completionNotes = row.notes || '';
-    completionNotes += `\n[${timestamp}] Job completed by ${user.techName}`;
+    completionNotes += `\n[${jobEndFormatted}] Job completed by ${techName}`;
 
     if (notes) {
-      completionNotes += `\n[${timestamp}] Completion note: ${notes}`;
+      completionNotes += `\n[${jobEndFormatted}] Completion note: ${notes}`;
     }
 
     const updateData = {
       status: 'Completed',
       completionTime: timestamp,
+      job_end: jobEndFormatted,  // Column Y - Job End timestamp
       notes: completionNotes.trim()
     };
 
@@ -908,7 +927,8 @@ export async function startJob(req, res) {
     }
 
     console.log(`${LOG_TAG} ====== START JOB REQUEST ======`);
-    console.log(`${LOG_TAG} RO: ${roPo}, Tech: ${user.techName}`);
+    const techName = getTechName(user);
+    console.log(`${LOG_TAG} RO: ${roPo}, Tech: ${techName}`);
 
     // Check if tech already has an active job
     const allResult = await sheetWriter.getAllScheduleRows();
@@ -916,7 +936,7 @@ export async function startJob(req, res) {
       return res.status(500).json({ success: false, error: 'Failed to check active jobs' });
     }
 
-    const techNameLower = (user.techName || '').toLowerCase().trim();
+    const techNameLower = techName.toLowerCase().trim();
     const activeJob = (allResult.rows || []).find(row => {
       const rowTech = (row.technician || row.technicianAssigned || '').toLowerCase().trim();
       const status = (row.status || '').toLowerCase();
@@ -969,7 +989,7 @@ export async function startJob(req, res) {
 
     // Also keep ISO timestamp for notes
     const timestamp = now.toISOString();
-    let startNote = `[${jobStartFormatted}] Job started by ${user.techName}`;
+    let startNote = `[${jobStartFormatted}] Job started by ${techName}`;
 
     // Check if schedule date is being changed
     const oldScheduledDate = row.scheduledDate || row.scheduled_date || '';
@@ -982,11 +1002,11 @@ export async function startJob(req, res) {
     }
 
     console.log(`${LOG_TAG} Miami time - Date: ${todayStr}, Time: ${currentTime}, JobStart: ${jobStartFormatted}`);
-    console.log(`${LOG_TAG} Updating Google Sheets - Status: "In Progress", Technician: "${user.techName}"`);
+    console.log(`${LOG_TAG} Updating Google Sheets - Status: "In Progress", Technician: "${techName}"`);
 
     const result = await sheetWriter.upsertScheduleRowByRO(roPo, {
       status: 'In Progress',
-      technician: user.techName,
+      technician: techName,
       scheduledDate: todayStr,
       scheduledTime: currentTime,
       job_start: jobStartFormatted,  // Column X - Job Start timestamp (human readable)
@@ -1043,7 +1063,8 @@ export async function completeJob(req, res) {
       return res.status(400).json({ success: false, error: 'RO/PO is required' });
     }
 
-    console.log(`${LOG_TAG} Complete job request for RO ${roPo} by tech: ${user.techName}`);
+    const techName = getTechName(user);
+    console.log(`${LOG_TAG} Complete job request for RO ${roPo} by tech: ${techName}`);
 
     // Verify job exists
     const row = await sheetWriter.getScheduleRowByRO(roPo);
@@ -1051,10 +1072,21 @@ export async function completeJob(req, res) {
       return res.status(404).json({ success: false, error: 'Vehicle not found' });
     }
 
-    // Record completion time
-    const timestamp = new Date().toISOString();
+    // Record completion time in Miami timezone
+    const now = new Date();
+    const timestamp = now.toISOString();
+    const jobEndFormatted = now.toLocaleString('en-US', {
+      timeZone: 'America/New_York',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    }); // e.g., "12/12/2025, 3:15 PM"
+
     let completionNotes = row.notes || '';
-    completionNotes += `\n[${timestamp}] Job completed by ${user.techName}`;
+    completionNotes += `\n[${jobEndFormatted}] Job completed by ${techName}`;
 
     if (completedCalibrations) {
       completionNotes += `\nCalibrations performed: ${completedCalibrations}`;
@@ -1067,6 +1099,7 @@ export async function completeJob(req, res) {
     const updateData = {
       status: 'Completed',
       completionTime: timestamp,
+      job_end: jobEndFormatted,  // Column Y - Job End timestamp
       notes: completionNotes.trim()
     };
 
@@ -1265,14 +1298,15 @@ async function sendCompletionEmailToShop(roPo, row, completedCalibrations) {
 export async function getActiveJob(req, res) {
   try {
     const user = req.user;
-    console.log(`${LOG_TAG} Getting active job for tech: ${user.techName}`);
+    const techName = getTechName(user);
+    console.log(`${LOG_TAG} Getting active job for tech: ${techName}`);
 
     const result = await sheetWriter.getAllScheduleRows();
     if (!result.success) {
       return res.status(500).json({ success: false, error: 'Failed to fetch jobs' });
     }
 
-    const techNameLower = (user.techName || '').toLowerCase().trim();
+    const techNameLower = techName.toLowerCase().trim();
 
     // Log all "In Progress" jobs to debug
     const inProgressJobs = (result.rows || []).filter(row => {
@@ -1291,11 +1325,11 @@ export async function getActiveJob(req, res) {
     });
 
     if (!activeJob) {
-      console.log(`${LOG_TAG} No active job found for tech "${user.techName}" - returning null`);
+      console.log(`${LOG_TAG} No active job found for tech "${techName}" - returning null`);
       return res.json({ success: true, activeJob: null });
     }
 
-    console.log(`${LOG_TAG} Found active job: RO ${activeJob.roPo} for tech ${user.techName}`);
+    console.log(`${LOG_TAG} Found active job: RO ${activeJob.roPo} for tech ${techName}`);
 
     res.json({
       success: true,

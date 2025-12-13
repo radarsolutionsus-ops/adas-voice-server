@@ -1150,12 +1150,23 @@ async function processEmail(message) {
         }
       }
 
-      // If VIN matching failed for scan reports, mark email as processed but don't create garbage row
+      // If VIN matching failed for scan-only email, mark as processed and return early
+      // This prevents garbage RO extraction like "ST" from "Post Scan.pdf"
       if (!roPo && scanReportPdfs.length === pdfs.length) {
         console.log(`${LOG_TAG} *** [SCAN VIN] FAILED: No RO found via VIN matching for scan-only email`);
-        console.log(`${LOG_TAG} *** Marking email as processed to avoid reprocessing`);
-        // Still let it continue to try other methods in case there's additional context
+        console.log(`${LOG_TAG} *** Marking email as processed to prevent reprocessing loop`);
+        await markAsProcessed(message.id);
+        return {
+          success: false,
+          error: 'Scan report VIN not found in system - email marked as processed',
+          messageId: message.id
+        };
       }
+    }
+
+    // If we found RO via VIN matching, skip all other RO extraction methods
+    if (roNormalized && roPo) {
+      console.log(`${LOG_TAG} *** Skipping other RO extraction - using VIN-matched RO: ${roPo}`);
     }
 
     // Helper: Detect insurance suffix from filename (ENT, SIXT, etc.)
@@ -1170,16 +1181,19 @@ async function processEmail(message) {
       return null;
     };
 
-    // 1. FIRST: Try email subject (JMD pattern: subject IS the RO number)
-    const subjectResult = parseEmailSubject(subject);
-    if (subjectResult.roPo) {
-      roPo = subjectResult.roPo;
-      roSource = `subject:${subjectResult.subjectType}`;
-      console.log(`${LOG_TAG} ✓ RO from email subject: ${roPo}`);
+    // Only run traditional RO extraction if VIN matching didn't find RO
+    if (!roNormalized) {
+      // 1. FIRST: Try email subject (JMD pattern: subject IS the RO number)
+      const subjectResult = parseEmailSubject(subject);
+      if (subjectResult.roPo) {
+        roPo = subjectResult.roPo;
+        roSource = `subject:${subjectResult.subjectType}`;
+        console.log(`${LOG_TAG} ✓ RO from email subject: ${roPo}`);
+      }
     }
 
     // 2. Check for explicit RO/PO/WO prefix in filenames
-    if (!roPo) {
+    if (!roNormalized && !roPo) {
       for (const pdf of pdfs) {
         const filename = pdf.filename || '';
         const nameWithoutExt = filename.replace(/\.pdf$/i, '');
@@ -1195,7 +1209,7 @@ async function processEmail(message) {
     }
 
     // 3. Check for estimate filename (numeric only like "3095.pdf")
-    if (!roPo) {
+    if (!roNormalized && !roPo) {
       for (const pdf of pdfs) {
         const filename = pdf.filename || '';
         // Match pure numeric filenames (the estimate PDF)
@@ -1210,7 +1224,7 @@ async function processEmail(message) {
     }
 
     // 4. Check for pre-scan filename with RO prefix (3095-PRESCAN.pdf, 3094-ENTPRE.pdf)
-    if (!roPo) {
+    if (!roNormalized && !roPo) {
       for (const pdf of pdfs) {
         const filename = pdf.filename || '';
         const nameWithoutExt = filename.replace(/\.pdf$/i, '');
@@ -1227,7 +1241,7 @@ async function processEmail(message) {
     }
 
     // 5. Check for Revv Report filename pattern
-    if (!roPo) {
+    if (!roNormalized && !roPo) {
       for (const pdf of pdfs) {
         const filename = pdf.filename || '';
         const nameWithoutExt = filename.replace(/\.pdf$/i, '');
@@ -1242,7 +1256,7 @@ async function processEmail(message) {
     }
 
     // 6. Try any PDF filename with leading digits
-    if (!roPo) {
+    if (!roNormalized && !roPo) {
       for (const pdf of pdfs) {
         const filenameRo = extractRoFromFilename(pdf.filename);
         if (filenameRo) {
@@ -1256,7 +1270,7 @@ async function processEmail(message) {
     }
 
     // 7. LAST RESORT: Try PDF text content (often unreliable)
-    if (!roPo && pdfs.length > 0) {
+    if (!roNormalized && !roPo && pdfs.length > 0) {
       try {
         const pdfParse = await import('pdf-parse');
         for (const pdf of pdfs) {
@@ -1282,7 +1296,7 @@ async function processEmail(message) {
     }
 
     // 8. Try email body
-    if (!roPo) {
+    if (!roNormalized && !roPo) {
       console.log(`${LOG_TAG} No RO found — attempting extraction from email body`);
       const bodyRo = extractRoFromText(body);
       if (bodyRo && /^\d/.test(bodyRo)) {
@@ -1293,7 +1307,7 @@ async function processEmail(message) {
     }
 
     // 9. Generate synthetic RO if nothing found
-    if (!roPo) {
+    if (!roNormalized && !roPo) {
       roPo = generateSyntheticRo(message.id);
       roSource = 'synthetic';
       isSyntheticRo = true;

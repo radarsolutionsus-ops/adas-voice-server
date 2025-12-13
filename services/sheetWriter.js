@@ -162,7 +162,7 @@ function formatSheetTime(timeVal) {
   return String(timeVal);
 }
 
-// Column mappings for ADAS_Schedule (A-U)
+// Column mappings for ADAS_Schedule (A-Y)
 const SCHEDULE_COLUMNS = {
   TIMESTAMP_CREATED: 0,    // A
   SHOP_NAME: 1,            // B
@@ -184,7 +184,11 @@ const SCHEDULE_COLUMNS = {
   INVOICE_DATE: 17,        // R
   NOTES: 18,               // S - Full notes summary (entire RO journey)
   FLOW_HISTORY: 19,        // T - Hidden column for flow history (sidebar)
-  EXTRA_DOCS: 20           // U - Extra Docs (additional documents)
+  EXTRA_DOCS: 20,          // U - Extra Docs (additional documents)
+  ESTIMATE_PDF: 21,        // V - Estimate PDF link
+  PRESCAN_PDF: 22,         // W - PreScan PDF link
+  JOB_START: 23,           // X - Job Start timestamp
+  JOB_END: 24              // Y - Job End timestamp
 };
 
 // Column mappings for Billing (A-L)
@@ -454,9 +458,12 @@ function scheduleRowToObject(row, rowIndex) {
     invoiceAmount: row[SCHEDULE_COLUMNS.INVOICE_AMOUNT] || '',
     invoiceDate: row[SCHEDULE_COLUMNS.INVOICE_DATE] || '',
     notes: row[SCHEDULE_COLUMNS.NOTES] || '',
-    fullScrubText: row[SCHEDULE_COLUMNS.FULL_SCRUB_TEXT] || '',
+    flowHistory: row[SCHEDULE_COLUMNS.FLOW_HISTORY] || '',
     extraDocs: row[SCHEDULE_COLUMNS.EXTRA_DOCS] || '',
-    oemPosition: row[SCHEDULE_COLUMNS.EXTRA_DOCS] || ''  // Legacy alias
+    estimatePdf: row[SCHEDULE_COLUMNS.ESTIMATE_PDF] || '',
+    preScanPdf: row[SCHEDULE_COLUMNS.PRESCAN_PDF] || '',
+    jobStart: row[SCHEDULE_COLUMNS.JOB_START] || '',
+    jobEnd: row[SCHEDULE_COLUMNS.JOB_END] || ''
   };
 }
 

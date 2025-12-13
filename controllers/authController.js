@@ -52,6 +52,11 @@ function generateAccessToken(user) {
     payload.coverage = user.coverage;
   }
 
+  // Add techName for admin users too (so they can use tech portal)
+  if (user.role === ROLES.ADMIN) {
+    payload.techName = user.name;
+  }
+
   return jwt.sign(payload, jwtSecret, { expiresIn });
 }
 
