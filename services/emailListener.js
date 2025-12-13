@@ -1315,6 +1315,46 @@ async function processEmail(message) {
       }
     }
 
+    // ADDITIONAL FIX: VIN matching for scan reports regardless of roSource
+    // This handles cases where RO came from filename (e.g., "12317 post.pdf" → "12317")
+    // but VIN matching finds a different existing RO
+    if (!roNormalized) {
+      for (const pdf of pdfs) {
+        const pdfType = detectPDFType(pdf.filename);
+        if (pdfType === 'scan_report') {
+          try {
+            const pdfParse = await import('pdf-parse');
+            const pdfData = await pdfParse.default(pdf.buffer);
+            const pdfText = pdfData.text || '';
+
+            // Extract VIN from scan report content
+            const vinPattern = /\b([A-HJ-NPR-Z0-9]{17})\b/gi;
+            const vinMatches = pdfText.match(vinPattern);
+
+            if (vinMatches && vinMatches.length > 0) {
+              const extractedVin = vinMatches[0].toUpperCase();
+              console.log(`${LOG_TAG} *** [GLOBAL] Extracted VIN from scan report: ${extractedVin}`);
+
+              const vinMatch = await sheetWriter.lookupByVIN(extractedVin);
+              if (vinMatch) {
+                const existingRO = vinMatch.ro_po || vinMatch.roPo || vinMatch.ro_number;
+                // Only use VIN-matched RO if it's different from current and exists
+                if (existingRO && existingRO !== roPo) {
+                  console.log(`${LOG_TAG} *** [GLOBAL] VIN MATCH! Using RO "${existingRO}" instead of "${roPo}"`);
+                  originalRoPo = roPo;
+                  roPo = existingRO;
+                  roNormalized = true;
+                  break;
+                }
+              }
+            }
+          } catch (scanErr) {
+            console.log(`${LOG_TAG} [GLOBAL] Could not extract VIN from scan report: ${scanErr.message}`);
+          }
+        }
+      }
+    }
+
     // Step 1: Upload PDFs to Drive
     const uploadResults = await driveUpload.uploadMultiplePDFs(
       pdfs.map(pdf => ({

@@ -155,8 +155,9 @@ function formatSheetTime(timeVal) {
         return `${hours}:${mins} ${ampm}`;
       }
     }
-    // Already formatted like "2:00 PM" - return as-is
-    return timeVal;
+    // Clean up duplicate AM/PM (e.g., "8:55 PM AM" -> "8:55 PM")
+    const cleaned = timeVal.replace(/\s*(AM|PM)\s*(AM|PM)/gi, ' $1').trim();
+    return cleaned;
   }
   return String(timeVal);
 }

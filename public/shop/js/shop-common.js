@@ -161,7 +161,10 @@
 
   window.formatTime = function(timeStr) {
     if (!timeStr || timeStr.includes('1899')) return '';
-    if (timeStr.includes('AM') || timeStr.includes('PM')) return timeStr;
+    // Clean up duplicate AM/PM first (e.g., "8:55 PM AM" -> "8:55 PM")
+    if (timeStr.includes('AM') || timeStr.includes('PM')) {
+      return timeStr.replace(/\s*(AM|PM)\s*(AM|PM)/gi, ' $1').trim();
+    }
     try {
       const date = new Date(timeStr);
       if (isNaN(date.getTime())) return timeStr;
