@@ -1191,6 +1191,8 @@ async function processEmail(message) {
 
         // RO extracted from subject/filename - continue processing
         console.log(`${LOG_TAG} *** [SCAN FALLBACK] Continuing with RO: ${roPo} (source: ${roSource})`);
+        // Mark as normalized to prevent subsequent subject parsing from overwriting
+        roNormalized = true;
       }
     }
 

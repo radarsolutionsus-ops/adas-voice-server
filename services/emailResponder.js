@@ -693,7 +693,7 @@ export async function sendJobCompletionEmail(params) {
 
       <div style="background: #edf2f7; border-radius: 6px; padding: 15px; margin: 20px 0; text-align: center;">
         <p style="margin: 0 0 10px; font-size: 14px;">View job details and documents in the portal:</p>
-        <a href="https://adasf1rst.com" style="display: inline-block; background: #2b6cb0; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold;">Open ADAS F1RST Portal</a>
+        <a href="https://portal.adasf1rst.com" style="display: inline-block; background: #2b6cb0; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold;">Open ADAS F1RST Portal</a>
       </div>
 
       <p>If you have any questions about this job or need additional services, please reply to this email or call us.</p>
@@ -741,7 +741,7 @@ All calibrations have been performed according to OEM specifications. The post-s
 
 ────────────────────────────────────────
 View job details and documents in the portal:
-https://adasf1rst.com
+https://portal.adasf1rst.com
 ────────────────────────────────────────
 
 If you have any questions about this job or need additional services, please reply to this email or call us.
