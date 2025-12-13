@@ -1208,11 +1208,13 @@ async function sendCompletionEmailToShop(roPo, row, completedCalibrations) {
       return;
     }
 
-    const shopEmail = await sheetWriter.getShopEmailByName(shopName);
-    if (!shopEmail) {
+    const shopEmailResult = await sheetWriter.getShopEmailByName(shopName);
+    if (!shopEmailResult || !shopEmailResult.email) {
       console.log(`${LOG_TAG} No email found for shop "${shopName}", skipping completion email`);
       return;
     }
+    const shopEmail = shopEmailResult.email;
+    console.log(`${LOG_TAG} Shop email resolved: ${shopEmail} (matched: ${shopEmailResult.matched || 'direct'})`);
 
     // Get document URLs
     const postScanLink = row.postScanPdf || row.postscan_pdf || row.post_scan_pdf || '';

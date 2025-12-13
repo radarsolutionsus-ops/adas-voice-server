@@ -1089,7 +1089,10 @@ function getScheduleByRO(roPo) {
       flowHistory: String(data[COL.FLOW_HISTORY] || ''),
       extra_docs: String(data[COL.EXTRA_DOCS] || ''),
       oem_position: String(data[COL.EXTRA_DOCS] || ''),  // Legacy alias for backwards compatibility
-      estimate_pdf: String(data[COL.ESTIMATE_PDF] || '')
+      estimate_pdf: String(data[COL.ESTIMATE_PDF] || ''),
+      prescan_pdf: String(data[COL.PRESCAN_PDF] || ''),
+      job_start: String(data[COL.JOB_START] || ''),
+      job_end: String(data[COL.JOB_END] || '')
     },
     rowNumber: rowNum
   };
