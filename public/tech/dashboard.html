@@ -2747,7 +2747,7 @@
         return;
       }
 
-      if (role !== 'tech') {
+      if (role !== 'tech' && role !== 'admin') {
         localStorage.clear();
         sessionStorage.clear();
         window.location.replace('/?logout=true');
