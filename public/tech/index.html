@@ -3,16 +3,87 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ADAS F1RST - Tech Portal</title>
+  <title>ADAS F1RST - Staff Portal</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/apple-style.css">
+  <style>
+    /* Role Selection Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .modal-overlay.show {
+      display: flex;
+    }
+    .modal-content {
+      background: white;
+      border-radius: 16px;
+      padding: 32px;
+      width: 90%;
+      max-width: 400px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    .modal-content h2 {
+      margin: 0 0 8px 0;
+      color: #1e1b4b;
+      font-size: 24px;
+    }
+    .modal-content p {
+      color: #6b7280;
+      margin-bottom: 24px;
+    }
+    .role-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .role-btn {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 20px;
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      background: white;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: left;
+    }
+    .role-btn:hover {
+      border-color: #7c3aed;
+      background: #f5f3ff;
+    }
+    .role-btn .role-icon {
+      font-size: 32px;
+      line-height: 1;
+    }
+    .role-btn .role-info h3 {
+      margin: 0;
+      color: #1e1b4b;
+      font-size: 16px;
+    }
+    .role-btn .role-info p {
+      margin: 4px 0 0 0;
+      font-size: 13px;
+      color: #6b7280;
+    }
+  </style>
 </head>
 <body class="login-page">
   <div class="login-container">
     <div class="login-card">
       <div class="login-header">
         <div class="login-logo">ADAS F1RST</div>
-        <p class="login-subtitle" style="color: #34c759;">Technician Portal</p>
+        <p class="login-subtitle" style="color: #34c759;">Staff Portal</p>
       </div>
 
       <form id="loginForm" class="login-form">
@@ -39,18 +110,69 @@
     </div>
   </div>
 
+  <!-- Role Selection Modal (for admins) -->
+  <div id="roleModal" class="modal-overlay">
+    <div class="modal-content">
+      <h2>Welcome back!</h2>
+      <p>Which portal would you like to access?</p>
+
+      <div class="role-buttons">
+        <button class="role-btn" onclick="selectRole('admin')">
+          <span class="role-icon">⚙️</span>
+          <div class="role-info">
+            <h3>Admin Portal</h3>
+            <p>Manage jobs, shops, techs, billing</p>
+          </div>
+        </button>
+
+        <button class="role-btn" onclick="selectRole('tech')">
+          <span class="role-icon">🔧</span>
+          <div class="role-info">
+            <h3>Tech Portal</h3>
+            <p>View schedule, complete jobs</p>
+          </div>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script src="/js/icons.js"></script>
   <script src="/js/auth.js"></script>
   <script>
+    let pendingAuthData = null;
+
     // Check if already logged in
     const token = Auth.getToken();
     if (token) {
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));
-        if (payload.role === 'tech' || payload.role === 'admin') {
+        const activeView = localStorage.getItem('activeView') || payload.role;
+        if (payload.role === 'admin') {
+          window.location.href = activeView === 'admin' ? '/admin/dashboard.html' : '/tech/dashboard.html';
+        } else if (payload.role === 'tech') {
           window.location.href = '/tech/dashboard.html';
         }
       } catch (e) {}
+    }
+
+    function selectRole(selectedView) {
+      if (!pendingAuthData) return;
+
+      // Store auth with selected view
+      localStorage.setItem('token', pendingAuthData.token);
+      if (pendingAuthData.refreshToken) {
+        localStorage.setItem('refreshToken', pendingAuthData.refreshToken);
+      }
+      localStorage.setItem('userRole', pendingAuthData.role);
+      localStorage.setItem('activeView', selectedView);
+      localStorage.setItem('userName', pendingAuthData.name);
+
+      // Redirect to selected portal
+      if (selectedView === 'admin') {
+        window.location.href = '/admin/dashboard.html';
+      } else {
+        window.location.href = '/tech/dashboard.html';
+      }
     }
 
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
@@ -79,17 +201,31 @@
         }
 
         // Check role
-        const payload = JSON.parse(atob(data.token.split('.')[1]));
+        const tokenToUse = data.token || data.accessToken;
+        const payload = JSON.parse(atob(tokenToUse.split('.')[1]));
         if (payload.role !== 'tech' && payload.role !== 'admin') {
-          throw new Error('Access denied. Tech credentials required.');
+          throw new Error('Access denied. Staff credentials required.');
         }
 
-        // Store auth
-        localStorage.setItem('token', data.token);
+        // Admin user - show role selection modal
+        if (payload.role === 'admin') {
+          pendingAuthData = {
+            token: tokenToUse,
+            refreshToken: data.refreshToken,
+            role: payload.role,
+            name: payload.name || payload.techName || username
+          };
+          document.getElementById('roleModal').classList.add('show');
+          return;
+        }
+
+        // Tech user - go directly to tech portal
+        localStorage.setItem('token', tokenToUse);
         if (data.refreshToken) {
           localStorage.setItem('refreshToken', data.refreshToken);
         }
         localStorage.setItem('userRole', payload.role);
+        localStorage.setItem('activeView', 'tech');
         localStorage.setItem('userName', payload.name || payload.techName || username);
 
         window.location.href = '/tech/dashboard.html';

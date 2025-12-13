@@ -370,6 +370,31 @@ body {
   border-color: var(--danger);
 }
 
+/* Portal Switch Button */
+.btn-switch-portal {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #34c759 0%, #30d158 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-switch-portal:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(52, 199, 89, 0.4);
+}
+
+.switch-icon {
+  font-size: 16px;
+}
+
 /* Content Area */
 .content-area {
   flex: 1;

@@ -199,9 +199,16 @@ function getStatusClass(status) {
   return status.toLowerCase().replace(/\s+/g, '-');
 }
 
+// Switch to Tech Portal (for admins)
+function switchToTech() {
+  localStorage.setItem('activeView', 'tech');
+  window.location.href = '/tech/dashboard.html';
+}
+
 // Export utilities
 window.AdminAPI = AdminAPI;
 window.escapeHtml = escapeHtml;
 window.formatDate = formatDate;
 window.formatTime = formatTime;
 window.getStatusClass = getStatusClass;
+window.switchToTech = switchToTech;

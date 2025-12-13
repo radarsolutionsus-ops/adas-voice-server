@@ -311,6 +311,36 @@
       z-index: 100;
     }
 
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-switch-portal {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-switch-portal:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+    }
+
+    .switch-icon {
+      font-size: 16px;
+    }
+
     .header-logo {
       display: flex;
       align-items: center;
@@ -1649,10 +1679,16 @@
       <div class="logo-icon">A</div>
       <span class="logo-text">ADAS F1RST</span>
     </div>
-    <button class="btn-logout" id="logoutBtn">
-      <span class="icon" id="logoutIcon"></span>
-      Sign Out
-    </button>
+    <div class="header-actions">
+      <button class="btn-switch-portal" id="switchToAdminBtn" style="display:none;" onclick="switchToAdmin()">
+        <span class="switch-icon">&#9881;</span>
+        Admin View
+      </button>
+      <button class="btn-logout" id="logoutBtn">
+        <span class="icon" id="logoutIcon"></span>
+        Sign Out
+      </button>
+    </div>
   </header>
 
   <!-- Active Job Banner -->
@@ -2637,6 +2673,12 @@
       return canStart;
     }
 
+    // Switch to Admin Portal (for admins viewing tech portal)
+    function switchToAdmin() {
+      localStorage.setItem('activeView', 'admin');
+      window.location.href = '/admin/dashboard.html';
+    }
+
     // Helper functions
     function getStorageItem(key) {
       return localStorage.getItem(key) || sessionStorage.getItem(key);
@@ -2717,6 +2759,13 @@
 
       // Initialize icons
       initIcons();
+
+      // Show admin switch button if user is admin
+      const userRole = getStorageItem('userRole');
+      if (userRole === 'admin') {
+        const switchBtn = document.getElementById('switchToAdminBtn');
+        if (switchBtn) switchBtn.style.display = 'flex';
+      }
 
       // Setup logout
       document.getElementById('logoutBtn').addEventListener('click', () => {
